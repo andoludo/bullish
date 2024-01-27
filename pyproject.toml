@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "bullish"
+version = "0.1.0"
+description = ""
+authors = ["aan <andoludovic.andriamamonjy@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+plotly = "^5.18.0"
+pandas = "^2.2.0"
+tinydb = "^4.8.0"
+pytest = "^7.4.4"
+pydantic = "^2.5.3"
+numba = "^0.58.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

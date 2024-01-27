@@ -1,0 +1,353 @@
+import abc
+import json
+import sys
+from itertools import zip_longest
+from pathlib import Path
+
+import pandas as pd
+from tinydb import TinyDB, Query
+import os
+
+sys.path.append("/home/aan/Documents/stocks")
+from scrapers.model import Ticker
+
+from numba import jit
+from pydantic import BaseModel, ConfigDict
+
+
+class TickerAnalysis(Ticker):
+    def growing(self):
+        if not self.fundamental.income_statement.net_income:
+            return False
+        data = pd.DataFrame.from_dict(
+            self.fundamental.income_statement.net_income.yearly, orient="index"
+        )
+        data.index = pd.to_datetime(data.index)
+        data = (data[0] / max(data[0])).sort_index()
+        growing = data[-1] == 1
+
+        if self.fundamental.income_statement.net_income.quarterly:
+            data = pd.DataFrame.from_dict(
+                self.fundamental.income_statement.net_income.quarterly, orient="index"
+            )
+            data.index = pd.to_datetime(data.index)
+            data = (data[0] / max(data[0])).sort_index()
+            growing = growing and (data[-1] == 1)
+        return growing
+
+    def get_price(self):
+        if not self.historical.price:
+            return
+        data = pd.DataFrame.from_dict(self.historical.model_dump())
+        data.index = pd.to_datetime(data.index)
+        return data.sort_index()
+
+
+import plotly.graph_objects as go
+from numpy.lib.stride_tricks import sliding_window_view
+
+
+class CandleStick(BaseModel):
+    price: float
+    open: float
+    high: float
+    low: float
+
+    @classmethod
+    def from_dataframe(cls, data):
+        return [cls(**data_) for data_ in data.to_dict(orient="records")]
+
+    def is_bullish(self):
+        return self.price > self.open
+
+    def is_bearish(self):
+        return self.open > self.price
+
+    def bullish_gap(self, other: "CandleStick"):
+        return (self.high - other.low) < 0
+
+    def bearish_gap(self, other: "CandleStick"):
+        return (self.low - other.high) > 0
+
+    def increase_close(self, other: "CandleStick"):
+        return self.price < other.price
+
+    def decrease_close(self, other: "CandleStick"):
+        return self.price > other.price
+
+    def close_smaller_than_open(self, other: "CandleStick"):
+        return self.price < other.open
+
+    def close_greater_than_open(self, other: "CandleStick"):
+        return self.price > other.open
+
+    def close_smaller_than_close(self, other: "CandleStick"):
+        return self.price < other.price
+
+    def close_greater_than_close(self, other: "CandleStick"):
+        return self.price > other.price
+
+    def high_superior_than(self, others: list["CandleStick"]):
+        return all([self.high >= other.high for other in others])
+
+    def low_inferior_than(self, others: list["CandleStick"]):
+        return all([self.low >= other.low for other in others])
+
+    def breaking_high(self, other: "CandleStick"):
+        return self.price > other.high
+
+    def breaking_low(self, other: "CandleStick"):
+        return self.price < other.low
+
+    def low_equal_open(self):
+        return self.open == self.low
+
+    def high_equal_open(self):
+        return self.open == self.high
+
+    def embedded_in(self, other: "CandleStick"):
+        if abs(other.open - other.price) > abs(self.open - self.price):
+            if self.is_bearish() and other.is_bearish():
+                return other.open > self.open
+            elif self.is_bearish() and other.is_bullish():
+                return other.price > self.open
+            elif self.is_bullish() and other.is_bullish():
+                return other.price > self.price
+            else:
+                return other.open > self.price
+        else:
+            return False
+
+
+class Pattern(abc.ABC, BaseModel):
+    name: str
+    window: int
+    data: pd.DataFrame
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @abc.abstractmethod
+    def logic_bullish(self, data: pd.DataFrame):
+        ...
+
+    @abc.abstractmethod
+    def logic_bearish(self, data: pd.DataFrame):
+        ...
+
+    def compute(self) -> pd.DataFrame:
+        bullish_patterns = []
+        bearish_patterns = []
+        sliding_windows = sliding_window_view(self.data, self.window, axis=0)
+        for sliding_window in sliding_windows:
+            data = pd.DataFrame(sliding_window.T, columns=self.data.columns)
+            sticks = CandleStick.from_dataframe(data)
+            bullish_patterns.append(self.logic_bullish(sticks))
+            bearish_patterns.append(self.logic_bearish(sticks))
+        for pattern_name, patterns in {
+            "bullish": bullish_patterns,
+            "bearish": bearish_patterns,
+        }.items():
+            patterns = pd.DataFrame(
+                list(
+                    reversed(
+                        list(zip_longest(reversed(self.data.index), reversed(patterns)))
+                    )
+                )
+            )
+            patterns.index = patterns[0]
+            name = f"{self.name}_{pattern_name}"
+            patterns[name] = patterns[1]
+            self.data[name] = patterns[1]
+        return self.data
+
+
+class ThreeCandles(Pattern):
+    name: str = "three_candles"
+    window: int = 3
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if all(
+            [
+                stick_0.increase_close(stick_1)
+                for stick_0, stick_1 in zip(
+                    sticks[: len(sticks) - 2], sticks[1 : len(sticks) - 1]
+                )
+            ]
+        ) and all([stick.is_bullish() for stick in sticks]):
+            return sticks[1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if all(
+            [
+                stick_0.decrease_close(stick_1)
+                for stick_0, stick_1 in zip(
+                    sticks[: len(sticks) - 2], sticks[1 : len(sticks) - 1]
+                )
+            ]
+        ) and all([stick.is_bearish() for stick in sticks]):
+            return sticks[1].price
+
+
+class Quintuplets(ThreeCandles):
+    name: str = "quintuplets"
+    window: int = 5
+
+
+class Tasuki(Pattern):
+    name: str = "tasuki"
+    window: int = 3
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            all([stick.is_bullish() for stick in sticks[:1]])
+            and sticks[2].is_bearish()
+            and sticks[0].close_smaller_than_open(sticks[1])
+            and sticks[0].close_smaller_than_close(sticks[2])
+        ):
+            return sticks[1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            all([stick.is_bearish() for stick in sticks[:1]])
+            and sticks[2].is_bullish()
+            and sticks[0].close_greater_than_open(sticks[1])
+            and sticks[0].close_greater_than_close(sticks[2])
+        ):
+            return sticks[1].price
+
+
+class Hikkake(Pattern):
+    name: str = "hikkake"
+    window: int = 5
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bullish()
+            and sticks[1].is_bearish()
+            and sticks[2].is_bearish()
+            and sticks[3].is_bullish()
+            and sticks[4].is_bullish()
+            and sticks[1].embedded_in(sticks[0])
+            and sticks[1].high_superior_than(sticks[2:3])
+            and sticks[4].breaking_high(sticks[3])
+        ):
+            return sticks[1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bearish()
+            and sticks[1].is_bullish()
+            and sticks[2].is_bullish()
+            and sticks[3].is_bearish()
+            and sticks[4].is_bearish()
+            and sticks[1].embedded_in(sticks[0])
+            and sticks[1].low_inferior_than(sticks[2:3])
+            and sticks[4].breaking_low(sticks[3])
+        ):
+            return sticks[1].price
+
+
+class Bottle(Pattern):
+    name: str = "bottle"
+    window: int = 2
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bullish()
+            and sticks[1].is_bullish()
+            and sticks[0].close_greater_than_open(sticks[1])
+            and sticks[1].low_equal_open()
+        ):
+            return sticks[1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bearish()
+            and sticks[1].is_bearish()
+            and sticks[0].close_smaller_than_open(sticks[1])
+            and sticks[1].high_equal_open()
+        ):
+            return sticks[1].price
+
+
+def gap(data: pd.DataFrame):
+    return ((data.high[0] - data.low[1]) < 0) or ((data.low[0] - data.high[1]) > 0)
+
+
+def test_load_data():
+    path = Path("/home/aan/Documents/bullish/data/db_json.json")
+    tiny_path = Path("/home/aan/Documents/bullish/data/tiny_db_json.json")
+    db = TinyDB(tiny_path)
+    # db.insert_multiple(json.loads(path.read_text()))
+    equity = Query()
+    results = db.search(
+        (equity.fundamental.ratios.price_earning_ratio > 5)
+        & (equity.fundamental.ratios.price_earning_ratio < 15)
+        & (equity.fundamental.valuation.market_cap > 1 * 10 ** 9)
+    )
+    ts = [TickerAnalysis(**rt) for rt in results]
+    filtered_data = []
+    data = {}
+
+    sectors = {
+        "Basic Materials",
+        "Consumer Cyclicals",
+        "Consumer Non-Cyclicals",
+        "Energy",
+        "Financials",
+        "Healthcare",
+        "Industrials",
+        "Real Estate",
+        "Technology",
+        "Utilities",
+    }
+    df = ts[0].get_price()
+    df = ThreeCandles(data=df).compute()
+    df = Tasuki(data=df).compute()
+    df = Hikkake(data=df).compute()
+    df = Bottle(data=df).compute()
+    df = Quintuplets(data=df).compute()
+    a = 12
+
+    fig = go.Figure(
+        data=go.Ohlc(
+            x=df_resample.index,
+            open=df_resample["open"],
+            high=df_resample["high"],
+            low=df_resample["low"],
+            close=df_resample["price"],
+        )
+    )
+    fig.add_scatter(
+        x=df_resample[["three_candle"]].index,
+        y=df_resample["three_candle"],
+        mode="markers",
+        marker=dict(
+            color="black",  # Set color to red
+            size=4,  # Set marker size
+            symbol="square",  # Set marker symbol to square
+        ),
+    )
+    fig.show()
+
+
+def resample(df):
+    df_resample = pd.DataFrame()
+    resampling = "M"
+    df_resample["high"] = (
+        df[["high"]].groupby(pd.Grouper(freq=resampling)).max().apply(max, axis=1)
+    )
+    df_resample["low"] = (
+        df[["low"]].groupby(pd.Grouper(freq=resampling)).min().apply(min, axis=1)
+    )
+    df_resample["open"] = (
+        df[["open"]].groupby(pd.Grouper(freq=resampling)).apply(lambda x: x["open"][0])
+    )
+    df_resample["price"] = (
+        df[["price"]]
+        .groupby(pd.Grouper(freq=resampling))
+        .apply(lambda x: x["price"][0])
+    )
+    return df_resample
