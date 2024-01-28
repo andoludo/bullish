@@ -567,9 +567,14 @@ def test_load_data():
         new_df = df.loc[lowest_index[0]:]
         df_max = new_df.where(new_df.high == new_df.high.max()).dropna()
         new_df = new_df.loc[lowest_index[0]:df_max.index[0]]
+        ys = new_df.low.values
+        xs = range(len(new_df.index))
+        slope = [(y - ys[0]) / (x - xs[0]) for x, y in zip(xs[1:], ys[1:])]
+        min_index = slope.index(min(slope))
 
 
-        support = pd.concat([df_lowest, new_df[-2:-1]])
+
+        support = pd.concat([df_lowest, new_df.iloc[[min_index+1]]])
         patterns = [
             ThreeCandles(data=df),
             Tasuki(data=df),
