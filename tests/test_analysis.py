@@ -52,9 +52,11 @@ class CandleStick(BaseModel):
     open: float
     high: float
     low: float
+    trading_range: float
 
     @classmethod
     def from_dataframe(cls, data):
+        data["trading_range"] = abs(data["high"] - data["low"])
         return [cls(**data_) for data_ in data.to_dict(orient="records")]
 
     def is_bullish(self):
@@ -62,6 +64,9 @@ class CandleStick(BaseModel):
 
     def is_bearish(self):
         return self.open > self.price
+
+    def is_a_doji(self):
+        return abs(self.open - self.price) < self.trading_range * 0.1
 
     def bullish_gap(self, other: "CandleStick"):
         return (self.high - other.low) < 0
@@ -82,7 +87,7 @@ class CandleStick(BaseModel):
         return self.price > other.open
 
     def close_smaller_than_close(self, other: "CandleStick"):
-        return self.price < other.price
+        return self.price <= other.price
 
     def close_greater_than_close(self, other: "CandleStick"):
         return self.price > other.price
@@ -93,28 +98,58 @@ class CandleStick(BaseModel):
     def low_inferior_than(self, others: list["CandleStick"]):
         return all([self.low >= other.low for other in others])
 
+    def high_inferior_than_low(self, other: "CandleStick"):
+        return self.high <= other.low
+
+    def low_superior_than_high(self, other: "CandleStick"):
+        return self.low >= other.high
+
+    def low_inferior_than_high(self, other: "CandleStick"):
+        return self.low <= other.high
+
+    def low_inferior_than_low(self, other: "CandleStick"):
+        return self.low <= other.low
+
+    def high_inferior_than_high(self, other: "CandleStick"):
+        return self.high <= other.high
+
+    def high_superior_than_low(self, other: "CandleStick"):
+        return self.high <= other.low
+
     def breaking_high(self, other: "CandleStick"):
         return self.price > other.high
 
     def breaking_low(self, other: "CandleStick"):
         return self.price < other.low
 
-    def low_equal_open(self):
-        return self.open == self.low
+    def same_low(self, other: "CandleStick"):
+        return self.low == other.low
+    def same_high(self, other: "CandleStick"):
+        return self.high == other.high
+
+    def low_equal_close(self):
+        return self.price == self.low
 
     def high_equal_open(self):
         return self.open == self.high
 
+    def high_equal_close(self):
+        return self.price == self.high
+
+    def open_equal_close(self):
+        return self.price == self.open
+
+
     def embedded_in(self, other: "CandleStick"):
         if abs(other.open - other.price) > abs(self.open - self.price):
             if self.is_bearish() and other.is_bearish():
-                return other.open > self.open
+                return other.open > self.open and other.price < self.price
             elif self.is_bearish() and other.is_bullish():
-                return other.price > self.open
+                return other.price > self.open and other.open < self.price
             elif self.is_bullish() and other.is_bullish():
-                return other.price > self.price
+                return other.price > self.price and other.open < self.open
             else:
-                return other.open > self.price
+                return other.open > self.price and other.price < self.open
         else:
             return False
 
@@ -272,6 +307,220 @@ class Bottle(Pattern):
             return sticks[1].price
 
 
+class SlingShot(Pattern):
+    name: str = "slingshot"
+    window: int = 4
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bullish()
+            and sticks[3].is_bullish()
+            and sticks[1].low_superior_than_high(sticks[0])
+            and sticks[3].low_inferior_than_high(sticks[0])
+        ):
+            return sticks[-1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bearish()
+            and sticks[3].is_bearish()
+            and sticks[1].high_inferior_than_low(sticks[0])
+            and sticks[3].high_inferior_than_low(sticks[0])
+        ):
+            return sticks[-1].price
+
+
+class H(Pattern):
+    name: str = "h"
+    window: int = 3
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bullish()
+            and sticks[1].is_a_doji()
+            and sticks[2].is_bullish()
+            and sticks[1].low_inferior_than_low(sticks[2])
+        ):
+            return sticks[-1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bearish()
+            and sticks[1].is_a_doji()
+            and sticks[2].is_bearish()
+            and sticks[2].high_inferior_than_high(sticks[1])
+        ):
+            return sticks[-1].price
+
+
+class Doji(Pattern):
+    name: str = "doji"
+    window: int = 3
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if sticks[0].is_bearish() and sticks[1].is_a_doji() and sticks[2].is_bullish():
+            return sticks[-1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if sticks[0].is_bullish() and sticks[1].is_a_doji() and sticks[2].is_bearish():
+            return sticks[-1].price
+
+
+class Harami(Pattern):
+    name: str = "harami"
+    window: int = 2
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bearish()
+            and sticks[1].is_bullish()
+            and sticks[1].embedded_in(sticks[0])
+        ):
+            return sticks[-1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bullish()
+            and sticks[1].is_bearish()
+            and sticks[1].embedded_in(sticks[0])
+        ):
+            return sticks[-1].price
+
+
+class OnNeck(Pattern):
+    name: str = "on_neck"
+    window: int = 2
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bearish()
+            and sticks[1].is_bullish()
+            and sticks[1].high_equal_close()
+            and sticks[1].close_smaller_than_close(sticks[0])
+        ):
+            return sticks[-1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bullish()
+            and sticks[1].is_bearish()
+            and sticks[1].low_equal_close()
+            and sticks[1].close_smaller_than_close(sticks[0])
+        ):
+            return sticks[-1].price
+
+class Tweezers(Pattern):
+    name: str = "tweezers"
+    window: int = 3
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bearish()
+            and sticks[1].is_bearish()
+            and sticks[2].is_bullish()
+            and sticks[1].same_low(sticks[2])
+        ):
+            return sticks[-1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bullish()
+            and sticks[1].is_bullish()
+            and sticks[2].is_bearish()
+            and sticks[1].same_high(sticks[2])
+        ):
+            return sticks[-1].price
+
+
+class Sandwich(Pattern):
+    name: str = "sandwich"
+    window: int = 3
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bearish()
+            and sticks[1].is_bullish()
+            and sticks[2].is_bearish()
+            and sticks[1].embedded_in(sticks[0])
+            and sticks[1].embedded_in(sticks[2])
+        ):
+            return sticks[-1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bullish()
+            and sticks[1].is_bearish()
+            and sticks[2].is_bullish()
+            and sticks[1].embedded_in(sticks[0])
+            and sticks[1].embedded_in(sticks[2])
+        ):
+            return sticks[-1].price
+
+class Hammer(Pattern):
+    name: str = "hammer"
+    window: int = 3
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bearish()
+            and sticks[1].is_bullish()
+            and sticks[2].is_bullish()
+                and sticks[1].high_equal_close()
+        ):
+            return sticks[-1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bullish()
+            and sticks[1].is_bearish()
+            and sticks[2].is_bearish()
+                and sticks[1].low_equal_close()
+        ):
+            return sticks[-1].price
+
+
+class Piercing(Pattern):
+    name: str = "start"
+    window: int = 2
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bearish()
+            and sticks[1].is_bullish()
+            and sticks[0].close_greater_than_open(sticks[0])
+        ):
+            return sticks[-1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bullish()
+            and sticks[1].is_bearish()
+            and sticks[1].close_greater_than_open(sticks[0])
+        ):
+            return sticks[-1].price
+
+
+
+
+class Engulfing(Pattern):
+    name: str = "engulfing"
+    window: int = 2
+
+    def logic_bullish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bearish()
+            and sticks[1].is_bullish()
+            and sticks[0].embedded_in(sticks[1])
+        ):
+            return sticks[-1].price
+
+    def logic_bearish(self, sticks: list[CandleStick]):
+        if (
+            sticks[0].is_bullish()
+            and sticks[1].is_bearish()
+            and sticks[1].embedded_in(sticks[0])
+        ):
+            return sticks[-1].price
 def gap(data: pd.DataFrame):
     return ((data.high[0] - data.low[1]) < 0) or ((data.low[0] - data.high[1]) > 0)
 
@@ -303,34 +552,60 @@ def test_load_data():
         "Technology",
         "Utilities",
     }
-    df = ts[0].get_price()
-    df = ThreeCandles(data=df).compute()
-    df = Tasuki(data=df).compute()
-    df = Hikkake(data=df).compute()
-    df = Bottle(data=df).compute()
-    df = Quintuplets(data=df).compute()
-    a = 12
+    for t in ts:
+        df = t.get_price()
+        patterns = [
+            ThreeCandles(data=df),
+            Tasuki(data=df),
+            Hikkake(data=df),
+            Bottle(data=df),
+            Quintuplets(data=df),
+            SlingShot(data=df),
+            H(data=df),
+            Doji(data=df),
+            Harami(data=df),
+        ]
+        for pattern in patterns:
+            df = pattern.compute()
+        a = 12
 
-    fig = go.Figure(
-        data=go.Ohlc(
-            x=df_resample.index,
-            open=df_resample["open"],
-            high=df_resample["high"],
-            low=df_resample["low"],
-            close=df_resample["price"],
+        fig = go.Figure(
+            # data=go.Candlestick(
+            #     x=df.index,
+            #     open=df["open"],
+            #     high=df["high"],
+            #     low=df["low"],
+            #     close=df["price"],
+            # )
         )
-    )
-    fig.add_scatter(
-        x=df_resample[["three_candle"]].index,
-        y=df_resample["three_candle"],
-        mode="markers",
-        marker=dict(
-            color="black",  # Set color to red
-            size=4,  # Set marker size
-            symbol="square",  # Set marker symbol to square
-        ),
-    )
-    fig.show()
+        for pattern in patterns:
+            fig.add_scatter(
+                x=df[[f"{pattern.name}_bearish"]].index,
+                y=df[f"{pattern.name}_bearish"],
+                name=f"{pattern.name}-bearish",
+                mode="markers",
+                marker=dict(
+                    color="black"
+                    if pattern.name in ["doji", "harami"]
+                    else "red",  # Set color to red
+                    size=8,  # Set marker size
+                    symbol="triangle-down",  # Set marker symbol to square
+                ),
+            )
+            fig.add_scatter(
+                x=df[[f"{pattern.name}_bullish"]].index,
+                y=df[f"{pattern.name}_bullish"],
+                name=f"{pattern.name}-bullish",
+                mode="markers",
+                marker=dict(
+                    color="black"
+                    if pattern.name in ["doji", "harami"]
+                    else "green",  # Set color to red
+                    size=8,  # Set marker size
+                    symbol="triangle-up",  # Set marker symbol to square
+                ),
+            )
+        fig.show()
 
 
 def resample(df):
