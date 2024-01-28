@@ -125,6 +125,7 @@ class CandleStick(BaseModel):
 
     def same_low(self, other: "CandleStick"):
         return self.low == other.low
+
     def same_high(self, other: "CandleStick"):
         return self.high == other.high
 
@@ -142,7 +143,6 @@ class CandleStick(BaseModel):
 
     def open_equal_close(self):
         return self.price == self.open
-
 
     def embedded_in(self, other: "CandleStick"):
         if abs(other.open - other.price) > abs(self.open - self.price):
@@ -413,6 +413,7 @@ class OnNeck(Pattern):
         ):
             return sticks[-1].price
 
+
 class Tweezers(Pattern):
     name: str = "tweezers"
     window: int = 3
@@ -460,6 +461,7 @@ class Sandwich(Pattern):
         ):
             return sticks[-1].price
 
+
 class Hammer(Pattern):
     name: str = "hammer"
     window: int = 3
@@ -469,7 +471,7 @@ class Hammer(Pattern):
             sticks[0].is_bearish()
             and sticks[1].is_bullish()
             and sticks[2].is_bullish()
-                and sticks[1].high_equal_close()
+            and sticks[1].high_equal_close()
         ):
             return sticks[-1].price
 
@@ -478,7 +480,7 @@ class Hammer(Pattern):
             sticks[0].is_bullish()
             and sticks[1].is_bearish()
             and sticks[2].is_bearish()
-                and sticks[1].low_equal_close()
+            and sticks[1].low_equal_close()
         ):
             return sticks[-1].price
 
@@ -504,8 +506,6 @@ class Piercing(Pattern):
             return sticks[-1].price
 
 
-
-
 class Engulfing(Pattern):
     name: str = "engulfing"
     window: int = 2
@@ -525,25 +525,55 @@ class Engulfing(Pattern):
             and sticks[1].embedded_in(sticks[0])
         ):
             return sticks[-1].price
+
+
 def gap(data: pd.DataFrame):
     return ((data.high[0] - data.low[1]) < 0) or ((data.low[0] - data.high[1]) > 0)
 
+
 import numpy as np
+
+
+def support_line(data: pd.DataFrame):
+    data_lowest = data.where(data.low == data.low.min()).dropna()
+    lowest_index = data_lowest.index
+    data_from_lowest = data.loc[lowest_index[0] :]
+    data_to_max = data_from_lowest.where(
+        data_from_lowest.high == data_from_lowest.high.max()
+    ).dropna()
+    base_data = data_from_lowest.loc[lowest_index[0] : data_to_max.index[0]]
+    ys = base_data.low.values
+    xs = range(len(base_data.index))
+    xs_ = xs[1:]
+    ys_ = ys[1:]
+    slopes = [(y - ys[0]) / (x - xs[0]) for x, y in zip(xs_, ys_)]
+    if not slopes:
+        return
+
+    min_slope = min(slopes)
+    min_slope_index = slopes.index(min_slope)
+    intercept = ys_[min_slope_index] - min_slope * xs_[min_slope_index]
+    length = 4*len(data_from_lowest) if len(data_from_lowest) <4 else 6*len(data_from_lowest)
+    return min_slope,intercept, pd.DataFrame(
+        [min_slope * x + intercept for x in range(length)],
+        index=pd.date_range(start=lowest_index[0], end=lowest_index[0] + pd.Timedelta(days=length-1)),
+        columns=["support"],
+    )
+
+
 def test_load_data():
     path = Path("/home/aan/Documents/bullish/data/db_json.json")
     tiny_path = Path("/home/aan/Documents/bullish/data/tiny_db_json.json")
     db = TinyDB(tiny_path)
     # db.insert_multiple(json.loads(path.read_text()))
     equity = Query()
-    # results = db.search(
-    #     (equity.fundamental.ratios.price_earning_ratio > 5)
-    #     & (equity.fundamental.ratios.price_earning_ratio < 15)
-    #     & (equity.fundamental.valuation.market_cap > 1 * 10 ** 9)
-    # )
     results = db.search(
-        (equity.symbol == "PROX")
+        (equity.fundamental.ratios.price_earning_ratio > 5)
+        & (equity.fundamental.ratios.price_earning_ratio < 15)
+        & (equity.fundamental.valuation.market_cap > 1 * 10 ** 9)
     )
-    ts = [TickerAnalysis(**rt) for rt in results][:1]
+    # results = db.search((equity.symbol == "PROX"))
+    ts = [TickerAnalysis(**rt) for rt in results]
     filtered_data = []
     data = {}
 
@@ -559,22 +589,34 @@ def test_load_data():
         "Technology",
         "Utilities",
     }
+    lines  =set()
     for t in ts:
-        df = t.get_price()
-        df.low.min()
-        df_lowest = df.where(df.low == df.low.min()).dropna()
-        lowest_index = df_lowest.index
-        new_df = df.loc[lowest_index[0]:]
-        df_max = new_df.where(new_df.high == new_df.high.max()).dropna()
-        new_df = new_df.loc[lowest_index[0]:df_max.index[0]]
-        ys = new_df.low.values
-        xs = range(len(new_df.index))
-        slope = [(y - ys[0]) / (x - xs[0]) for x, y in zip(xs[1:], ys[1:])]
-        min_index = slope.index(min(slope))
+        df = t.get_price()[806:]
+        # fig = go.Figure(
+        # )
+        fig = go.Figure(
+            data=go.Candlestick(
+                x=df.index,
+                open=df["open"],
+                high=df["high"],
+                low=df["low"],
+                close=df["price"],
+            )
+        )
+        for i in range(len(df.index)):
+            res = support_line(df[:i+1])
+            if res is None:
+                continue
+            (min_slope, intercept, support) = res
+            if (min_slope, intercept) not in lines:
+                lines.add((min_slope, intercept))
+            else:
+                continue
+            if support is not None:
+                fig.add_trace(go.Scatter(x=support.index, y=support["support"], mode="lines", marker=dict(
+                    color="black")))
 
-
-
-        support = pd.concat([df_lowest, new_df.iloc[[min_index+1]]])
+        # support = pd.concat([df_lowest, new_df.iloc[[min_index+1]]])
         patterns = [
             ThreeCandles(data=df),
             Tasuki(data=df),
@@ -592,8 +634,8 @@ def test_load_data():
             Hammer(data=df),
             Sandwich(data=df),
         ]
-        # for pattern in patterns:
-        #     df = pattern.compute()
+        for pattern in patterns:
+            df = pattern.compute()
         a = 12
 
         # fig = go.Figure(
@@ -605,40 +647,40 @@ def test_load_data():
         #         close=df["price"],
         #     )
         # )
-        fig = go.Figure(
-        )
-        fig.add_trace(go.Line(x=support.index, y=support["low"]))
-        fig.add_scatter(x=new_df.index, y=new_df.low)
-        # for x in [50, 100, 200]:
-        #     df_ma = df.rolling(window=x).mean()
-        #     fig.add_trace(go.Line(x=df_ma.index, y=df_ma["price"]))
-        # for pattern in patterns:
-        #     fig.add_scatter(
-        #         x=df[[f"{pattern.name}_bearish"]].index,
-        #         y=df[f"{pattern.name}_bearish"],
-        #         name=f"{pattern.name}-bearish",
-        #         mode="markers",
-        #         marker=dict(
-        #             color="black"
-        #             if pattern.name in ["doji", "harami", "one_neck", "tweezers","engulfing", "piercing", "hammer","sandwich"]
-        #             else "red",  # Set color to red
-        #             size=8,  # Set marker size
-        #             symbol="triangle-down",  # Set marker symbol to square
-        #         ),
-        #     )
-        #     fig.add_scatter(
-        #         x=df[[f"{pattern.name}_bullish"]].index,
-        #         y=df[f"{pattern.name}_bullish"],
-        #         name=f"{pattern.name}-bullish",
-        #         mode="markers",
-        #         marker=dict(
-        #             color="black"
-        #             if pattern.name in ["doji", "harami", "one_neck", "tweezers","engulfing", "piercing", "hammer","sandwich"]
-        #             else "green",  # Set color to red
-        #             size=8,  # Set marker size
-        #             symbol="triangle-up",  # Set marker symbol to square
-        #         ),
-        #     )
+
+        # support = support_line(df)
+        # fig.add_trace(go.Line(x=support.index, y=support["support"]))
+        # fig.add_scatter(x=df.index, y=df.price)
+        for x in [50, 100, 200]:
+            df_ma = df.rolling(window=x).mean()
+            fig.add_trace(go.Line(x=df_ma.index, y=df_ma["price"]))
+        for pattern in patterns:
+            fig.add_scatter(
+                x=df[[f"{pattern.name}_bearish"]].index,
+                y=df[f"{pattern.name}_bearish"],
+                name=f"{pattern.name}-bearish",
+                mode="markers",
+                marker=dict(
+                    color="black"
+                    if pattern.name in ["doji", "harami", "one_neck", "tweezers","engulfing", "piercing", "hammer","sandwich"]
+                    else "red",  # Set color to red
+                    size=8,  # Set marker size
+                    symbol="triangle-down",  # Set marker symbol to square
+                ),
+            )
+            fig.add_scatter(
+                x=df[[f"{pattern.name}_bullish"]].index,
+                y=df[f"{pattern.name}_bullish"],
+                name=f"{pattern.name}-bullish",
+                mode="markers",
+                marker=dict(
+                    color="black"
+                    if pattern.name in ["doji", "harami", "one_neck", "tweezers","engulfing", "piercing", "hammer","sandwich"]
+                    else "green",  # Set color to red
+                    size=8,  # Set marker size
+                    symbol="triangle-up",  # Set marker symbol to square
+                ),
+            )
         fig.show()
 
 
