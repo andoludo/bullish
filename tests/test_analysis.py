@@ -121,7 +121,7 @@ def test_load_data():
         df = t.get_price()
         # fig = go.Figure(
         # )
-        df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=30)) & (df.index <= pd.Timestamp.now())]
+        df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=90)) & (df.index <= pd.Timestamp.now())]
         if df.empty:
             continue
         fig = go.Figure(
@@ -204,6 +204,38 @@ def test_load_data():
         #     )
         fig.update_layout(yaxis_range=[min(df.low) -1,max(df.high) + 1])
         fig.show()
+
+
+
+def test_strategy():
+    path = Path("/home/aan/Documents/bullish/data/db_json.json")
+    tiny_path = Path("/home/aan/Documents/bullish/data/tiny_db_json.json")
+    db = TinyDB(tiny_path)
+    # db.insert_multiple(json.loads(path.read_text()))
+    equity = Query()
+    results = db.search(
+        (equity.fundamental.ratios.price_earning_ratio > 5)
+        & (equity.fundamental.ratios.price_earning_ratio < 15)
+
+    )
+    # results = db.search((equity.symbol == "PROX"))
+    ts = [TickerAnalysis(**rt) for rt in results][:1]
+    for t in ts:
+        df = t.get_price()
+        # fig = go.Figure(
+        # )
+        df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=90)) & (df.index <= pd.Timestamp.now())]
+        if df.empty:
+            continue
+
+        for i in range(len(df.index)):
+            data = df[: i + 1]
+            for x in [20, 50,200]:
+                data_ma = data.rolling(window=x).mean()
+            support_data = support(data, data.index[-1])
+            resistance_data = resistance(data, data.index[-1])
+            (min_slope, intercept, support_df) = support_data
+            (min_slope, intercept, resistance_df) = resistance_data
 
 
 def resample(df):

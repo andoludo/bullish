@@ -42,7 +42,7 @@ def _line(data, get_extreme, get_opposite, get_values, slope_function, name, max
     ys_ = ys[1:]
     slopes = [(y - ys[0]) / (x - xs[0]) for x, y in zip(xs_, ys_)]
     if not slopes:
-        return
+        return (None, None, pd.DataFrame())
 
     _slope = slope_function(slopes)
     min_slope_index = slopes.index(_slope)
