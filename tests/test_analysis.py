@@ -9,7 +9,7 @@ import pandas as pd
 from tinydb import TinyDB, Query
 import os
 
-from trend.lines import support, resistance
+from trend.lines import support, resistance, plot_support, plot_resistance
 
 sys.path.append("/home/aan/Documents/stocks")
 from scrapers.model import Ticker
@@ -96,10 +96,10 @@ def test_load_data():
     results = db.search(
         (equity.fundamental.ratios.price_earning_ratio > 5)
         & (equity.fundamental.ratios.price_earning_ratio < 15)
-        & (equity.fundamental.valuation.market_cap > 1 * 10 ** 9)
+
     )
     # results = db.search((equity.symbol == "PROX"))
-    ts = [TickerAnalysis(**rt) for rt in results]
+    ts = [TickerAnalysis(**rt) for rt in results][30:-10]
     filtered_data = []
     data = {}
 
@@ -115,12 +115,13 @@ def test_load_data():
         "Technology",
         "Utilities",
     }
-    lines  =set()
+    lines_resistance  =set()
+    lines_support  =set()
     for t in ts:
         df = t.get_price()
         # fig = go.Figure(
         # )
-        df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=90)) & (df.index <= pd.Timestamp.now())]
+        df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=30)) & (df.index <= pd.Timestamp.now())]
         if df.empty:
             continue
         fig = go.Figure(
@@ -133,31 +134,8 @@ def test_load_data():
                 close=df["price"],
             )
         )
-        for i in range(len(df.index)):
-            res = support(df[:i+1])
-            if res is None:
-                continue
-            (min_slope, intercept, support_) = res
-            if (min_slope, intercept) not in lines:
-                lines.add((min_slope, intercept))
-            else:
-                continue
-            if support_ is not None:
-                fig.add_trace(go.Scatter(x=support_.index, y=support_["Support"], mode="lines", marker=dict(
-                    color="black")))
-
-        for i in range(len(df.index)):
-            res = resistance(df[:i+1])
-            if res is None:
-                continue
-            (min_slope, intercept, support_) = res
-            if (min_slope, intercept) not in lines:
-                lines.add((min_slope, intercept))
-            else:
-                continue
-            if support_ is not None:
-                fig.add_trace(go.Scatter(x=support_.index, y=support_["Resistance"], mode="lines", marker=dict(
-                    color="red")))
+        plot_support(fig, df)
+        plot_resistance(fig, df)
 
         # support = pd.concat([df_lowest, new_df.iloc[[min_index+1]]])
         # patterns = [
@@ -224,6 +202,7 @@ def test_load_data():
         #             symbol="triangle-up",  # Set marker symbol to square
         #         ),
         #     )
+        fig.update_layout(yaxis_range=[min(df.low) -1,max(df.high) + 1])
         fig.show()
 
 
