@@ -14,7 +14,7 @@ from trend.lines import support, resistance, plot_support, plot_resistance
 sys.path.append("/home/aan/Documents/stocks")
 from scrapers.model import Ticker
 
-from numba import jit
+from numba import jit, njit, gdb_init, gdb_breakpoint
 from pydantic import BaseModel, ConfigDict
 
 
@@ -121,7 +121,7 @@ def test_load_data():
         df = t.get_price()
         # fig = go.Figure(
         # )
-        df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=90)) & (df.index <= pd.Timestamp.now())]
+        df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=200)) & (df.index <= pd.Timestamp.now())]
         if df.empty:
             continue
         fig = go.Figure(
@@ -207,35 +207,100 @@ def test_load_data():
 
 
 
+
+
 def test_strategy():
-    path = Path("/home/aan/Documents/bullish/data/db_json.json")
-    tiny_path = Path("/home/aan/Documents/bullish/data/tiny_db_json.json")
-    db = TinyDB(tiny_path)
-    # db.insert_multiple(json.loads(path.read_text()))
-    equity = Query()
-    results = db.search(
-        (equity.fundamental.ratios.price_earning_ratio > 5)
-        & (equity.fundamental.ratios.price_earning_ratio < 15)
+    # path = Path("/home/aan/Documents/bullish/data/db_json.json")
+    # tiny_path = Path("/home/aan/Documents/bullish/data/tiny_db_json.json")
+    # db = TinyDB(tiny_path)
+    # # db.insert_multiple(json.loads(path.read_text()))
+    # equity = Query()
+    # results = db.search(
+    #     (equity.fundamental.ratios.price_earning_ratio > 5)
+    #     & (equity.fundamental.ratios.price_earning_ratio < 15)
+    #
+    # )
+    # # results = db.search((equity.symbol == "PROX"))
+    # ts = [TickerAnalysis(**rt) for rt in results][0]
+    # # for t in ts:
+    # df = ts.get_price()
+    # fig = go.Figure(
+    # )
+    df = pd.read_csv("/home/aan/Documents/bullish/tests/data.csv")
 
-    )
-    # results = db.search((equity.symbol == "PROX"))
-    ts = [TickerAnalysis(**rt) for rt in results][:1]
-    for t in ts:
-        df = t.get_price()
-        # fig = go.Figure(
+    index = pd.DatetimeIndex(df[df.columns[0]])
+    index.name = None
+    df = df.drop(df.columns[0], axis=1)
+    df.index = index
+    # df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=200)) & (df.index <= pd.Timestamp.now())]
+    support_line = []
+    resistance_line = []
+    support_dataframe = pd.DataFrame(columns = ["support"])
+    resistance_dataframe = pd.DataFrame(columns = ["resistance"])
+    for i in range(len(df.index)):
+        data = df[: i + 1]
+        data_orig = data.copy()
+        for x in [20, 50,200]:
+            data[f"ma_{x}"] = data.price.rolling(window=x).mean()
+        support_data = support(data_orig, data_orig.index[-1])
+        resistance_data = resistance(data_orig, data_orig.index[-1])
+        (min_slope, intercept, support_df) = support_data
+        (min_slope, intercept, resistance_df) = resistance_data
+        # if support_df.empty:
+        #     support_line.append(np.nan)
+        # else:
+        #     support_line.append(support_df.loc[data.index[-1]].values.flatten()[0])
+        # def get_great(x1, x2):
+        #     a = 12
+        support_dataframe = support_dataframe.combine_first(support_df[:-1])
+        resistance_dataframe = resistance_dataframe.combine_first(resistance_df[:-1])
+        resistance_dataframe.index = resistance_dataframe.index.drop_duplicates()
+        resistance_dataframe = resistance_dataframe.reindex(index=data.index)
+        support_dataframe  =support_dataframe.reindex(index=data.index)
+        data["support"] = support_dataframe["support"]
+        # if resistance_df.empty:
+        #     resistance_line.append(np.nan)
+        # else:
+        #     resistance_line.append(resistance_df.loc[data.index[-1]].values.flatten()[0])
+        #     a = 12
+        data["resistance"] = resistance_dataframe["resistance"]
+        results = []
+    fig = go.Figure(
+        # data=go.Candlestick(
+        #     name="test",
+        #     x=data.index,
+        #     open=data["open"],
+        #     high=data["high"],
+        #     low=data["low"],
+        #     close=data["price"],
         # )
-        df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=90)) & (df.index <= pd.Timestamp.now())]
-        if df.empty:
-            continue
+    )
+    for x in ["ma_20", "ma_50", "ma_200","support","resistance"]:
+        fig.add_trace(go.Line(x=data.index, y=data[x]))
+    fig.show()
+    # plot_support(fig, df)
+    # plot_resistance(fig, df)
 
-        for i in range(len(df.index)):
-            data = df[: i + 1]
-            for x in [20, 50,200]:
-                data_ma = data.rolling(window=x).mean()
-            support_data = support(data, data.index[-1])
-            resistance_data = resistance(data, data.index[-1])
-            (min_slope, intercept, support_df) = support_data
-            (min_slope, intercept, resistance_df) = resistance_data
+    # @njit(debug=True)
+    # def apply_strategy(x):
+    #
+    #
+    #     return x[0]
+    #
+    # df.expanding(1, method='table').apply(apply_strategy, raw=True, engine="numba")
+    # df.expanding(1).agg(apply_strategy)
+
+    min_periods = 100
+
+
+    # for i in range(len(df.index)):
+    #     data = df[: i + 1]
+    #     for x in [20, 50,200]:
+    #         data_ma = data.rolling(window=x).mean()
+    #     support_data = support(data, data.index[-1])
+    #     resistance_data = resistance(data, data.index[-1])
+    #     (min_slope, intercept, support_df) = support_data
+    #     (min_slope, intercept, resistance_df) = resistance_data
 
 
 def resample(df):
@@ -256,3 +321,18 @@ def resample(df):
         .apply(lambda x: x["price"][0])
     )
     return df_resample
+
+
+if __name__ == "__main__":
+    df = pd.read_csv("/home/aan/Documents/bullish/tests/data.csv")
+
+    results = []
+
+    @njit(debug=True)
+    def apply_strategy(x):
+        gdb_init()
+        gdb_breakpoint()
+
+        return x[0]
+
+    df.expanding(1, method='table').apply(apply_strategy, raw=True, engine="numba")
