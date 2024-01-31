@@ -1,14 +1,18 @@
 import abc
 import json
 import sys
+from enum import Enum
+from functools import cached_property
 from itertools import zip_longest
 from pathlib import Path
+from typing import Callable, List
 
 import numpy as np
 import pandas as pd
 from tinydb import TinyDB, Query
 import os
 
+from patterns.candlestick import CandleStick
 from trend.lines import support, resistance, plot_support, plot_resistance
 
 sys.path.append("/home/aan/Documents/stocks")
@@ -49,10 +53,6 @@ class TickerAnalysis(Ticker):
 import plotly.graph_objects as go
 
 
-
-
-
-
 def gap(data: pd.DataFrame):
     return ((data.high[0] - data.low[1]) < 0) or ((data.low[0] - data.high[1]) > 0)
 
@@ -79,11 +79,22 @@ def support_line(data: pd.DataFrame):
     min_slope = min(slopes)
     min_slope_index = slopes.index(min_slope)
     intercept = ys_[min_slope_index] - min_slope * xs_[min_slope_index]
-    length = 4*len(data_from_lowest) if len(data_from_lowest) <4 else 6*len(data_from_lowest)
-    return min_slope,intercept, pd.DataFrame(
-        [min_slope * x + intercept for x in range(length)],
-        index=pd.date_range(start=lowest_index[0], end=lowest_index[0] + pd.Timedelta(days=length-1)),
-        columns=["support"],
+    length = (
+        4 * len(data_from_lowest)
+        if len(data_from_lowest) < 4
+        else 6 * len(data_from_lowest)
+    )
+    return (
+        min_slope,
+        intercept,
+        pd.DataFrame(
+            [min_slope * x + intercept for x in range(length)],
+            index=pd.date_range(
+                start=lowest_index[0],
+                end=lowest_index[0] + pd.Timedelta(days=length - 1),
+            ),
+            columns=["support"],
+        ),
     )
 
 
@@ -96,7 +107,6 @@ def test_load_data():
     results = db.search(
         (equity.fundamental.ratios.price_earning_ratio > 5)
         & (equity.fundamental.ratios.price_earning_ratio < 15)
-
     )
     # results = db.search((equity.symbol == "PROX"))
     ts = [TickerAnalysis(**rt) for rt in results][30:-10]
@@ -115,13 +125,16 @@ def test_load_data():
         "Technology",
         "Utilities",
     }
-    lines_resistance  =set()
-    lines_support  =set()
+    lines_resistance = set()
+    lines_support = set()
     for t in ts:
         df = t.get_price()
         # fig = go.Figure(
         # )
-        df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=200)) & (df.index <= pd.Timestamp.now())]
+        df = df.loc[
+            (df.index > pd.Timestamp.now() - pd.Timedelta(days=200))
+            & (df.index <= pd.Timestamp.now())
+        ]
         if df.empty:
             continue
         fig = go.Figure(
@@ -172,7 +185,7 @@ def test_load_data():
         # support = support_line(df)
         # fig.add_trace(go.Line(x=support.index, y=support["support"]))
         # fig.add_scatter(x=df.index, y=df.price)
-        for x in [20, 50,200]:
+        for x in [20, 50, 200]:
             df_ma = df.rolling(window=x).mean()
             fig.add_trace(go.Line(x=df_ma.index, y=df_ma["price"]))
         # for pattern in patterns:
@@ -202,11 +215,158 @@ def test_load_data():
         #             symbol="triangle-up",  # Set marker symbol to square
         #         ),
         #     )
-        fig.update_layout(yaxis_range=[min(df.low) -1,max(df.high) + 1])
+        fig.update_layout(yaxis_range=[min(df.low) - 1, max(df.high) + 1])
         fig.show()
 
 
+from pydantic import BaseModel, computed_field, Field, PrivateAttr
 
+
+class BuySell(Enum):
+    buy: str = "buy"
+    sell: str = "sell"
+
+
+class BaseInput(BaseModel):
+    def __hash__(self):
+        return hash(self.name)
+
+    @abc.abstractmethod
+    def compute(self, data: pd.DataFrame) -> pd.DataFrame:
+        ...
+
+
+class BaseMovingAverage(BaseInput):
+    window: int
+
+    @computed_field
+    def name(self) -> str:
+        return f"moving_average_{self.window}"
+
+    def compute(self, data: pd.DataFrame):
+        try:
+            data[self.name] = data.price.rolling(window=self.window).mean()
+        except:
+            pass
+        return data
+
+
+class SupportLine(BaseInput):
+    name: str = "support"
+    extreme: Callable = Field(default=lambda data: data.low == data.low.min())
+    opposite: Callable = Field(default=lambda data: data.high == data.high.max())
+    extract_value: Callable = Field(default=lambda data: data.low)
+    slope: Callable = Field(default=min)
+    _previous_data: pd.DataFrame = PrivateAttr(default=pd.DataFrame())
+
+    def _to_timestamp(self, data: pd.DataFrame) -> pd:
+        return pd.DatetimeIndex(list(data.index)).astype("int64") // 10 ** 9
+
+    def compute(self, data: pd.DataFrame) -> pd.DataFrame:
+        data_extreme = self.extract_value(data.where(self.extreme(data))).dropna()
+        extreme_index = data_extreme.index
+        data_from_extreme = data.loc[extreme_index[0] :]
+        data_to_opposite = self.extract_value(data_from_extreme.where(
+            self.opposite(data_from_extreme)
+        )).dropna()
+        base_data = data_from_extreme.loc[extreme_index[0] : data_to_opposite.index[0]]
+        ys = self.extract_value(base_data).values
+        xs = self._to_timestamp(base_data)
+        xs_ = xs[1:]
+        ys_ = ys[1:]
+        slopes = [(y - ys[0]) / (x - xs[0]) for x, y in zip(xs_, ys_)]
+        support = pd.DataFrame(columns=[self.name])
+        if slopes:
+            _slope = self.slope(slopes)
+            min_slope_index = slopes.index(_slope)
+            intercept = ys_[min_slope_index] - _slope * xs_[min_slope_index]
+            support = pd.DataFrame(
+                [_slope * x + intercept for x in xs],
+                index=pd.DatetimeIndex(list(base_data.index)),
+                columns=[self.name],
+            )
+
+        self._previous_data = self._previous_data.combine_first(support)
+        data[self.name] = self._previous_data[self.name]
+        return data
+
+
+class Resistance(SupportLine):
+    name: str = "resistance"
+    extreme: Callable = Field(default=lambda data: data.high == data.high.max())
+    opposite: Callable = Field(default=lambda data: data.low == data.low.min())
+    extract_value: Callable = Field(default=lambda data: data.high)
+    slope: Callable = Field(default=max)
+
+
+class Point(CandleStick):
+    price: float
+    high: float
+    low: float
+    volume: float
+    support: float
+    resistance: float
+    moving_average_200: float
+    moving_average_20: float
+    moving_average_5: float
+
+
+class Strategy(BaseModel):
+    window: int = 1
+    name: str = "default"
+    inputs: List[BaseInput] = Field(
+        default=[
+            Resistance(),
+            SupportLine(),
+            BaseMovingAverage(window=200),
+            BaseMovingAverage(window=20),
+            BaseMovingAverage(window=5),
+        ]
+    )
+
+    def _buy(self, point: Point):
+        return point.price > point.moving_average_20 and point.price > point.support
+
+    def _sell(self, point: Point):
+        return point.price < point.moving_average_20 and point.price < point.support
+
+    def assess(self, data: pd.DataFrame):
+        points = Point.from_dataframe(data[-self.window:])
+
+
+class Backtest(BaseModel):
+    strategies: list[Strategy]
+    price: pd.DataFrame
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @computed_field
+    @cached_property
+    def _inputs(self) -> List[BaseInput]:
+        return list(
+            {input for strategy in self.strategies for input in strategy.inputs}
+        )
+
+    def play(self):
+        for i in range(len(self.price.index)):
+            data = self.price[: i + 1]
+            for input in self._inputs:
+                data = input.compute(data)
+            for strategy in self.strategies:
+                strategy.assess(data)
+        data
+
+
+def test_backtest():
+    df = pd.read_csv("/home/aan/Documents/bullish/tests/data.csv")
+    index = pd.DatetimeIndex(df[df.columns[0]])
+    index.name = None
+    df = df.drop(df.columns[0], axis=1)
+    df.index = index
+    backtest = Backtest(
+        strategies=[Strategy()],
+        price=df,
+    )
+    backtest.play()
 
 
 def test_strategy():
@@ -235,12 +395,12 @@ def test_strategy():
     # df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=200)) & (df.index <= pd.Timestamp.now())]
     support_line = []
     resistance_line = []
-    support_dataframe = pd.DataFrame(columns = ["support"])
-    resistance_dataframe = pd.DataFrame(columns = ["resistance"])
+    support_dataframe = pd.DataFrame(columns=["support"])
+    resistance_dataframe = pd.DataFrame(columns=["resistance"])
     for i in range(len(df.index)):
         data = df[: i + 1]
         data_orig = data.copy()
-        for x in [20, 50,200]:
+        for x in [5, 20, 50, 200]:
             data[f"ma_{x}"] = data.price.rolling(window=x).mean()
         support_data = support(data_orig, data_orig.index[-1])
         resistance_data = resistance(data_orig, data_orig.index[-1])
@@ -256,7 +416,7 @@ def test_strategy():
         resistance_dataframe = resistance_dataframe.combine_first(resistance_df[:-1])
         resistance_dataframe.index = resistance_dataframe.index.drop_duplicates()
         resistance_dataframe = resistance_dataframe.reindex(index=data.index)
-        support_dataframe  =support_dataframe.reindex(index=data.index)
+        support_dataframe = support_dataframe.reindex(index=data.index)
         data["support"] = support_dataframe["support"]
         # if resistance_df.empty:
         #     resistance_line.append(np.nan)
@@ -275,7 +435,7 @@ def test_strategy():
         #     close=data["price"],
         # )
     )
-    for x in ["ma_20", "ma_50", "ma_200","support","resistance"]:
+    for x in ["ma_5", "ma_20", "ma_50", "ma_200", "support", "resistance"]:
         fig.add_trace(go.Line(x=data.index, y=data[x]))
     fig.show()
     # plot_support(fig, df)
@@ -291,7 +451,6 @@ def test_strategy():
     # df.expanding(1).agg(apply_strategy)
 
     min_periods = 100
-
 
     # for i in range(len(df.index)):
     #     data = df[: i + 1]
@@ -335,4 +494,4 @@ if __name__ == "__main__":
 
         return x[0]
 
-    df.expanding(1, method='table').apply(apply_strategy, raw=True, engine="numba")
+    df.expanding(1, method="table").apply(apply_strategy, raw=True, engine="numba")
