@@ -222,9 +222,10 @@ def test_load_data():
 from pydantic import BaseModel, computed_field, Field, PrivateAttr
 
 
-class BuySell(Enum):
-    buy: str = "buy"
-    sell: str = "sell"
+class Status(Enum):
+    buy: int = 1
+    sell: int = 2
+    unknown: int = 0
 
 
 class BaseInput(BaseModel):
@@ -244,10 +245,7 @@ class BaseMovingAverage(BaseInput):
         return f"moving_average_{self.window}"
 
     def compute(self, data: pd.DataFrame):
-        try:
-            data[self.name] = data.price.rolling(window=self.window).mean()
-        except:
-            pass
+        data[self.name] = data.price.rolling(window=self.window).mean()
         return data
 
 
@@ -266,9 +264,9 @@ class SupportLine(BaseInput):
         data_extreme = self.extract_value(data.where(self.extreme(data))).dropna()
         extreme_index = data_extreme.index
         data_from_extreme = data.loc[extreme_index[0] :]
-        data_to_opposite = self.extract_value(data_from_extreme.where(
-            self.opposite(data_from_extreme)
-        )).dropna()
+        data_to_opposite = self.extract_value(
+            data_from_extreme.where(self.opposite(data_from_extreme))
+        ).dropna()
         base_data = data_from_extreme.loc[extreme_index[0] : data_to_opposite.index[0]]
         ys = self.extract_value(base_data).values
         xs = self._to_timestamp(base_data)
@@ -312,8 +310,9 @@ class Point(CandleStick):
 
 
 class Strategy(BaseModel):
-    window: int = 1
+    window: int = 5
     name: str = "default"
+    status: Status = Status.unknown
     inputs: List[BaseInput] = Field(
         default=[
             Resistance(),
@@ -323,17 +322,47 @@ class Strategy(BaseModel):
             BaseMovingAverage(window=5),
         ]
     )
+    _dataframe: pd.DataFrame = PrivateAttr(default=pd.DataFrame())
 
-    def _buy(self, point: Point):
-        return point.price > point.moving_average_20 and point.price > point.support
+    def _buy(self, points: List[Point]):
+        return all(
+            [
+                point.price > point.moving_average_20 and point.price > point.support
+                for point in points
+            ]
+        )
 
-    def _sell(self, point: Point):
-        return point.price < point.moving_average_20 and point.price < point.support
+    def _sell(self, points: List[Point]):
+        return all(
+            [
+                point.price < point.moving_average_20 and point.price < point.support
+                for point in points
+            ]
+        )
 
     def assess(self, data: pd.DataFrame):
-        points = Point.from_dataframe(data[-self.window:])
+        # points = Point.from_dataframe(data[-self.window :])
+        # self._buy(points)
+        # self._sell(points)
+        # if (self._buy(points) and self._sell(points)) or (
+        #     not self._sell(points) and not self._buy(points)
+        # ):
+        #     self.status = Status.unknown
+        # elif self._sell(points):
+        #     self.status = Status.sell
+        # elif self._buy(points):
+        #     self.status = Status.buy
+        # else:
+        #     self.status = Status.unknown
+        data = data[-self.window :]
+        data = intersection(data.moving_average_5, data.moving_average_20)
+        self._dataframe = self._dataframe.combine_first(data)
+        a = 12
 
 
+import numpy as np
+from plotly.subplots import make_subplots
+import plotly.figure_factory as ff
 class Backtest(BaseModel):
     strategies: list[Strategy]
     price: pd.DataFrame
@@ -353,7 +382,36 @@ class Backtest(BaseModel):
                 data = input.compute(data)
             for strategy in self.strategies:
                 strategy.assess(data)
-        data
+        data = pd.concat([self.strategies[0]._dataframe, data], axis=1)
+        perf_data = pd.DataFrame(difference(data), index=data.index)
+        fig = make_subplots(rows=2, cols=1, row_heights=[0.7, 0.3])
+        for x in [
+            "moving_average_5",
+            "moving_average_20",
+            "moving_average_200",
+            "support",
+            "resistance",
+        ]:
+            fig.add_trace(go.Line(x=data.index, y=data[x]),row=1, col=1)
+        fig.add_trace(
+            go.Scatter(
+                x=data.index,
+                y=data["intersection"],
+                mode="markers",
+                marker={"size": 10, "color": data.sign},
+            ),row=1, col=1
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=data.index,
+                y=perf_data["percentage"],
+                mode="markers",
+                marker={"size": 5},
+            ),row=2, col=1
+        )
+
+
+        fig.show()
 
 
 def test_backtest():
@@ -367,6 +425,92 @@ def test_backtest():
         price=df,
     )
     backtest.play()
+
+
+def intersection(
+    first_curve: pd.Series, second_curve: pd.Series, name: str = "intersection"
+):
+    curve_difference = np.diff(np.sign(first_curve - second_curve))
+    difference_sign = np.sign(curve_difference)
+    data = pd.concat(
+        [
+            pd.DataFrame(
+                first_curve.iloc[np.argwhere(curve_difference).flatten()],
+                index=first_curve.index,
+            ),
+            pd.DataFrame(
+                difference_sign, index=first_curve.index[:-1], columns=["sign"]
+            ),
+        ],
+        axis=1,
+    )
+    data = data.rename(columns={first_curve.name: name})
+    return data
+
+def difference(data, name: str = "intersection"):
+    gain = (
+        data[[name, "sign"]]
+        .dropna()
+        .diff()
+        .rename(columns={name: "gain", "sign": "type"})
+    )
+    percentage_data = data[[name]].dropna()
+    if not percentage_data.empty:
+        percentage = (percentage_data.pct_change() * 100).rename(
+            columns={name: "percentage"}
+        )
+    else:
+        percentage = pd.DataFrame(columns=["percentage"], index=gain.index)
+    data_ = pd.concat([gain, percentage], axis=1)
+    data_ = data_.where(data_.type == -2)
+    return data_
+
+def test_intersection_dataframe():
+    index = pd.date_range("2024-01-01", "2024-01-10")
+    first_parameter = [12, 13, 14, 15, 15.1, 14.5, 14.2, 13.5, 12, 11]
+    second_parameter = [13, 13.1, 13.5, 14, 15, 15.1, 14, 13, 13, 13.5]
+    data = pd.DataFrame(
+        {"first_parameter": first_parameter, "second_parameter": second_parameter},
+        index=index,
+    )
+    data_ = intersection(data.first_parameter, data.second_parameter)
+    data = pd.concat([data, data_], axis=1)
+    fig = go.Figure()
+    for x in [
+        "first_parameter",
+        "second_parameter",
+    ]:
+        fig.add_trace(go.Line(x=data.index, y=data[x]))
+    fig.add_trace(
+        go.Scatter(
+            x=data.index,
+            y=data["intersection"],
+            mode="markers",
+            marker={"size": 10, "color": data.sign},
+        )
+    )
+    fig.show()
+
+
+def test_intersection():
+    data_up = pd.DataFrame.from_dict(
+        {"moving_average_5": [0, 0, 0, 0], "moving_average_20": [-1, -0.5, 0.5, 2]}
+    )
+    res_up = np.diff(np.sign(data_up.moving_average_5 - data_up.moving_average_20))
+    pd.DataFrame(index=data_up.index, columns=data_up.columns).combine_first(
+        data_up.moving_average_5.iloc[np.argwhere(res_up).flatten()]
+    )
+    pd.DataFrame(
+        data_up.moving_average_5.iloc[np.argwhere(res_up).flatten()],
+        index=data_up.index,
+    )
+
+    # data_down = pd.DataFrame.from_dict({"moving_average_5":[0,0,0,0], "moving_average_20":[1,0.5, -0.5, -2]})
+    # res_down = np.diff(np.sign(data_down.moving_average_5 - data_down.moving_average_20))
+    # a = 12
+    #
+    # data.iloc[np.argwhere(res_up).flatten()]
+    # data.iloc[np.argwhere(np.diff(np.sign(data.moving_average_5 - data.moving_average_20))).flatten()]
 
 
 def test_strategy():
