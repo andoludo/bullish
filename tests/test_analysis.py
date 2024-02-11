@@ -249,6 +249,55 @@ class BaseMovingAverage(BaseInput):
         return data
 
 
+class BaseExponentialMovingAverage(BaseInput):
+    window: int
+
+    @computed_field
+    def name(self) -> str:
+        return f"exponential_moving_average_{self.window}"
+
+    def compute(self, data: pd.DataFrame):
+        data[self.name] = data.price.ewm(span=self.window, adjust=False).mean()
+        return data
+
+
+class Macd(BaseInput):
+    window: int = None
+
+    @computed_field
+    def name(self) -> str:
+        return f"macd"
+
+    def compute(self, data: pd.DataFrame):
+        data = BaseExponentialMovingAverage(window=12).compute(
+            data
+        )
+        data = BaseExponentialMovingAverage(window=26).compute(
+            data
+        )
+        data[self.name] = data.exponential_moving_average_12 - data.exponential_moving_average_26
+        return data
+
+
+class MacdSignal(BaseInput):
+    window: int = None
+
+    @computed_field
+    def name(self) -> str:
+        return f"macd_signal"
+
+    def compute(self, data: pd.DataFrame):
+        data = BaseExponentialMovingAverage(window=12).compute(
+            data
+        )
+        data = BaseExponentialMovingAverage(window=26).compute(
+            data
+        )
+        macd = data.exponential_moving_average_12 - data.exponential_moving_average_26
+        data[self.name] = macd.ewm(span=9, adjust=False).mean()
+        return data
+
+
 class SupportLine(BaseInput):
     name: str = "support"
     extreme: Callable = Field(default=lambda data: data.low == data.low.min())
@@ -312,7 +361,6 @@ class Point(CandleStick):
 class Strategy(BaseModel):
     window: int = 5
     name: str = "default"
-    status: Status = Status.unknown
     inputs: List[BaseInput] = Field(
         default=[
             Resistance(),
@@ -324,47 +372,42 @@ class Strategy(BaseModel):
     )
     _dataframe: pd.DataFrame = PrivateAttr(default=pd.DataFrame())
 
-    def _buy(self, points: List[Point]):
-        return all(
-            [
-                point.price > point.moving_average_20 and point.price > point.support
-                for point in points
-            ]
-        )
-
-    def _sell(self, points: List[Point]):
-        return all(
-            [
-                point.price < point.moving_average_20 and point.price < point.support
-                for point in points
-            ]
-        )
-
     def assess(self, data: pd.DataFrame):
-        # points = Point.from_dataframe(data[-self.window :])
-        # self._buy(points)
-        # self._sell(points)
-        # if (self._buy(points) and self._sell(points)) or (
-        #     not self._sell(points) and not self._buy(points)
-        # ):
-        #     self.status = Status.unknown
-        # elif self._sell(points):
-        #     self.status = Status.sell
-        # elif self._buy(points):
-        #     self.status = Status.buy
-        # else:
-        #     self.status = Status.unknown
         data = data[-self.window :]
         data = intersection(data.moving_average_5, data.moving_average_20)
         self._dataframe = self._dataframe.combine_first(data)
         a = 12
 
 
+class MACD(BaseModel):
+    window: int = 5
+    name: str = "default"
+    inputs: List[BaseInput] = Field(
+        default=[
+            BaseMovingAverage(window=200),
+            BaseMovingAverage(window=20),
+            BaseMovingAverage(window=5),
+            Macd(),
+            MacdSignal(),
+        ]
+    )
+    _dataframe: pd.DataFrame = PrivateAttr(default=pd.DataFrame())
+
+    def assess(self, data: pd.DataFrame):
+        data_window = data[-self.window :]
+        data_intersection = intersection(data_window.macd, data_window.macd_signal)
+        data_intersection["intersection"] = pd.DataFrame(data_window.price.loc[data_intersection.intersection.dropna().index], index=data_window.index)
+        self._dataframe = self._dataframe.combine_first(data_intersection)
+        a = 12
+
+
 import numpy as np
 from plotly.subplots import make_subplots
 import plotly.figure_factory as ff
+
+
 class Backtest(BaseModel):
-    strategies: list[Strategy]
+    strategies: list[Strategy | MACD]
     price: pd.DataFrame
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -386,20 +429,28 @@ class Backtest(BaseModel):
         perf_data = pd.DataFrame(difference(data), index=data.index)
         fig = make_subplots(rows=2, cols=1, row_heights=[0.7, 0.3])
         for x in [
+            # "macd",
+            # "macd_signal",
+            # "exponential_moving_average_12",
+            # "exponential_moving_average_26"
+            # "moving_average_200",
             "moving_average_5",
             "moving_average_20",
-            "moving_average_200",
-            "support",
-            "resistance",
+            "price",
+            # "support",
+            # "resistance",
         ]:
-            fig.add_trace(go.Line(x=data.index, y=data[x]),row=1, col=1)
+            fig.add_trace(go.Line(x=data.index, y=data[x]), row=1, col=1)
+
         fig.add_trace(
             go.Scatter(
                 x=data.index,
                 y=data["intersection"],
                 mode="markers",
                 marker={"size": 10, "color": data.sign},
-            ),row=1, col=1
+            ),
+            row=1,
+            col=1,
         )
         fig.add_trace(
             go.Scatter(
@@ -407,9 +458,10 @@ class Backtest(BaseModel):
                 y=perf_data["percentage"],
                 mode="markers",
                 marker={"size": 5},
-            ),row=2, col=1
+            ),
+            row=2,
+            col=1,
         )
-
 
         fig.show()
 
@@ -421,7 +473,7 @@ def test_backtest():
     df = df.drop(df.columns[0], axis=1)
     df.index = index
     backtest = Backtest(
-        strategies=[Strategy()],
+        strategies=[MACD()],
         price=df,
     )
     backtest.play()
@@ -430,6 +482,8 @@ def test_backtest():
 def intersection(
     first_curve: pd.Series, second_curve: pd.Series, name: str = "intersection"
 ):
+    if not first_curve.name:
+        first_curve.name = name
     curve_difference = np.diff(np.sign(first_curve - second_curve))
     difference_sign = np.sign(curve_difference)
     data = pd.concat(
@@ -446,6 +500,7 @@ def intersection(
     )
     data = data.rename(columns={first_curve.name: name})
     return data
+
 
 def difference(data, name: str = "intersection"):
     gain = (
@@ -464,6 +519,7 @@ def difference(data, name: str = "intersection"):
     data_ = pd.concat([gain, percentage], axis=1)
     data_ = data_.where(data_.type == -2)
     return data_
+
 
 def test_intersection_dataframe():
     index = pd.date_range("2024-01-01", "2024-01-10")
@@ -514,74 +570,79 @@ def test_intersection():
 
 
 def test_strategy():
-    # path = Path("/home/aan/Documents/bullish/data/db_json.json")
-    # tiny_path = Path("/home/aan/Documents/bullish/data/tiny_db_json.json")
-    # db = TinyDB(tiny_path)
-    # # db.insert_multiple(json.loads(path.read_text()))
-    # equity = Query()
-    # results = db.search(
-    #     (equity.fundamental.ratios.price_earning_ratio > 5)
-    #     & (equity.fundamental.ratios.price_earning_ratio < 15)
-    #
-    # )
-    # # results = db.search((equity.symbol == "PROX"))
-    # ts = [TickerAnalysis(**rt) for rt in results][0]
-    # # for t in ts:
-    # df = ts.get_price()
-    # fig = go.Figure(
-    # )
-    df = pd.read_csv("/home/aan/Documents/bullish/tests/data.csv")
-
-    index = pd.DatetimeIndex(df[df.columns[0]])
-    index.name = None
-    df = df.drop(df.columns[0], axis=1)
-    df.index = index
-    # df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=200)) & (df.index <= pd.Timestamp.now())]
-    support_line = []
-    resistance_line = []
-    support_dataframe = pd.DataFrame(columns=["support"])
-    resistance_dataframe = pd.DataFrame(columns=["resistance"])
-    for i in range(len(df.index)):
-        data = df[: i + 1]
-        data_orig = data.copy()
-        for x in [5, 20, 50, 200]:
-            data[f"ma_{x}"] = data.price.rolling(window=x).mean()
-        support_data = support(data_orig, data_orig.index[-1])
-        resistance_data = resistance(data_orig, data_orig.index[-1])
-        (min_slope, intercept, support_df) = support_data
-        (min_slope, intercept, resistance_df) = resistance_data
-        # if support_df.empty:
-        #     support_line.append(np.nan)
-        # else:
-        #     support_line.append(support_df.loc[data.index[-1]].values.flatten()[0])
-        # def get_great(x1, x2):
-        #     a = 12
-        support_dataframe = support_dataframe.combine_first(support_df[:-1])
-        resistance_dataframe = resistance_dataframe.combine_first(resistance_df[:-1])
-        resistance_dataframe.index = resistance_dataframe.index.drop_duplicates()
-        resistance_dataframe = resistance_dataframe.reindex(index=data.index)
-        support_dataframe = support_dataframe.reindex(index=data.index)
-        data["support"] = support_dataframe["support"]
-        # if resistance_df.empty:
-        #     resistance_line.append(np.nan)
-        # else:
-        #     resistance_line.append(resistance_df.loc[data.index[-1]].values.flatten()[0])
-        #     a = 12
-        data["resistance"] = resistance_dataframe["resistance"]
-        results = []
-    fig = go.Figure(
-        # data=go.Candlestick(
-        #     name="test",
-        #     x=data.index,
-        #     open=data["open"],
-        #     high=data["high"],
-        #     low=data["low"],
-        #     close=data["price"],
-        # )
+    path = Path("/home/aan/Documents/bullish/data/db_json.json")
+    tiny_path = Path("/home/aan/Documents/bullish/data/tiny_db_json.json")
+    db = TinyDB(tiny_path)
+    # db.insert_multiple(json.loads(path.read_text()))
+    equity = Query()
+    results = db.search(
+        (equity.fundamental.ratios.price_earning_ratio > 5)
+        & (equity.fundamental.ratios.price_earning_ratio < 15)
     )
-    for x in ["ma_5", "ma_20", "ma_50", "ma_200", "support", "resistance"]:
-        fig.add_trace(go.Line(x=data.index, y=data[x]))
-    fig.show()
+    # # results = db.search((equity.symbol == "PROX"))
+    ts = [TickerAnalysis(**rt) for rt in results]
+    for t in ts:
+        df = t.get_price()
+        backtest = Backtest(
+            strategies=[Strategy()],
+            price=df,
+        )
+        backtest.play()
+
+    # # fig = go.Figure(
+    # # )
+    # df = pd.read_csv("/home/aan/Documents/bullish/tests/data.csv")
+    #
+    # index = pd.DatetimeIndex(df[df.columns[0]])
+    # index.name = None
+    # df = df.drop(df.columns[0], axis=1)
+    # df.index = index
+    # # df = df.loc[(df.index > pd.Timestamp.now() - pd.Timedelta(days=200)) & (df.index <= pd.Timestamp.now())]
+    # support_line = []
+    # resistance_line = []
+    # support_dataframe = pd.DataFrame(columns=["support"])
+    # resistance_dataframe = pd.DataFrame(columns=["resistance"])
+    # for i in range(len(df.index)):
+    #     data = df[: i + 1]
+    #     data_orig = data.copy()
+    #     for x in [5, 20, 50, 200]:
+    #         data[f"ma_{x}"] = data.price.rolling(window=x).mean()
+    #     support_data = support(data_orig, data_orig.index[-1])
+    #     resistance_data = resistance(data_orig, data_orig.index[-1])
+    #     (min_slope, intercept, support_df) = support_data
+    #     (min_slope, intercept, resistance_df) = resistance_data
+    #     # if support_df.empty:
+    #     #     support_line.append(np.nan)
+    #     # else:
+    #     #     support_line.append(support_df.loc[data.index[-1]].values.flatten()[0])
+    #     # def get_great(x1, x2):
+    #     #     a = 12
+    #     support_dataframe = support_dataframe.combine_first(support_df[:-1])
+    #     resistance_dataframe = resistance_dataframe.combine_first(resistance_df[:-1])
+    #     resistance_dataframe.index = resistance_dataframe.index.drop_duplicates()
+    #     resistance_dataframe = resistance_dataframe.reindex(index=data.index)
+    #     support_dataframe = support_dataframe.reindex(index=data.index)
+    #     data["support"] = support_dataframe["support"]
+    #     # if resistance_df.empty:
+    #     #     resistance_line.append(np.nan)
+    #     # else:
+    #     #     resistance_line.append(resistance_df.loc[data.index[-1]].values.flatten()[0])
+    #     #     a = 12
+    #     data["resistance"] = resistance_dataframe["resistance"]
+    #     results = []
+    # fig = go.Figure(
+    #     # data=go.Candlestick(
+    #     #     name="test",
+    #     #     x=data.index,
+    #     #     open=data["open"],
+    #     #     high=data["high"],
+    #     #     low=data["low"],
+    #     #     close=data["price"],
+    #     # )
+    # )
+    # for x in ["ma_5", "ma_20", "ma_50", "ma_200", "support", "resistance"]:
+    #     fig.add_trace(go.Line(x=data.index, y=data[x]))
+    # fig.show()
     # plot_support(fig, df)
     # plot_resistance(fig, df)
 
