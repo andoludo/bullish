@@ -1,25 +1,23 @@
-import abc
-import json
 import sys
 from enum import Enum
 from functools import cached_property
-from itertools import zip_longest
 from pathlib import Path
-from typing import Callable, List
+from typing import List
 
-import numpy as np
 import pandas as pd
 from tinydb import TinyDB, Query
-import os
 
 from patterns.candlestick import CandleStick
-from trend.lines import support, resistance, plot_support, plot_resistance
+from strategy.inputs import BaseInput
+from strategy.strategy import MACD, MovingAverage5To20, BaseStrategy
+from strategy.func import intersection
+from trend.lines import plot_support, plot_resistance
 
 sys.path.append("/home/aan/Documents/stocks")
 from scrapers.model import Ticker
 
-from numba import jit, njit, gdb_init, gdb_breakpoint
-from pydantic import BaseModel, ConfigDict
+from numba import njit, gdb_init, gdb_breakpoint
+from pydantic import ConfigDict
 
 
 class TickerAnalysis(Ticker):
@@ -55,47 +53,6 @@ import plotly.graph_objects as go
 
 def gap(data: pd.DataFrame):
     return ((data.high[0] - data.low[1]) < 0) or ((data.low[0] - data.high[1]) > 0)
-
-
-import numpy as np
-
-
-def support_line(data: pd.DataFrame):
-    data_lowest = data.where(data.low == data.low.min()).dropna()
-    lowest_index = data_lowest.index
-    data_from_lowest = data.loc[lowest_index[0] :]
-    data_to_max = data_from_lowest.where(
-        data_from_lowest.high == data_from_lowest.high.max()
-    ).dropna()
-    base_data = data_from_lowest.loc[lowest_index[0] : data_to_max.index[0]]
-    ys = base_data.low.values
-    xs = range(len(base_data.index))
-    xs_ = xs[1:]
-    ys_ = ys[1:]
-    slopes = [(y - ys[0]) / (x - xs[0]) for x, y in zip(xs_, ys_)]
-    if not slopes:
-        return
-
-    min_slope = min(slopes)
-    min_slope_index = slopes.index(min_slope)
-    intercept = ys_[min_slope_index] - min_slope * xs_[min_slope_index]
-    length = (
-        4 * len(data_from_lowest)
-        if len(data_from_lowest) < 4
-        else 6 * len(data_from_lowest)
-    )
-    return (
-        min_slope,
-        intercept,
-        pd.DataFrame(
-            [min_slope * x + intercept for x in range(length)],
-            index=pd.date_range(
-                start=lowest_index[0],
-                end=lowest_index[0] + pd.Timedelta(days=length - 1),
-            ),
-            columns=["support"],
-        ),
-    )
 
 
 def test_load_data():
@@ -219,131 +176,13 @@ def test_load_data():
         fig.show()
 
 
-from pydantic import BaseModel, computed_field, Field, PrivateAttr
+from pydantic import BaseModel, computed_field
 
 
 class Status(Enum):
     buy: int = 1
     sell: int = 2
     unknown: int = 0
-
-
-class BaseInput(BaseModel):
-    def __hash__(self):
-        return hash(self.name)
-
-    @abc.abstractmethod
-    def compute(self, data: pd.DataFrame) -> pd.DataFrame:
-        ...
-
-
-class BaseMovingAverage(BaseInput):
-    window: int
-
-    @computed_field
-    def name(self) -> str:
-        return f"moving_average_{self.window}"
-
-    def compute(self, data: pd.DataFrame):
-        data[self.name] = data.price.rolling(window=self.window).mean()
-        return data
-
-
-class BaseExponentialMovingAverage(BaseInput):
-    window: int
-
-    @computed_field
-    def name(self) -> str:
-        return f"exponential_moving_average_{self.window}"
-
-    def compute(self, data: pd.DataFrame):
-        data[self.name] = data.price.ewm(span=self.window, adjust=False).mean()
-        return data
-
-
-class Macd(BaseInput):
-    window: int = None
-
-    @computed_field
-    def name(self) -> str:
-        return f"macd"
-
-    def compute(self, data: pd.DataFrame):
-        data = BaseExponentialMovingAverage(window=12).compute(
-            data
-        )
-        data = BaseExponentialMovingAverage(window=26).compute(
-            data
-        )
-        data[self.name] = data.exponential_moving_average_12 - data.exponential_moving_average_26
-        return data
-
-
-class MacdSignal(BaseInput):
-    window: int = None
-
-    @computed_field
-    def name(self) -> str:
-        return f"macd_signal"
-
-    def compute(self, data: pd.DataFrame):
-        data = BaseExponentialMovingAverage(window=12).compute(
-            data
-        )
-        data = BaseExponentialMovingAverage(window=26).compute(
-            data
-        )
-        macd = data.exponential_moving_average_12 - data.exponential_moving_average_26
-        data[self.name] = macd.ewm(span=9, adjust=False).mean()
-        return data
-
-
-class SupportLine(BaseInput):
-    name: str = "support"
-    extreme: Callable = Field(default=lambda data: data.low == data.low.min())
-    opposite: Callable = Field(default=lambda data: data.high == data.high.max())
-    extract_value: Callable = Field(default=lambda data: data.low)
-    slope: Callable = Field(default=min)
-    _previous_data: pd.DataFrame = PrivateAttr(default=pd.DataFrame())
-
-    def _to_timestamp(self, data: pd.DataFrame) -> pd:
-        return pd.DatetimeIndex(list(data.index)).astype("int64") // 10 ** 9
-
-    def compute(self, data: pd.DataFrame) -> pd.DataFrame:
-        data_extreme = self.extract_value(data.where(self.extreme(data))).dropna()
-        extreme_index = data_extreme.index
-        data_from_extreme = data.loc[extreme_index[0] :]
-        data_to_opposite = self.extract_value(
-            data_from_extreme.where(self.opposite(data_from_extreme))
-        ).dropna()
-        base_data = data_from_extreme.loc[extreme_index[0] : data_to_opposite.index[0]]
-        ys = self.extract_value(base_data).values
-        xs = self._to_timestamp(base_data)
-        xs_ = xs[1:]
-        ys_ = ys[1:]
-        slopes = [(y - ys[0]) / (x - xs[0]) for x, y in zip(xs_, ys_)]
-        support = pd.DataFrame(columns=[self.name])
-        if slopes:
-            _slope = self.slope(slopes)
-            min_slope_index = slopes.index(_slope)
-            intercept = ys_[min_slope_index] - _slope * xs_[min_slope_index]
-            support = pd.DataFrame(
-                [_slope * x + intercept for x in xs],
-                index=pd.DatetimeIndex(list(base_data.index)),
-                columns=[self.name],
-            )
-
-        self._previous_data = self._previous_data.combine_first(support)
-        data[self.name] = self._previous_data[self.name]
-        return data
-
-
-class Resistance(SupportLine):
-    name: str = "resistance"
-    extreme: Callable = Field(default=lambda data: data.high == data.high.max())
-    opposite: Callable = Field(default=lambda data: data.low == data.low.min())
-    extract_value: Callable = Field(default=lambda data: data.high)
-    slope: Callable = Field(default=max)
 
 
 class Point(CandleStick):
@@ -358,56 +197,12 @@ class Point(CandleStick):
     moving_average_5: float
 
 
-class Strategy(BaseModel):
-    window: int = 5
-    name: str = "default"
-    inputs: List[BaseInput] = Field(
-        default=[
-            Resistance(),
-            SupportLine(),
-            BaseMovingAverage(window=200),
-            BaseMovingAverage(window=20),
-            BaseMovingAverage(window=5),
-        ]
-    )
-    _dataframe: pd.DataFrame = PrivateAttr(default=pd.DataFrame())
-
-    def assess(self, data: pd.DataFrame):
-        data = data[-self.window :]
-        data = intersection(data.moving_average_5, data.moving_average_20)
-        self._dataframe = self._dataframe.combine_first(data)
-        a = 12
-
-
-class MACD(BaseModel):
-    window: int = 5
-    name: str = "default"
-    inputs: List[BaseInput] = Field(
-        default=[
-            BaseMovingAverage(window=200),
-            BaseMovingAverage(window=20),
-            BaseMovingAverage(window=5),
-            Macd(),
-            MacdSignal(),
-        ]
-    )
-    _dataframe: pd.DataFrame = PrivateAttr(default=pd.DataFrame())
-
-    def assess(self, data: pd.DataFrame):
-        data_window = data[-self.window :]
-        data_intersection = intersection(data_window.macd, data_window.macd_signal)
-        data_intersection["intersection"] = pd.DataFrame(data_window.price.loc[data_intersection.intersection.dropna().index], index=data_window.index)
-        self._dataframe = self._dataframe.combine_first(data_intersection)
-        a = 12
-
-
 import numpy as np
 from plotly.subplots import make_subplots
-import plotly.figure_factory as ff
 
 
 class Backtest(BaseModel):
-    strategies: list[Strategy | MACD]
+    strategies: list[BaseStrategy]
     price: pd.DataFrame
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -425,8 +220,9 @@ class Backtest(BaseModel):
                 data = input.compute(data)
             for strategy in self.strategies:
                 strategy.assess(data)
-        data = pd.concat([self.strategies[0]._dataframe, data], axis=1)
-        perf_data = pd.DataFrame(difference(data), index=data.index)
+        for strategy in self.strategies:
+            data = pd.concat([strategy._dataframe, data], axis=1)
+            data = pd.concat([data, strategy.performance()], axis=1)
         fig = make_subplots(rows=2, cols=1, row_heights=[0.7, 0.3])
         for x in [
             # "macd",
@@ -442,26 +238,27 @@ class Backtest(BaseModel):
         ]:
             fig.add_trace(go.Line(x=data.index, y=data[x]), row=1, col=1)
 
-        fig.add_trace(
-            go.Scatter(
-                x=data.index,
-                y=data["intersection"],
-                mode="markers",
-                marker={"size": 10, "color": data.sign},
-            ),
-            row=1,
-            col=1,
-        )
-        fig.add_trace(
-            go.Scatter(
-                x=data.index,
-                y=perf_data["percentage"],
-                mode="markers",
-                marker={"size": 5},
-            ),
-            row=2,
-            col=1,
-        )
+        # fig.add_trace(
+        #     go.Scatter(
+        #         x=data.index,
+        #         y=data["intersection"],
+        #         mode="markers",
+        #         marker={"size": 10, "color": data.sign},
+        #     ),
+        #     row=1,
+        #     col=1,
+        # )
+        for strategy in self.strategies:
+            fig.add_trace(
+                go.Scatter(
+                    x=data.index,
+                    y=data[f"percentage_{strategy.name}"],
+                    mode="markers",
+                    marker={"size": 5},
+                ),
+                row=2,
+                col=1,
+            )
 
         fig.show()
 
@@ -473,52 +270,10 @@ def test_backtest():
     df = df.drop(df.columns[0], axis=1)
     df.index = index
     backtest = Backtest(
-        strategies=[MACD()],
+        strategies=[MACD(), MovingAverage5To20()],
         price=df,
     )
     backtest.play()
-
-
-def intersection(
-    first_curve: pd.Series, second_curve: pd.Series, name: str = "intersection"
-):
-    if not first_curve.name:
-        first_curve.name = name
-    curve_difference = np.diff(np.sign(first_curve - second_curve))
-    difference_sign = np.sign(curve_difference)
-    data = pd.concat(
-        [
-            pd.DataFrame(
-                first_curve.iloc[np.argwhere(curve_difference).flatten()],
-                index=first_curve.index,
-            ),
-            pd.DataFrame(
-                difference_sign, index=first_curve.index[:-1], columns=["sign"]
-            ),
-        ],
-        axis=1,
-    )
-    data = data.rename(columns={first_curve.name: name})
-    return data
-
-
-def difference(data, name: str = "intersection"):
-    gain = (
-        data[[name, "sign"]]
-        .dropna()
-        .diff()
-        .rename(columns={name: "gain", "sign": "type"})
-    )
-    percentage_data = data[[name]].dropna()
-    if not percentage_data.empty:
-        percentage = (percentage_data.pct_change() * 100).rename(
-            columns={name: "percentage"}
-        )
-    else:
-        percentage = pd.DataFrame(columns=["percentage"], index=gain.index)
-    data_ = pd.concat([gain, percentage], axis=1)
-    data_ = data_.where(data_.type == -2)
-    return data_
 
 
 def test_intersection_dataframe():

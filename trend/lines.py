@@ -93,3 +93,41 @@ def plot_trend(data, fig, trend_function, name, color):
 
                 )
             )
+
+
+def support_line(data: pd.DataFrame):
+    data_lowest = data.where(data.low == data.low.min()).dropna()
+    lowest_index = data_lowest.index
+    data_from_lowest = data.loc[lowest_index[0] :]
+    data_to_max = data_from_lowest.where(
+        data_from_lowest.high == data_from_lowest.high.max()
+    ).dropna()
+    base_data = data_from_lowest.loc[lowest_index[0] : data_to_max.index[0]]
+    ys = base_data.low.values
+    xs = range(len(base_data.index))
+    xs_ = xs[1:]
+    ys_ = ys[1:]
+    slopes = [(y - ys[0]) / (x - xs[0]) for x, y in zip(xs_, ys_)]
+    if not slopes:
+        return
+
+    min_slope = min(slopes)
+    min_slope_index = slopes.index(min_slope)
+    intercept = ys_[min_slope_index] - min_slope * xs_[min_slope_index]
+    length = (
+        4 * len(data_from_lowest)
+        if len(data_from_lowest) < 4
+        else 6 * len(data_from_lowest)
+    )
+    return (
+        min_slope,
+        intercept,
+        pd.DataFrame(
+            [min_slope * x + intercept for x in range(length)],
+            index=pd.date_range(
+                start=lowest_index[0],
+                end=lowest_index[0] + pd.Timedelta(days=length - 1),
+            ),
+            columns=["support"],
+        ),
+    )
