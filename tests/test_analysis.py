@@ -1,25 +1,23 @@
 import json
-import sys
+from enum import Enum
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
 from typing import List
 
 import pandas as pd
-from strategy.plot import plot_strategy
+import sys
+# sys.path.append("/home/aan/Documents/bearish")
+from bearish.scrapers.main import Scraper, DataSource, Country
+from bearish.scrapers.model import Ticker
+from pydantic import ConfigDict
 from tinydb import TinyDB, Query
 
 from patterns.candlestick import CandleStick
-from strategy.inputs import BaseInput
-from strategy.strategy import MACD, MovingAverage5To20, BaseStrategy
 from strategy.func import intersection
-from trend.lines import plot_support, plot_resistance
-
-sys.path.append("/home/aan/Documents/stocks")
-from scrapers.model import Ticker
-
-from numba import njit, gdb_init, gdb_breakpoint
-from pydantic import ConfigDict
+from strategy.inputs import BaseInput
+from strategy.plot import plot_strategy
+from strategy.strategy import MACD, MovingAverage5To20, BaseStrategy
 
 
 class TickerAnalysis(Ticker):
@@ -67,6 +65,17 @@ def test_select_stocsk():
 
         a = 12
 
+def test_follow_up():
+    scraper = Scraper(source=DataSource.investing, country=Country.belgium, bearish_path=Path("/home/aan/Documents/bullish/follow_up"))
+    scraper.scrape(skip_existing=False, symbols=["ACKB"])
+    db_json = scraper.create_db_json()
+    f = Path("/home/aan/Documents/bullish/follow_up/data/db_json.json")
+    f.touch(exist_ok=True)
+    with f.open(mode="w") as p:
+        json.dump(db_json, p, indent=4)
+    tiny_path = Path("/home/aan/Documents/bullish/follow_up/data/tiny_db_json.json")
+    db = TinyDB(tiny_path)
+    db.insert_multiple(json.loads(f.read_text()))
 def test_load_data():
     tiny_path = Path("/home/aan/Documents/bullish/data/tiny_db_json.json")
     db = TinyDB(tiny_path)
@@ -112,7 +121,6 @@ class Point(CandleStick):
 
 
 import numpy as np
-from plotly.subplots import make_subplots
 
 
 class Backtest(BaseModel):
