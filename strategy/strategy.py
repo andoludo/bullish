@@ -48,8 +48,14 @@ class MovingAverage5To20(BaseStrategy):
 
     def assess(self, data: pd.DataFrame):
         data = data[-self.window :]
-        data = intersection(data.moving_average_5, data.moving_average_20, self.name)
-        self._dataframe = self._dataframe.combine_first(data)
+        data_intersection = intersection(data.moving_average_5, data.moving_average_20, self.name)
+        data_intersection[f"buy_{self.name}"] = data_intersection[f"intersection_{self.name}"].where(
+            data_intersection[f"sign_{self.name}"] == 1
+        )
+        data_intersection[f"sell_{self.name}"] = data_intersection[f"intersection_{self.name}"].where(
+            data_intersection[f"sign_{self.name}"] == -1
+        )
+        self._dataframe = self._dataframe.combine_first(data_intersection)
 
 
 class MACD(BaseStrategy):
@@ -63,9 +69,17 @@ class MACD(BaseStrategy):
 
     def assess(self, data: pd.DataFrame):
         data_window = data[-self.window :]
-        data_intersection = intersection(data_window.macd, data_window.macd_signal, self.name)
+        data_intersection = intersection(
+            data_window.macd, data_window.macd_signal, self.name
+        )
         data_intersection[f"intersection_{self.name}"] = pd.DataFrame(
             data_window.price.loc[data_intersection.dropna().index],
             index=data_window.index,
+        )
+        data_intersection[f"buy_{self.name}"] = data_intersection[f"intersection_{self.name}"].where(
+            data_intersection[f"sign_{self.name}"] == 1
+        )
+        data_intersection[f"sell_{self.name}"] = data_intersection[f"intersection_{self.name}"].where(
+            data_intersection[f"sign_{self.name}"] == -1
         )
         self._dataframe = self._dataframe.combine_first(data_intersection)
