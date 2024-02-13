@@ -1,37 +1,38 @@
 import abc
-from typing import Callable
+from typing import Callable, Optional
 
 import pandas as pd
 from pydantic import BaseModel, computed_field, Field, PrivateAttr
 
 
 class BaseInput(BaseModel):
+    window: Optional[int] = None
     def __hash__(self):
         return hash(self.name)
+
+    @computed_field
+    def name(self) -> str:
+        if not self.window:
+            return f"{self.__class__.__name__.lower()}"
+
+        return f"{self.__class__.__name__.lower()}_{self.window}"
 
     @abc.abstractmethod
     def compute(self, data: pd.DataFrame) -> pd.DataFrame:
         ...
 
 
-class BaseMovingAverage(BaseInput):
+class MovingAverage(BaseInput):
     window: int
-
-    @computed_field
-    def name(self) -> str:
-        return f"moving_average_{self.window}"
 
     def compute(self, data: pd.DataFrame):
         data[self.name] = data.price.rolling(window=self.window).mean()
         return data
 
 
-class BaseExponentialMovingAverage(BaseInput):
+class ExponentialMovingAverage(BaseInput):
     window: int
 
-    @computed_field
-    def name(self) -> str:
-        return f"exponential_moving_average_{self.window}"
 
     def compute(self, data: pd.DataFrame):
         data[self.name] = data.price.ewm(span=self.window, adjust=False).mean()
@@ -40,43 +41,48 @@ class BaseExponentialMovingAverage(BaseInput):
 
 class Macd(BaseInput):
     window: int = None
-
-    @computed_field
-    def name(self) -> str:
-        return f"macd"
-
     def compute(self, data: pd.DataFrame):
-        data = BaseExponentialMovingAverage(window=12).compute(
-            data
+        data = ExponentialMovingAverage(window=12).compute(data)
+        data = ExponentialMovingAverage(window=26).compute(data)
+        data[self.name] = (
+            data.exponentialmovingaverage_12 - data.exponentialmovingaverage_26
         )
-        data = BaseExponentialMovingAverage(window=26).compute(
-            data
-        )
-        data[self.name] = data.exponential_moving_average_12 - data.exponential_moving_average_26
         return data
 
 
 class MacdSignal(BaseInput):
     window: int = None
-
-    @computed_field
-    def name(self) -> str:
-        return f"macd_signal"
-
     def compute(self, data: pd.DataFrame):
-        data = BaseExponentialMovingAverage(window=12).compute(
-            data
-        )
-        data = BaseExponentialMovingAverage(window=26).compute(
-            data
-        )
-        macd = data.exponential_moving_average_12 - data.exponential_moving_average_26
+        data = ExponentialMovingAverage(window=12).compute(data)
+        data = ExponentialMovingAverage(window=26).compute(data)
+        macd = data.exponentialmovingaverage_12 - data.exponentialmovingaverage_26
         data[self.name] = macd.ewm(span=9, adjust=False).mean()
         return data
 
 
-class SupportLine(BaseInput):
-    name: str = "support"
+class RSI(BaseInput):
+    window: int = 14
+
+    def compute(self, data: pd.DataFrame):
+        close_diff = data.price.diff()
+        up_days = (
+            close_diff.where(close_diff > 0)
+            .rolling(window=self.window, min_periods=1)
+            .mean()
+        )
+        down_days = (
+            -close_diff.where(close_diff < 0)
+            .rolling(window=self.window, min_periods=1)
+            .mean()
+        )
+
+        rs = up_days / down_days
+        rsi = 100 - (100 / (1 + rs))
+        data[self.name] = rsi
+        return data
+
+
+class Support(BaseInput):
     extreme: Callable = Field(default=lambda data: data.low == data.low.min())
     opposite: Callable = Field(default=lambda data: data.high == data.high.max())
     extract_value: Callable = Field(default=lambda data: data.low)
@@ -115,8 +121,7 @@ class SupportLine(BaseInput):
         return data
 
 
-class Resistance(SupportLine):
-    name: str = "resistance"
+class Resistance(Support):
     extreme: Callable = Field(default=lambda data: data.high == data.high.max())
     opposite: Callable = Field(default=lambda data: data.low == data.low.min())
     extract_value: Callable = Field(default=lambda data: data.high)

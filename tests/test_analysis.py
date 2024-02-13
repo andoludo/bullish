@@ -7,6 +7,7 @@ from typing import List
 
 import pandas as pd
 import sys
+
 # sys.path.append("/home/aan/Documents/bearish")
 from bearish.scrapers.main import Scraper, DataSource, Country
 from bearish.scrapers.model import Ticker
@@ -17,7 +18,14 @@ from patterns.candlestick import CandleStick
 from strategy.func import intersection
 from strategy.inputs import BaseInput
 from strategy.plot import plot_strategy
-from strategy.strategy import MACD, MovingAverage5To20, BaseStrategy
+from strategy.strategy import (
+    MACD,
+    MovingAverage5To20,
+    BaseStrategy,
+    MovingAverage5To10,
+    MovingAverage4To18,
+    ExponentialMovingAverage5To10,
+)
 
 
 class TickerAnalysis(Ticker):
@@ -54,20 +62,41 @@ import plotly.graph_objects as go
 def gap(data: pd.DataFrame):
     return ((data.high[0] - data.low[1]) < 0) or ((data.low[0] - data.high[1]) > 0)
 
+# SDGI, MICP, ALDLT, KOF
 def test_select_stocsk():
     for file in Path("/home/aan/Documents/bullish/tests/results").glob("*"):
         data = pd.read_parquet(file)
         # data = data[-90:]
-        selection_data = data[-14:]
-        v = selection_data["sign_movingaverage5to20"].drop(selection_data[selection_data["sign_movingaverage5to20"]==0].index).dropna().values
-        if len(v) >0 and v[-1] == 1:
-            plot_strategy(data, [MACD(), MovingAverage5To20()], name=file.stem)
+        selection_data = data[-7:]
+        v = (
+            selection_data["sign_movingaverage5to20"]
+            .drop(selection_data[selection_data["sign_movingaverage5to20"] == 0].index)
+            .dropna()
+            .values
+        )
+        if len(v) > 0 and v[-1] == 1 and data["rsi_14"][-1] < 60:
+            plot_strategy(
+                data,
+                [
+                    MACD(),
+                    MovingAverage5To20(),
+                    MovingAverage5To10(),
+                    MovingAverage4To18(),
+                    ExponentialMovingAverage5To10(),
+                ],
+                name=file.stem,
+            )
 
         a = 12
 
+
 def test_follow_up():
-    scraper = Scraper(source=DataSource.investing, country=Country.belgium, bearish_path=Path("/home/aan/Documents/bullish/follow_up"))
-    scraper.scrape(skip_existing=False, symbols=["ACKB"])
+    scraper = Scraper(
+        source=DataSource.investing,
+        country=Country.belgium,
+        bearish_path=Path("/home/aan/Documents/bullish/follow_up"),
+    )
+    scraper.scrape(skip_existing=False, symbols=["ACKB","SDGI", "MICP", "ALDLT", "KOF"])
     db_json = scraper.create_db_json()
     f = Path("/home/aan/Documents/bullish/follow_up/data/db_json.json")
     f.touch(exist_ok=True)
@@ -76,16 +105,13 @@ def test_follow_up():
     tiny_path = Path("/home/aan/Documents/bullish/follow_up/data/tiny_db_json.json")
     db = TinyDB(tiny_path)
     db.insert_multiple(json.loads(f.read_text()))
-def test_load_data():
-    tiny_path = Path("/home/aan/Documents/bullish/data/tiny_db_json.json")
+
+
+def test_load_follow_up():
+    tiny_path = Path("/home/aan/Documents/bullish/follow_up/data/tiny_db_json.json")
     db = TinyDB(tiny_path)
-    # path = Path("/home/aan/Documents/stocks/data/db_json.json")
-    # db.insert_multiple(json.loads(path.read_text()))
     equity = Query()
-    results = db.search(
-        (equity.fundamental.ratios.price_earning_ratio > 5)
-        & (equity.fundamental.ratios.price_earning_ratio < 15)
-    )
+    results = db.search(equity.symbol == "ACKB")
     ts = [TickerAnalysis(**rt) for rt in results]
 
     for t in ts:
@@ -95,8 +121,36 @@ def test_load_data():
             price=df,
         )
         data = backtest.play()
-        data.to_parquet(f"/home/aan/Documents/bullish/tests/results/{t.symbol}.pqt")
+        # data.to_parquet(f"/home/aan/Documents/bullish/tests/results/{t.symbol}.pqt")
 
+
+def test_load_data():
+    tiny_path = Path("/home/aan/Documents/bullish/data/tiny_db_json.json")
+    db = TinyDB(tiny_path)
+    # path = Path("/home/aan/Documents/bullish/data/db_json.json")
+    # db.insert_multiple(json.loads(path.read_text()))
+    equity = Query()
+    results = db.search(
+        (equity.fundamental.ratios.price_earning_ratio != None)
+        & (equity.fundamental.ratios.price_earning_ratio > 5)
+        & (equity.fundamental.ratios.price_earning_ratio < 15)
+    )
+    ts = [TickerAnalysis(**rt) for rt in results]
+
+    for t in ts:
+        df = t.get_price()
+        backtest = Backtest(
+            strategies=[
+                MACD(),
+                MovingAverage5To20(),
+                MovingAverage5To10(),
+                MovingAverage4To18(),
+                ExponentialMovingAverage5To10(),
+            ],
+            price=df,
+        )
+        data = backtest.play()
+        data.to_parquet(f"/home/aan/Documents/bullish/tests/results/{t.symbol}.pqt")
 
 
 from pydantic import BaseModel, computed_field
@@ -160,6 +214,32 @@ def test_plot():
     # fig = make_subplots(rows=2, cols=1, row_heights=[0.7, 0.3])
 
 
+def compute_mean(x):
+    a = 12
+
+
+def rsi(data, window=14):
+    a = 12
+    close_diff = data.price.diff()
+    up_days = (
+        close_diff.where(close_diff > 0).rolling(window=window, min_periods=1).mean()
+    )
+    down_days = (
+        -close_diff.where(close_diff < 0).rolling(window=window, min_periods=1).mean()
+    )
+
+    rs = up_days / down_days
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+
+def test_rsi():
+    df = pd.read_csv("/home/aan/Documents/bullish/tests/data.csv")
+    index = pd.DatetimeIndex(df[df.columns[0]])
+    index.name = None
+    df = df.drop(df.columns[0], axis=1)
+    df.index = index
+    rsi(df)
 
 
 def test_backtest():
@@ -169,7 +249,13 @@ def test_backtest():
     df = df.drop(df.columns[0], axis=1)
     df.index = index
     backtest = Backtest(
-        strategies=[MACD(), MovingAverage5To20()],
+        strategies=[
+            MACD(),
+            MovingAverage5To20(),
+            MovingAverage5To10(),
+            MovingAverage4To18(),
+            ExponentialMovingAverage5To10(),
+        ],
         price=df,
     )
     backtest.play()
@@ -242,6 +328,3 @@ def test_strategy():
             price=df,
         )
         backtest.play()
-
-
-

@@ -13,11 +13,25 @@ def plot_strategy(data, strategies, name: str = "test"):
         ],
     )
     for x in [
-        "moving_average_5",
-        "moving_average_20",
+        "movingaverage_5",
+        "movingaverage_10",
+        "movingaverage_4",
+        "movingaverage_18",
+        "movingaverage_20",
         "price",
+        "support",
+        "resistance"
     ]:
         fig.add_trace(go.Line(x=data.index, y=data[x], name=x), row=1, col=1)
+    fig.add_trace(
+        go.Scatter(
+            x=data.index,
+            y=data[f"rsi_14"],
+            name="rsi",
+        ),
+        row=2,
+        col=1,
+    )
     for s in strategies:
         for bs in ["buy", "sell"]:
             fig.add_trace(
@@ -31,17 +45,7 @@ def plot_strategy(data, strategies, name: str = "test"):
                 row=1,
                 col=1,
             )
-        fig.add_trace(
-            go.Scatter(
-                x=data.index,
-                y=data[f"percentage_{s.name}"],
-                mode="markers",
-                marker={"size": 5},
-                name=s.name,
-            ),
-            row=2,
-            col=1,
-        )
+
         fig.add_trace(
             go.Box(y=data[f"percentage_{s.name}"], name=s.name),
             row=2,
