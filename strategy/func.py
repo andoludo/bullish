@@ -50,3 +50,17 @@ def difference(data: pd.DataFrame, strategy_name: str):
     data_ = pd.concat([gain, percentage], axis=1)
     data_ = data_.where(data_[f"type_{strategy_name}"] == -2)
     return data_
+
+
+def rsi(data, window=14):
+    close_diff = data.price.diff()
+    up_days = (
+        close_diff.where(close_diff > 0).rolling(window=window, min_periods=1).mean()
+    )
+    down_days = (
+        -close_diff.where(close_diff < 0).rolling(window=window, min_periods=1).mean()
+    )
+
+    rs = up_days / down_days
+    rsi = 100 - (100 / (1 + rs))
+    return rsi

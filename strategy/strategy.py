@@ -59,6 +59,7 @@ class MovingAverage5To20(MovingAverageBaseStrategy):
             RSI(),
             MovingAverage(window=20),
             MovingAverage(window=5),
+            MovingAverage(window=200),
         ]
     )
 
