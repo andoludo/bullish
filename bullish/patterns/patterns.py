@@ -3,7 +3,7 @@ from itertools import zip_longest
 
 import pandas as pd
 
-from patterns.candlestick import CandleStick
+from bullish.patterns.candlestick import CandleStick
 from pydantic import ConfigDict, BaseModel
 from numpy.lib.stride_tricks import sliding_window_view
 

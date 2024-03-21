@@ -5,7 +5,7 @@ import pandas as pd
 from pydantic import BaseModel, Field, PrivateAttr, computed_field
 
 
-from strategy.inputs import (
+from bullish.strategy.inputs import (
     BaseInput,
     Resistance,
     Support,
@@ -13,7 +13,7 @@ from strategy.inputs import (
     Macd,
     MacdSignal, RSI, ExponentialMovingAverage,
 )
-from strategy.func import intersection, difference
+from bullish.strategy.func import intersection, difference
 
 
 class BaseStrategy(BaseModel):

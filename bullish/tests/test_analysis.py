@@ -6,10 +6,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import pytest
 
-from strategy.func import intersection, rsi
-from strategy.model import TickerAnalysis, Backtest
-from strategy.plot import plot_strategy
-from strategy.strategy import (
+from bullish.strategy.func import intersection, rsi
+from bullish.strategy.model import TickerAnalysis, Backtest
+from bullish.strategy.plot import plot_strategy
+from bullish.strategy.strategy import (
     MACD,
     MovingAverage5To20,
     MovingAverage5To10,

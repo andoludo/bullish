@@ -6,10 +6,10 @@ import pandas as pd
 from bearish.scrapers.model import Ticker
 from pydantic import BaseModel, ConfigDict, computed_field
 
-from patterns.candlestick import CandleStick
-from strategy.inputs import BaseInput
-from strategy.plot import plot_strategy
-from strategy.strategy import BaseStrategy
+from bullish.patterns.candlestick import CandleStick
+from bullish.strategy.inputs import BaseInput
+from bullish.strategy.plot import plot_strategy
+from bullish.strategy.strategy import BaseStrategy
 
 
 class Point(CandleStick):
