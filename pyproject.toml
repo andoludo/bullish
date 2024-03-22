@@ -15,7 +15,7 @@ pydantic = "^2.5.3"
 numba = "^0.58.1"
 fastparquet = "^2024.2.0"
 simplejson = "^3.19.2"
-bearish = {path = "/home/aan/Documents/bearish", develop=true}
+bearish = {git = "https://github.com/andoludo/bearish", branch = "master", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]
