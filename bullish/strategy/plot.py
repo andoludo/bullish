@@ -1,10 +1,19 @@
-from plotly.subplots import make_subplots
+from typing import Any, List
+
+import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+from bullish.strategy.strategy import BaseStrategy
 
 
-def plot_strategy(data, strategies, name: str = "test", show:bool=True):
+def plot_strategy(
+    data: pd.DataFrame,
+    strategies: List[BaseStrategy],
+    name: str = "test",
+    show: bool = True,
+) -> Any:  # noqa : ANN401
     fig = make_subplots(
-
         rows=2,
         cols=2,
         specs=[
@@ -21,7 +30,7 @@ def plot_strategy(data, strategies, name: str = "test", show:bool=True):
         "movingaverage_200",
         "price",
         "support",
-        "resistance"
+        "resistance",
     ]:
         if x not in data:
             continue
@@ -29,7 +38,7 @@ def plot_strategy(data, strategies, name: str = "test", show:bool=True):
     fig.add_trace(
         go.Scatter(
             x=data.index,
-            y=data[f"rsi_14"],
+            y=data["rsi_14"],
             name="rsi",
         ),
         row=2,

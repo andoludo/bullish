@@ -1,13 +1,14 @@
 import abc
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 import pandas as pd
-from pydantic import BaseModel, computed_field, Field, PrivateAttr
+from pydantic import BaseModel, Field, PrivateAttr, computed_field
 
 
 class BaseInput(BaseModel):
     window: Optional[int] = None
-    def __hash__(self):
+
+    def __hash__(self) -> int:
         return hash(self.name)
 
     @computed_field
@@ -25,23 +26,23 @@ class BaseInput(BaseModel):
 class MovingAverage(BaseInput):
     window: int
 
-    def compute(self, data: pd.DataFrame):
+    def compute(self, data: pd.DataFrame) -> pd.DataFrame:
         data[self.name] = data.price.rolling(window=self.window).mean()
         return data
 
 
 class ExponentialMovingAverage(BaseInput):
-    window: int
+    window: Optional[int]
 
-
-    def compute(self, data: pd.DataFrame):
+    def compute(self, data: pd.DataFrame) -> pd.DataFrame:
         data[self.name] = data.price.ewm(span=self.window, adjust=False).mean()
         return data
 
 
 class Macd(BaseInput):
-    window: int = None
-    def compute(self, data: pd.DataFrame):
+    window: Optional[int] = None
+
+    def compute(self, data: pd.DataFrame) -> pd.DataFrame:
         data = ExponentialMovingAverage(window=12).compute(data)
         data = ExponentialMovingAverage(window=26).compute(data)
         data[self.name] = (
@@ -51,8 +52,9 @@ class Macd(BaseInput):
 
 
 class MacdSignal(BaseInput):
-    window: int = None
-    def compute(self, data: pd.DataFrame):
+    window: Optional[int] = None
+
+    def compute(self, data: pd.DataFrame) -> pd.DataFrame:
         data = ExponentialMovingAverage(window=12).compute(data)
         data = ExponentialMovingAverage(window=26).compute(data)
         macd = data.exponentialmovingaverage_12 - data.exponentialmovingaverage_26
@@ -63,7 +65,7 @@ class MacdSignal(BaseInput):
 class RSI(BaseInput):
     window: int = 14
 
-    def compute(self, data: pd.DataFrame):
+    def compute(self, data: pd.DataFrame) -> pd.DataFrame:
         close_diff = data.price.diff()
         up_days = (
             close_diff.where(close_diff > 0)
@@ -83,14 +85,14 @@ class RSI(BaseInput):
 
 
 class Support(BaseInput):
-    extreme: Callable = Field(default=lambda data: data.low == data.low.min())
-    opposite: Callable = Field(default=lambda data: data.high == data.high.max())
-    extract_value: Callable = Field(default=lambda data: data.low)
-    slope: Callable = Field(default=min)
+    extreme: Callable[[pd.DataFrame], pd.Series] = Field(default=lambda data: data.low == data.low.min())  # type: ignore # noqa: E501
+    opposite: Callable[[pd.DataFrame], pd.Series] = Field(default=lambda data: data.high == data.high.max())  # type: ignore # noqa: E501
+    extract_value: Callable[[pd.DataFrame], pd.Series] = Field(default=lambda data: data.low)  # type: ignore
+    slope: Callable[[List[float]], float] = Field(default=min)
     _previous_data: pd.DataFrame = PrivateAttr(default=pd.DataFrame())
 
-    def _to_timestamp(self, data: pd.DataFrame) -> pd:
-        return pd.DatetimeIndex(list(data.index)).astype("int64") // 10 ** 9
+    def _to_timestamp(self, data: pd.DataFrame) -> "pd.Index[int]":
+        return pd.DatetimeIndex(list(data.index)).astype("int64") // 10**9
 
     def compute(self, data: pd.DataFrame) -> pd.DataFrame:
         data_extreme = self.extract_value(data.where(self.extreme(data))).dropna()
@@ -100,7 +102,7 @@ class Support(BaseInput):
             data_from_extreme.where(self.opposite(data_from_extreme))
         ).dropna()
         base_data = data_from_extreme.loc[extreme_index[0] : data_to_opposite.index[0]]
-        ys = self.extract_value(base_data).values
+        ys = self.extract_value(base_data).to_numpy()
         xs = self._to_timestamp(base_data)
         xs_ = xs[1:]
         ys_ = ys[1:]
@@ -122,7 +124,7 @@ class Support(BaseInput):
 
 
 class Resistance(Support):
-    extreme: Callable = Field(default=lambda data: data.high == data.high.max())
-    opposite: Callable = Field(default=lambda data: data.low == data.low.min())
-    extract_value: Callable = Field(default=lambda data: data.high)
-    slope: Callable = Field(default=max)
+    extreme: Callable[[pd.DataFrame], pd.Series] = Field(default=lambda data: data.high == data.high.max())  # type: ignore # noqa: E501
+    opposite: Callable[[pd.DataFrame], pd.Series] = Field(default=lambda data: data.low == data.low.min())  # type: ignore # noqa: E501
+    extract_value: Callable[[pd.DataFrame], pd.Series] = Field(default=lambda data: data.high)  # type: ignore
+    slope: Callable[[List[float]], float] = Field(default=max)

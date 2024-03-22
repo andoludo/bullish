@@ -7,14 +7,14 @@ import plotly.graph_objects as go
 import pytest
 
 from bullish.strategy.func import intersection, rsi
-from bullish.strategy.model import TickerAnalysis, Backtest
+from bullish.strategy.model import Backtest, TickerAnalysis
 from bullish.strategy.plot import plot_strategy
 from bullish.strategy.strategy import (
     MACD,
-    MovingAverage5To20,
-    MovingAverage5To10,
-    MovingAverage4To18,
     ExponentialMovingAverage5To10,
+    MovingAverage4To18,
+    MovingAverage5To10,
+    MovingAverage5To20,
 )
 
 
@@ -30,7 +30,7 @@ def ticker_data(ticker: dict[str, Any]) -> pd.DataFrame:
     return ticker.get_price()
 
 
-def test_backtest_ticker(ticker_data: pd.DataFrame):
+def test_backtest_ticker(ticker_data: pd.DataFrame) -> None:
     backtest = Backtest(
         strategies=[
             MACD(),
@@ -46,9 +46,7 @@ def test_backtest_ticker(ticker_data: pd.DataFrame):
     assert {input.name for input in backtest._inputs}.issubset(set(data.columns))
 
 
-
-
-def test_plot(ticker_data):
+def test_plot(ticker_data: pd.DataFrame) -> None:
     backtest = Backtest(
         strategies=[MACD(), MovingAverage5To20()],
         price=ticker_data,
@@ -58,13 +56,12 @@ def test_plot(ticker_data):
     assert figure_json
 
 
-
-def test_rsi(ticker_data):
+def test_rsi(ticker_data: pd.DataFrame) -> None:
     rsi_value = rsi(ticker_data)
     assert not rsi_value.empty
 
 
-def test_backtest(ticker_data):
+def test_backtest(ticker_data: pd.DataFrame) -> None:
     backtest = Backtest(
         strategies=[
             MACD(),
@@ -79,7 +76,7 @@ def test_backtest(ticker_data):
     assert not data.empty
 
 
-def test_intersection_dataframe():
+def test_intersection_dataframe() -> None:
     index = pd.date_range("2024-01-01", "2024-01-10")
     first_parameter = [12, 13, 14, 15, 15.1, 14.5, 14.2, 13.5, 12, 11]
     second_parameter = [13, 13.1, 13.5, 14, 15, 15.1, 14, 13, 13, 13.5]

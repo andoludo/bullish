@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 
 
-def intersection(first_curve: pd.Series, second_curve: pd.Series, strategy: str):
+def intersection(
+    first_curve: "pd.Series[float]", second_curve: "pd.Series[float]", strategy: str
+) -> pd.DataFrame:
     sign = f"sign_{strategy}"
     name = f"intersection_{strategy}"
     if not first_curve.name:
@@ -24,7 +26,7 @@ def intersection(first_curve: pd.Series, second_curve: pd.Series, strategy: str)
 
 
 #
-def difference(data: pd.DataFrame, strategy_name: str):
+def difference(data: pd.DataFrame, strategy_name: str) -> pd.DataFrame:
     sign_name = f"sign_{strategy_name}"
     intersection_name = f"intersection_{strategy_name}"
     gain = (
@@ -48,11 +50,11 @@ def difference(data: pd.DataFrame, strategy_name: str):
             columns=[f"percentage_{strategy_name}"], index=gain.index
         )
     data_ = pd.concat([gain, percentage], axis=1)
-    data_ = data_.where(data_[f"type_{strategy_name}"] == -2)
+    data_ = data_.where(data_[f"type_{strategy_name}"] == -2)  # noqa: PLR2004
     return data_
 
 
-def rsi(data, window=14):
+def rsi(data: pd.DataFrame, window: int = 14) -> "pd.Series[float]":
     close_diff = data.price.diff()
     up_days = (
         close_diff.where(close_diff > 0).rolling(window=window, min_periods=1).mean()

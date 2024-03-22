@@ -1,43 +1,58 @@
+from typing import Any, Callable, List, Optional, Tuple
+
 import pandas as pd
-import plotly.graph_objects as go
+from numpy import ndarray
+from pandas.core.arrays import ExtensionArray
 
 
-def _get_min_low(data):
+def _get_min_low(data: pd.DataFrame) -> Any:  # noqa : ANN401
     return data.low == data.low.min()
 
 
-def _get_max_high(data):
+def _get_max_high(data: pd.DataFrame) -> Any:  # noqa : ANN401
     return data.high == data.high.max()
 
 
-def _get_low_values(data):
-    return data.low.values
+def _get_low_values(data: pd.DataFrame) -> ExtensionArray | ndarray[Any, Any]:
+    return data.low.to_numpy()
 
 
-def _get_high_values(data):
-    return data.high.values
+def _get_high_values(data: pd.DataFrame) -> ExtensionArray | ndarray[Any, Any]:
+    return data.high.to_numpy()
 
 
-def resistance(data: pd.DataFrame, max_date):
+def resistance(
+    data: pd.DataFrame, max_date: int
+) -> Tuple[Optional[float], Optional[float], pd.DataFrame]:
     return _line(
         data, _get_max_high, _get_min_low, _get_high_values, max, "resistance", max_date
     )
 
 
-def support(data: pd.DataFrame, max_date):
+def support(
+    data: pd.DataFrame, max_date: int
+) -> Tuple[Optional[float], Optional[float], pd.DataFrame]:
     return _line(
         data, _get_min_low, _get_max_high, _get_low_values, min, "support", max_date
     )
 
 
-def _line(data, get_extreme, get_opposite, get_values, slope_function, name, max_date):
+def _line(  # noqa : PLR0913
+    data: pd.DataFrame,
+    get_extreme: Callable[[pd.DataFrame], "pd.Series[float]"],
+    get_opposite: Callable[[pd.DataFrame], "pd.Series[float]"],
+    get_values: Callable[[pd.DataFrame], ExtensionArray | ndarray[Any, Any]],
+    slope_function: Callable[[List[float]], float],
+    name: str,
+    max_date: int,
+) -> Tuple[Optional[float], Optional[float], pd.DataFrame]:
     data_extreme = data.where(get_extreme(data)).dropna()
     extreme_index = data_extreme.index
     data_from_extreme = data.loc[extreme_index[0] :]
     data_to_opposite = data_from_extreme.where(get_opposite(data_from_extreme)).dropna()
     base_data = data_from_extreme.loc[extreme_index[0] : data_to_opposite.index[0]]
     ys = get_values(base_data)
-    xs = base_data.index.astype("int64") // 10 ** 9
+    xs = base_data.index.astype("int64") // 10**9
     xs_ = xs[1:]
     ys_ = ys[1:]
     slopes = [(y - ys[0]) / (x - xs[0]) for x, y in zip(xs_, ys_)]
@@ -53,81 +68,12 @@ def _line(data, get_extreme, get_opposite, get_values, slope_function, name, max
         pd.DataFrame(
             [
                 _slope * x + intercept
-                for x in pd.DatetimeIndex(list(base_data.index) + [max_date]).astype(
+                for x in pd.DatetimeIndex([*list(base_data.index), max_date]).astype(
                     "int64"
                 )
-                // 10 ** 9
+                // 10**9
             ],
-            index=pd.DatetimeIndex(list(base_data.index) + [max_date]),
+            index=pd.DatetimeIndex([*list(base_data.index), max_date]),
             columns=[name],
-        ),
-    )
-
-def plot_support(fig, data):
-    plot_trend(data, fig, support,"support", "black")
-
-
-def plot_resistance(fig, data):
-    plot_trend(data, fig, resistance,"resistance", "red")
-
-def plot_trend(data, fig, trend_function, name, color):
-    lines = set()
-    for i in range(len(data.index)):
-        res = trend_function(data[: i + 1], data.index[-1])
-        if res is None:
-            continue
-        (min_slope, intercept, support_) = res
-        if (min_slope, intercept) not in lines:
-            lines.add((min_slope, intercept))
-        else:
-            continue
-        if support_ is not None:
-            fig.add_trace(
-                go.Scatter(
-                    x=support_.index,
-                    y=support_[name],
-                    mode="lines",
-                    marker=dict(color=color),
-                    # opacity=0.6,
-                    line={"width": 0.4}
-
-                )
-            )
-
-
-def support_line(data: pd.DataFrame):
-    data_lowest = data.where(data.low == data.low.min()).dropna()
-    lowest_index = data_lowest.index
-    data_from_lowest = data.loc[lowest_index[0] :]
-    data_to_max = data_from_lowest.where(
-        data_from_lowest.high == data_from_lowest.high.max()
-    ).dropna()
-    base_data = data_from_lowest.loc[lowest_index[0] : data_to_max.index[0]]
-    ys = base_data.low.values
-    xs = range(len(base_data.index))
-    xs_ = xs[1:]
-    ys_ = ys[1:]
-    slopes = [(y - ys[0]) / (x - xs[0]) for x, y in zip(xs_, ys_)]
-    if not slopes:
-        return
-
-    min_slope = min(slopes)
-    min_slope_index = slopes.index(min_slope)
-    intercept = ys_[min_slope_index] - min_slope * xs_[min_slope_index]
-    length = (
-        4 * len(data_from_lowest)
-        if len(data_from_lowest) < 4
-        else 6 * len(data_from_lowest)
-    )
-    return (
-        min_slope,
-        intercept,
-        pd.DataFrame(
-            [min_slope * x + intercept for x in range(length)],
-            index=pd.date_range(
-                start=lowest_index[0],
-                end=lowest_index[0] + pd.Timedelta(days=length - 1),
-            ),
-            columns=["support"],
         ),
     )

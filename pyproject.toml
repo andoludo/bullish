@@ -35,7 +35,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.mypy]
 plugins = "pydantic.mypy"
-
+packages = "bullish"
 
 
 follow_imports = "silent"
@@ -48,14 +48,18 @@ show_absolute_path = true
 # for strict mypy: (this is the tricky one :-))
 disallow_untyped_defs = true
 strict = true
-init_forbid_extra = true
-init_typed = true
-warn_required_dynamic_aliases = true
+#disable_error_code = "import-untyped"
 
 exclude = [
     "test_*",
     "conftest.py",
 ]
+
+[[tool.mypy.overrides]]
+module = [
+    "plotly.*",
+]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 96
@@ -94,7 +98,7 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "W", "F", "B006","RUF","UP","SIM","FURB","PIE","PERF","C4","B","PL","S","C901","N","ANN", "ERA001", "PD"]
 ignore = []
-extend-ignore = ["ANN101","ANN102"]
+extend-ignore = ["ANN101","ANN102","PLR6301","E203"]
 
 fixable = ["ALL"]
 unfixable = []
