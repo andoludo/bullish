@@ -6,16 +6,8 @@ authors = ["aan <andoludovic.andriamamonjy@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
-plotly = "^5.18.0"
-pandas = "^2.2.0"
-tinydb = "^4.8.0"
-pytest = "^7.4.4"
-pydantic = "^2.5.3"
-numba = "^0.58.1"
-fastparquet = "^2024.2.0"
-simplejson = "^3.19.2"
-bearish = {git = "https://github.com/andoludo/bearish", branch = "master", develop = true}
+python = ">=3.10,<3.13"
+bearishpy = "^0.18.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -91,14 +83,15 @@ exclude = [
     "site-packages",
     "venv",
     "test_*",
-    "conftest.py"
+    "conftest.py",
+    "*env.py"
 ]
 
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "B006","RUF","UP","SIM","FURB","PIE","PERF","C4","B","PL","S","C901","N","ANN", "ERA001", "PD"]
 ignore = []
-extend-ignore = ["ANN101","ANN102","PLR6301","E203"]
+extend-ignore = ["ANN101","ANN102","PLR6301","E203","W291","ANN401"]
 
 fixable = ["ALL"]
 unfixable = []

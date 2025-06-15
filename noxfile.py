@@ -24,9 +24,19 @@ def install(session: Session, groups: List[str], root: bool = True) -> None:
 
 @nox.session(python=["3.10"])
 def tests(session: Session) -> None:
-    install(session, groups=["dev"])
+    session.run("poetry", "run", "pytest", "-m", "not integration")
 
+
+@nox.session(python=["3.10"])
+def linting(session: Session) -> None:
+    session.run("poetry", "run", "black", ".")
     session.run("poetry", "run", "mypy")
     session.run(
-        "pre-commit", "run", "--all-files", "--config", ".pre-commit-config.yaml"
+        "poetry",
+        "run",
+        "ruff",
+        "check",
+        "--fix",
+        "--show-fixes",
+        "--exit-non-zero-on-fix",
     )
