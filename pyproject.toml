@@ -8,6 +8,9 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 bearishpy = "^0.18.0"
+streamlit = "^1.45.1"
+streamlit-pydantic = "^v0.6.1-rc.3"
+streamlit-file-browser = "^3.2.22"
 
 
 [tool.poetry.group.dev.dependencies]

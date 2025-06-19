@@ -5,7 +5,7 @@ from bearish.models.base import Ticker
 from bearish.models.price.prices import Prices
 from bearish.models.query.query import AssetQuery, Symbols
 
-from bullish.analysis import Analysis, TechnicalAnalysis, mom, wow, yoy
+from bullish.analysis import Analysis, TechnicalAnalysis, mom, wow, yoy, run_analysis
 from bullish.database.crud import BullishDb
 
 
@@ -47,8 +47,20 @@ def test_star_prices() -> None:
     assert median_wow > 0
 
 
-def test_technical_analysis():
+def test_technical_analysis() -> None:
 
     prices = Prices.from_csv(Path(__file__).parent / "data" / "prices.csv")
     ta = TechnicalAnalysis.from_data(prices.to_dataframe())
     assert ta
+
+
+def test_run_analysis(bullish_db: BullishDb) -> None:
+    run_analysis(bullish_db)
+    analysis_db = bullish_db.read_analysis(Ticker(symbol="AAPL"))
+    assert analysis_db.last_adx is not None
+    assert analysis_db.positive_net_income is not None
+
+
+def test_read_analysis_view(bullish_db_with_analysis: BullishDb) -> None:
+    data = bullish_db_with_analysis.read_analysis_data()
+    assert not data.empty

@@ -1,7 +1,6 @@
 from sqlmodel import Field, SQLModel
 
 from bullish.analysis import Analysis
-from bullish.view import View
 
 
 class BaseTable(SQLModel):
@@ -11,7 +10,4 @@ class BaseTable(SQLModel):
 
 class AnalysisORM(BaseTable, Analysis, table=True):
     __tablename__ = "analysis"
-
-
-class ViewORM(BaseTable, View, table=True):
-    __tablename__ = "view"
+    __table_args__ = {"extend_existing": True}  # noqa:RUF012

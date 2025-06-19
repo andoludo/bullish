@@ -11,10 +11,11 @@ from sqlalchemy import Engine, create_engine, insert
 from sqlmodel import Session, select
 
 from bullish.analysis import Analysis
-from bullish.database.schemas import AnalysisORM, ViewORM
+from bullish.database.schemas import AnalysisORM
 from bullish.database.scripts.upgrade import upgrade
+from bullish.exceptions import DatabaseFileNotFoundError
 from bullish.interface.interface import BullishDbBase
-from bullish.view import View
+
 
 if TYPE_CHECKING:
     pass
@@ -28,8 +29,14 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
     model_config = ConfigDict(arbitrary_types_allowed=True)
     database_path: Path
 
+    def valid(self) -> bool:
+        """Check if the database is valid."""
+        return self.database_path.exists() and self.database_path.is_file()
+
     @cached_property
     def _engine(self) -> Engine:
+        if not self.valid():
+            raise DatabaseFileNotFoundError("Database file not found.")
         database_url = f"sqlite:///{Path(self.database_path)}"
         upgrade(self.database_path)
         engine = create_engine(database_url)
@@ -56,22 +63,13 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                 return None
             return Analysis.model_validate(analysis)
 
-    def _read_views(self, query: str) -> List[View]:
-        views = pd.read_sql(
+    def _read_analysis_data(self, columns: List[str]) -> pd.DataFrame:
+        columns_ = ",".join(columns)
+        query = f"""SELECT {columns_} FROM analysis"""  # noqa: S608
+        return pd.read_sql_query(query, self._engine)
+
+    def _read_filter_query(self, query: str) -> pd.DataFrame:
+        return pd.read_sql(
             query,
             con=self._engine,
         )
-        return [
-            View.model_validate(record) for record in views.to_dict(orient="records")
-        ]
-
-    def _write_views(self, views: List[View]) -> None:
-        with Session(self._engine) as session:
-            stmt = (
-                insert(ViewORM)
-                .prefix_with("OR REPLACE")
-                .values([view.model_dump() for view in views])
-            )
-
-            session.exec(stmt)  # type: ignore
-            session.commit()

@@ -1,12 +1,28 @@
 import logging
 from datetime import date
-from typing import Annotated, Any, List, Optional, Sequence, Type, cast, get_args
+from typing import (
+    Annotated,
+    Any,
+    List,
+    Optional,
+    Sequence,
+    Type,
+    cast,
+    get_args,
+    TYPE_CHECKING,
+)
 
 import pandas as pd
 import pandas_ta as ta  # type: ignore
 from bearish.interface.interface import BearishDbBase  # type: ignore
 from bearish.models.assets.equity import BaseEquity  # type: ignore
-from bearish.models.base import DataSourceBase, Ticker  # type: ignore
+from bearish.models.base import (  # type: ignore
+    DataSourceBase,
+    Ticker,
+    PriceTracker,
+    TrackerQuery,
+    FinancialsTracker,
+)
 from bearish.models.financials.balance_sheet import (  # type: ignore
     BalanceSheet,
     QuarterlyBalanceSheet,
@@ -24,6 +40,9 @@ from bearish.models.price.prices import Prices  # type: ignore
 from bearish.models.query.query import AssetQuery, Symbols  # type: ignore
 from bearish.types import TickerOnlySources  # type: ignore
 from pydantic import BaseModel, BeforeValidator, Field, create_model
+
+if TYPE_CHECKING:
+    from bullish.database.crud import BullishDb
 
 QUARTERLY = "quarterly"
 logger = logging.getLogger(__name__)
@@ -507,7 +526,45 @@ class FundamentalAnalysis(YearlyFundamentalAnalysis, QuarterlyFundamentalAnalysi
         )
 
 
-class Analysis(BaseEquity, TechnicalAnalysis, FundamentalAnalysis):  # type: ignore
+class AnalysisView(BaseModel):
+    sector: Annotated[
+        Optional[str],
+        Field(
+            None,
+            description="Broad sector to which the company belongs, "
+            "such as 'Real Estate' or 'Technology'",
+        ),
+    ]
+    industry: Annotated[
+        Optional[str],
+        Field(
+            None,
+            description="Detailed industry categorization for the company, "
+            "like 'Real Estate Management & Development'",
+        ),
+    ]
+    market_capitalization: Annotated[
+        Optional[float],
+        BeforeValidator(to_float),
+        Field(
+            default=None,
+            description="Market capitalization value",
+        ),
+    ]
+    country: Annotated[
+        Optional[str],
+        Field(None, description="Country where the company's headquarters is located"),
+    ]
+    symbol: str = Field(
+        description="Unique ticker symbol identifying the company on the stock exchange"
+    )
+    name: Annotated[
+        Optional[str],
+        Field(None, description="Full name of the company"),
+    ]
+
+
+class Analysis(AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis):  # type: ignore
     price_per_earning_ratio: Optional[float] = None
 
     @classmethod
@@ -540,3 +597,12 @@ class Analysis(BaseEquity, TechnicalAnalysis, FundamentalAnalysis):  # type: ign
                 )
             }
         )
+
+
+def run_analysis(bullish_db: "BullishDb") -> None:
+    price_trackers = set(bullish_db._read_tracker(TrackerQuery(), PriceTracker))
+    finance_trackers = set(bullish_db._read_tracker(TrackerQuery(), FinancialsTracker))
+    tickers = list(price_trackers.intersection(finance_trackers))
+    for ticker in tickers:
+        analysis = Analysis.from_ticker(bullish_db, ticker)
+        bullish_db.write_analysis(analysis)

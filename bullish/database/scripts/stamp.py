@@ -2,7 +2,6 @@ import os
 import sqlite3
 from pathlib import Path
 
-from alembic import command
 from alembic.config import Config
 
 from bullish.database.settings import TEST_DATABASE_PATH
@@ -19,7 +18,6 @@ def stamp(database_path: Path) -> None:
         conn.commit()
     alembic_cfg = Config(root_folder / "alembic" / "alembic.ini")
     alembic_cfg.set_main_option("script_location", str(root_folder / "alembic"))
-    command.stamp(alembic_cfg, "head")
 
 
 if __name__ == "__main__":

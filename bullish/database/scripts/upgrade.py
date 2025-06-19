@@ -7,6 +7,8 @@ from alembic.util import CommandError
 
 from bullish.database.scripts.stamp import stamp
 
+DATABASE_PATH_VIEW = Path(__file__).parents[3] / "tests" / "data" / "view_bear.db"
+
 
 def upgrade(database_path: Path) -> None:
     root_folder = Path(__file__).parents[1]
@@ -18,3 +20,8 @@ def upgrade(database_path: Path) -> None:
         command.upgrade(alembic_cfg, "head")
     except CommandError:
         stamp(database_path)
+        command.upgrade(alembic_cfg, "head")
+
+
+if __name__ == "__main__":
+    upgrade(DATABASE_PATH_VIEW)
