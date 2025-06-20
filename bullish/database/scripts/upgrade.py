@@ -7,7 +7,7 @@ from alembic.util import CommandError
 
 from bullish.database.scripts.stamp import stamp
 
-DATABASE_PATH_VIEW = Path(__file__).parents[3] / "tests" / "data" / "view_bear.db"
+DATABASE_PATH = Path(__file__).parents[3] / "tests" / "data" / "bear.db"
 
 
 def upgrade(database_path: Path) -> None:
@@ -24,4 +24,4 @@ def upgrade(database_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    upgrade(DATABASE_PATH_VIEW)
+    upgrade(DATABASE_PATH)

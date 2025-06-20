@@ -7,7 +7,8 @@ from bearish.interface.interface import BearishDbBase  # type: ignore
 from bearish.models.base import Ticker  # type: ignore
 
 from bullish.analysis import Analysis, AnalysisView
-from bullish.filter import FilterQuery
+from bullish.filter import FilterQuery, FilteredResults
+from bullish.jobs.models import JobTracker, JobTrackerStatus, add_icons
 
 logger = logging.getLogger(__name__)
 
@@ -33,14 +34,35 @@ class BullishDbBase(BearishDbBase):  # type: ignore
         """  # noqa: S608
         return self._read_filter_query(query_str)
 
-    def read_analysis_data(self, columns: Optional[List[str]] = None) -> pd.DataFrame:
+    def read_analysis_data(
+        self, columns: Optional[List[str]] = None, symbols: Optional[List[str]] = None
+    ) -> pd.DataFrame:
         columns = columns or list(AnalysisView.model_fields)
-        data = self._read_analysis_data(columns)
+        data = self._read_analysis_data(columns, symbols=symbols)
         if set(data.columns) != set(columns):
             raise ValueError(
                 f"Expected columns {columns}, but got {data.columns.tolist()}"
             )
         return data
+
+    def read_job_trackers(self) -> pd.DataFrame:
+        return add_icons(self._read_job_trackers())
+
+    @abc.abstractmethod
+    def _read_job_trackers(self) -> pd.DataFrame:
+        ...
+
+    @abc.abstractmethod
+    def write_job_tracker(self, job_tracker: JobTracker) -> None:
+        ...
+
+    @abc.abstractmethod
+    def delete_job_trackers(self, job_ids: List[str]) -> None:
+        ...
+
+    @abc.abstractmethod
+    def update_job_tracker_status(self, job_tracker_status: JobTrackerStatus) -> None:
+        ...
 
     @abc.abstractmethod
     def _write_analysis(self, analysis: "Analysis") -> None:
@@ -55,5 +77,19 @@ class BullishDbBase(BearishDbBase):  # type: ignore
         ...
 
     @abc.abstractmethod
-    def _read_analysis_data(self, columns: List[str]) -> pd.DataFrame:
+    def _read_analysis_data(
+        self, columns: List[str], symbols: Optional[List[str]] = None
+    ) -> pd.DataFrame:
+        ...
+
+    @abc.abstractmethod
+    def read_filtered_results(self, name: str) -> Optional[FilteredResults]:
+        ...
+
+    @abc.abstractmethod
+    def read_list_filtered_results(self) -> List[str]:
+        ...
+
+    @abc.abstractmethod
+    def write_filtered_results(self, filtered_results: FilteredResults) -> None:
         ...

@@ -13,7 +13,9 @@ from streamlit_file_browser import st_file_browser  # type: ignore
 
 from bullish.database.crud import BullishDb
 from bullish.figures import plot
-from bullish.filter import FilterQuery
+from bullish.filter import FilterQuery, FilterUpdate, FilteredResults, FilterQueryStored
+from bullish.jobs.models import JobTracker
+from bullish.jobs.tasks import update
 
 CACHE_SHELVE = "user_cache"
 DB_KEY = "db_path"
@@ -105,34 +107,99 @@ def dialog_plot_figure() -> None:
     )
     st.html("<span class='big-dialog'></span>")
     st.plotly_chart(st.session_state.ticker_figure, use_container_width=True)
+    st.session_state.ticker_figure = None
 
 
 def main() -> None:
     assign_db_state()
     if st.session_state.database_path is None:
         dialog_pick_database()
-
     bearish_db_ = bearish_db(st.session_state.database_path)
+    charts_tab, jobs_tab = st.tabs(["Charts", "Jobs"])
     if "data" not in st.session_state:
         st.session_state.data = load_analysis_data(bearish_db_)
-    st.header("✅ Data overview")
     with st.sidebar:  # noqa: SIM117
         with st.expander("Filter"):
             view_query = sp.pydantic_form(key="my_form", model=FilterQuery)
             if view_query:
                 st.session_state.data = bearish_db_.read_filter_query(view_query)
                 st.session_state.ticker_figure = None
-    st.dataframe(
-        st.session_state.data,
-        on_select=on_table_select,
-        selection_mode="single-row",
-        key="selected_data",
-    )
-    if (
-        "ticker_figure" in st.session_state
-        and st.session_state.ticker_figure is not None
-    ):
-        dialog_plot_figure()
+                st.session_state.filter_query = view_query
+            with st.container(border=True):
+                disabled = "filter_query" not in st.session_state
+                if "filter_query" in st.session_state:
+                    disabled = st.session_state.filter_query is None
+                user_input = st.text_input("Enter your name:", disabled=disabled)
+                if st.button("Save", disabled=disabled):
+                    name = user_input.strip()
+                    if not name:
+                        st.error("This field is required.")
+                    else:
+                        symbols = st.session_state.data["symbol"].unique().tolist()
+                        filtered_results = FilteredResults(
+                            name=name,
+                            filter_query=FilterQueryStored.model_validate(
+                                st.session_state.filter_query.model_dump()
+                            ),
+                            symbols=symbols,
+                        )
+                        bearish_db_.write_filtered_results(filtered_results)
+                        st.session_state.filter_query = None
+                        st.success(f"Hello, {user_input}!")
+        with st.expander("Load"):
+            existing_filtered_results = bearish_db_.read_list_filtered_results()
+            option = st.selectbox(
+                "Saved results",
+                [""] + existing_filtered_results,
+            )
+            if option:
+                filtered_results = bearish_db_.read_filtered_results(option)
+                if filtered_results:
+                    st.session_state.data = bearish_db_.read_analysis_data(
+                        symbols=filtered_results.symbols
+                    )
+
+        with st.expander("Update"):
+            update_query = sp.pydantic_form(key="update", model=FilterUpdate)
+            if (
+                update_query
+                and st.session_state.data is not None
+                and not st.session_state.data.empty
+            ):
+                symbols = st.session_state.data["symbol"].unique().tolist()
+                res = update(
+                    database_path=st.session_state.database_path,
+                    symbols=symbols,
+                    update_query=update_query,
+                )  # enqueue & get result-handle
+                bearish_db_.write_job_tracker(
+                    JobTracker(job_id=str(res.id), type="Update data")
+                )
+                st.success("Data update job has been enqueued.")
+                st.rerun()
+    with charts_tab:
+        st.header("✅ Data overview")
+        st.dataframe(
+            st.session_state.data,
+            on_select=on_table_select,
+            selection_mode="single-row",
+            key="selected_data",
+            use_container_width=True,
+            height=600,
+        )
+        if (
+            "ticker_figure" in st.session_state
+            and st.session_state.ticker_figure is not None
+        ):
+            dialog_plot_figure()
+
+    with jobs_tab:
+        job_trackers = bearish_db_.read_job_trackers()
+        st.dataframe(
+            job_trackers,
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 if __name__ == "__main__":

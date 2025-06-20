@@ -13,8 +13,10 @@ DATABASE_PATH_VIEW = Path(__file__).parent / "data" / "filter_bear.db"
 def delete_tables(database_path: Path):
     with sqlite3.connect(database_path) as conn:
         conn.execute("DROP TABLE IF EXISTS  alembic_version;")
-        conn.execute("DROP TABLE IF EXISTS view;")
+        conn.execute("DROP TABLE IF EXISTS jobtracker;")
         conn.execute("DROP TABLE IF EXISTS analysis;")
+        conn.execute("DROP TABLE IF EXISTS view;")
+        conn.execute("DROP TABLE IF EXISTS filteredresults;")
         conn.commit()
 
 

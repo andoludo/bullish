@@ -1,6 +1,7 @@
 from functools import cached_property
-from typing import Literal, Set, get_args, Dict, Any
+from typing import Literal, Set, get_args, Dict, Any, Optional, List
 
+from bearish.types import SeriesLength
 from pydantic import BaseModel, Field
 
 Industry = Literal[
@@ -100,3 +101,23 @@ class FilterQuery(BaseModel):
             [f"{k}{SIGNS.get(k,'=')}{v}" for k, v in self.query_parameters.items()]
         )
         return query
+
+
+class FilterQueryStored(FilterQuery):
+    industry: Optional[List[Industry]] = None
+    country: Optional[List[Country]] = None
+
+
+class FilterUpdate(BaseModel):
+    window_size: SeriesLength = Field("5d")
+    data_age_in_days: int = 1
+    update_financials: bool = False
+    update_analysis_only: bool = False
+
+
+class FilteredResults(BaseModel):
+    name: str
+    filter_query: FilterQueryStored
+    symbols: list[str] = Field(
+        default_factory=list, description="List of filtered tickers."
+    )

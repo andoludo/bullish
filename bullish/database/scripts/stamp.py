@@ -15,6 +15,7 @@ def stamp(database_path: Path) -> None:
         conn.execute("DROP TABLE IF EXISTS  alembic_version;")
         conn.execute("DROP TABLE IF EXISTS view;")
         conn.execute("DROP TABLE IF EXISTS analysis;")
+        conn.execute("DROP TABLE IF EXISTS filteredresults;")
         conn.commit()
     alembic_cfg = Config(root_folder / "alembic" / "alembic.ini")
     alembic_cfg.set_main_option("script_location", str(root_folder / "alembic"))
