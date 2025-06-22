@@ -1,3 +1,3 @@
-from huey import SqliteHuey
+from huey import SqliteHuey  # type: ignore
 
-huey = SqliteHuey("queue.db")
+huey = SqliteHuey(name="queue")

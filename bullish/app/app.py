@@ -12,10 +12,15 @@ from bearish.models.query.query import AssetQuery, Symbols  # type: ignore
 from streamlit_file_browser import st_file_browser  # type: ignore
 
 from bullish.database.crud import BullishDb
-from bullish.figures import plot
-from bullish.filter import FilterQuery, FilterUpdate, FilteredResults, FilterQueryStored
+from bullish.figures.figures import plot
+from bullish.analysis.filter import (
+    FilterQuery,
+    FilterUpdate,
+    FilteredResults,
+    FilterQueryStored,
+)
 from bullish.jobs.models import JobTracker
-from bullish.jobs.tasks import update
+from bullish.jobs.tasks import update, news
 
 CACHE_SHELVE = "user_cache"
 DB_KEY = "db_path"
@@ -110,7 +115,7 @@ def dialog_plot_figure() -> None:
     st.session_state.ticker_figure = None
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0915, C901
     assign_db_state()
     if st.session_state.database_path is None:
         dialog_pick_database()
@@ -118,7 +123,7 @@ def main() -> None:
     charts_tab, jobs_tab = st.tabs(["Charts", "Jobs"])
     if "data" not in st.session_state:
         st.session_state.data = load_analysis_data(bearish_db_)
-    with st.sidebar:  # noqa: SIM117
+    with st.sidebar:
         with st.expander("Filter"):
             view_query = sp.pydantic_form(key="my_form", model=FilterQuery)
             if view_query:
@@ -130,6 +135,7 @@ def main() -> None:
                 if "filter_query" in st.session_state:
                     disabled = st.session_state.filter_query is None
                 user_input = st.text_input("Enter your name:", disabled=disabled)
+                headless = st.checkbox("Headless mode", value=True, disabled=disabled)
                 if st.button("Save", disabled=disabled):
                     name = user_input.strip()
                     if not name:
@@ -143,20 +149,26 @@ def main() -> None:
                             ),
                             symbols=symbols,
                         )
+
                         bearish_db_.write_filtered_results(filtered_results)
+                        res = news(
+                            database_path=st.session_state.database_path,
+                            symbols=symbols,
+                            headless=headless,
+                        )
+                        bearish_db_.write_job_tracker(
+                            JobTracker(job_id=str(res.id), type="Fetching news")
+                        )
                         st.session_state.filter_query = None
                         st.success(f"Hello, {user_input}!")
         with st.expander("Load"):
             existing_filtered_results = bearish_db_.read_list_filtered_results()
-            option = st.selectbox(
-                "Saved results",
-                [""] + existing_filtered_results,
-            )
+            option = st.selectbox("Saved results", ["", *existing_filtered_results])
             if option:
-                filtered_results = bearish_db_.read_filtered_results(option)
-                if filtered_results:
+                filtered_results_ = bearish_db_.read_filtered_results(option)
+                if filtered_results_:
                     st.session_state.data = bearish_db_.read_analysis_data(
-                        symbols=filtered_results.symbols
+                        symbols=filtered_results_.symbols
                     )
 
         with st.expander("Update"):

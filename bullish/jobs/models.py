@@ -20,9 +20,6 @@ class JobTracker(JobTrackerStatus):
 
 
 def add_icons(data: pd.DataFrame) -> pd.DataFrame:
-    status_map = {
-        status: icon
-        for status, icon in zip(list(get_args(JobStatus)), StatusIcon, strict=True)
-    }
+    status_map = dict(zip(list(get_args(JobStatus)), StatusIcon, strict=True))
     data["status"] = data["status"].map(status_map)
     return data

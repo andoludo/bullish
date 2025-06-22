@@ -1,7 +1,7 @@
 from functools import cached_property
 from typing import Literal, Set, get_args, Dict, Any, Optional, List
 
-from bearish.types import SeriesLength
+from bearish.types import SeriesLength  # type: ignore
 from pydantic import BaseModel, Field
 
 Industry = Literal[
@@ -104,8 +104,8 @@ class FilterQuery(BaseModel):
 
 
 class FilterQueryStored(FilterQuery):
-    industry: Optional[List[Industry]] = None
-    country: Optional[List[Country]] = None
+    industry: Optional[List[Industry]] = None  # type: ignore
+    country: Optional[List[Country]] = None  # type: ignore
 
 
 class FilterUpdate(BaseModel):

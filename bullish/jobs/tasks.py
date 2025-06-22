@@ -1,18 +1,19 @@
 import functools
 import logging
-from time import sleep
 from typing import Optional, Any, Callable, List
 
-from bearish.main import Bearish
+from bearish.main import Bearish  # type: ignore
+from tickermood.main import get_news  # type: ignore
+from tickermood.types import DatabaseConfig  # type: ignore
 
 from .app import huey
 from pathlib import Path
-from huey.api import Task
+from huey.api import Task  # type: ignore
 
 from .models import JobTrackerStatus
-from ..analysis import run_analysis
+from ..analysis.analysis import run_analysis
 from ..database.crud import BullishDb
-from ..filter import FilterQuery, FilterUpdate
+from bullish.analysis.filter import FilterUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,8 @@ def job_tracker(func: Callable[..., Any]) -> Callable[..., Any]:
         database_path: Path, *args: Any, task: Optional[Task] = None, **kwargs: Any
     ) -> None:
         bullish_db = BullishDb(database_path=database_path)
+        if task is None:
+            raise ValueError("Task must be provided for job tracking.")
         bullish_db.update_job_tracker_status(
             JobTrackerStatus(job_id=task.id, status="Running")
         )
@@ -40,7 +43,7 @@ def job_tracker(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-@huey.task(context=True)
+@huey.task(context=True)  # type: ignore
 @job_tracker
 def update(
     database_path: Path,
@@ -60,3 +63,15 @@ def update(
             bearish.update_financials(symbols)
     bullish_db = BullishDb(database_path=database_path)
     run_analysis(bullish_db)
+
+
+@huey.task(context=True)  # type: ignore
+@job_tracker
+def news(
+    database_path: Path,
+    symbols: List[str],
+    headless: bool = True,
+    task: Optional[Task] = None,
+) -> None:
+    database_config = DatabaseConfig(database_path=database_path, no_migration=True)
+    get_news(symbols, database_config, headless=headless)

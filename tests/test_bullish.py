@@ -2,14 +2,24 @@ import datetime
 from pathlib import Path
 
 import pandas as pd
+import pytest
 from bearish.main import Bearish
 from bearish.models.base import Ticker
 from bearish.models.price.prices import Prices
 from bearish.models.query.query import AssetQuery, Symbols
+from sqlalchemy import inspect
 
-from bullish.analysis import Analysis, TechnicalAnalysis, mom, wow, yoy, run_analysis
+
+from bullish.analysis.analysis import (
+    Analysis,
+    TechnicalAnalysis,
+    mom,
+    wow,
+    yoy,
+    run_analysis,
+)
 from bullish.database.crud import BullishDb
-from bullish.filter import FilteredResults, FilterQuery, FilterQueryStored
+from bullish.analysis.filter import FilteredResults, FilterQueryStored
 from bullish.jobs.models import JobTracker
 
 
@@ -104,3 +114,12 @@ def test_filtered_results(bullish_db: BullishDb) -> None:
     assert filtered_results is not None
     results = bullish_db.read_list_filtered_results()
     assert results
+
+
+@pytest.mark.skip
+def test_ticker_mood_instantiation(bullish_db: BullishDb) -> None:
+    from tickermood.database.crud import TickerMoodDb
+
+    TickerMoodDb(database_path=bullish_db.database_path, no_migration=True)
+    insp = inspect(bullish_db._engine)
+    assert insp.has_table("subject")

@@ -6,8 +6,9 @@ import pandas as pd
 from bearish.interface.interface import BearishDbBase  # type: ignore
 from bearish.models.base import Ticker  # type: ignore
 
-from bullish.analysis import Analysis, AnalysisView
-from bullish.filter import FilterQuery, FilteredResults
+
+from bullish.analysis.analysis import Analysis, AnalysisView
+from bullish.analysis.filter import FilterQuery, FilteredResults
 from bullish.jobs.models import JobTracker, JobTrackerStatus, add_icons
 
 logger = logging.getLogger(__name__)

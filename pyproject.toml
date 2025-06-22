@@ -7,7 +7,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
-bearishpy = { path = "../bearish", develop = true }
+bearishpy = "^0.19.0"
+tickermood = "^0.4.0"
 streamlit = "^1.45.1"
 streamlit-pydantic = "^v0.6.1-rc.3"
 streamlit-file-browser = "^3.2.22"
@@ -15,6 +16,8 @@ huey = "^2.5.3"
 pandas-ta = "^0.3.14b0"
 plotly = "^6.1.2"
 
+[tool.poetry.scripts]
+bullish = "bullish.cli:app"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from bullish.analysis import run_analysis
+from bullish.analysis.analysis import run_analysis
 from bullish.database.crud import BullishDb
 
 DATABASE_PATH = Path(__file__).parent / "data" / "bear.db"
@@ -17,6 +17,7 @@ def delete_tables(database_path: Path):
         conn.execute("DROP TABLE IF EXISTS analysis;")
         conn.execute("DROP TABLE IF EXISTS view;")
         conn.execute("DROP TABLE IF EXISTS filteredresults;")
+        conn.execute("DROP TABLE IF EXISTS subject;")
         conn.commit()
 
 

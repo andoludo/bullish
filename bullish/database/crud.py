@@ -10,11 +10,11 @@ from pydantic import ConfigDict
 from sqlalchemy import Engine, create_engine, insert, delete, update
 from sqlmodel import Session, select
 
-from bullish.analysis import Analysis
+from bullish.analysis.analysis import Analysis
 from bullish.database.schemas import AnalysisORM, JobTrackerORM, FilteredResultsORM
 from bullish.database.scripts.upgrade import upgrade
 from bullish.exceptions import DatabaseFileNotFoundError
-from bullish.filter import FilteredResults
+from bullish.analysis.filter import FilteredResults
 from bullish.interface.interface import BullishDbBase
 from bullish.jobs.models import JobTracker, JobTrackerStatus
 
@@ -70,9 +70,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
         columns_ = ",".join(columns)
         if symbols:
             symbols_str = ",".join([f"'{s}'" for s in symbols])
-            query = (
-                f"""SELECT {columns_} FROM analysis WHERE symbol IN ({symbols_str})"""
-            )
+            query = f"""SELECT {columns_} FROM analysis WHERE symbol IN ({symbols_str})"""  # noqa: S608
         else:
             query = f"""SELECT {columns_} FROM analysis"""  # noqa: S608
         return pd.read_sql_query(query, self._engine)
@@ -94,15 +92,15 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                 .prefix_with("OR REPLACE")
                 .values(job_tracker.model_dump())
             )
-            session.exec(stmt)
+            session.exec(stmt)  # type: ignore
             session.commit()
 
     def delete_job_trackers(self, job_ids: List[str]) -> None:
         with Session(self._engine) as session:
-            stmt = delete(JobTrackerORM).where(JobTrackerORM.job_id.in_(job_ids))
+            stmt = delete(JobTrackerORM).where(JobTrackerORM.job_id.in_(job_ids))  # type: ignore
             result = session.execute(stmt)
 
-            if result.rowcount > 0:
+            if result.rowcount > 0:  # type: ignore
                 session.commit()
             else:
                 logger.warning(f"Job tracker(s) with ID(s) {job_ids} not found.")
@@ -111,12 +109,12 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
         with Session(self._engine) as session:
             stmt = (
                 update(JobTrackerORM)
-                .where(JobTrackerORM.job_id == job_tracker_status.job_id)
+                .where(JobTrackerORM.job_id == job_tracker_status.job_id)  # type: ignore
                 .values(status=job_tracker_status.status)
             )
             result = session.execute(stmt)
 
-            if result.rowcount > 0:
+            if result.rowcount > 0:  # type: ignore
                 session.commit()
             else:
                 logger.warning(
@@ -138,7 +136,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
         with Session(self._engine) as session:
             stmt = select(FilteredResultsORM.name)
             result = session.execute(stmt).scalars().all()
-            return result
+            return list(result)
 
     def write_filtered_results(self, filtered_results: FilteredResults) -> None:
         with Session(self._engine) as session:

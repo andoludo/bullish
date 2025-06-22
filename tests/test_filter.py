@@ -1,5 +1,5 @@
 from bullish.database.crud import BullishDb
-from bullish.filter import FilterQuery
+from bullish.analysis.filter import FilterQuery
 
 
 def test_read_filter_query(bullish_view: BullishDb) -> None:
