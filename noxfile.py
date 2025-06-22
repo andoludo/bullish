@@ -1,5 +1,3 @@
-from typing import List
-
 import nox
 from nox import Session
 
@@ -7,11 +5,9 @@ nox.options.reuse_existing_virtualenvs = True
 
 
 @nox.session(python=["3.10"])
-def install(session: Session, groups: List[str], root: bool = True) -> None:
-    if root:
-        groups = ["main", *groups]
-
-    session.run_always(
+def install(session: Session) -> None:
+    groups = ["main", "dev"]
+    session.run(
         "poetry",
         "install",
         "--no-root",
@@ -19,13 +15,6 @@ def install(session: Session, groups: List[str], root: bool = True) -> None:
         f"--only={','.join(groups)}",
         external=True,
     )
-    if root:
-        session.install(".")
-
-
-@nox.session(python=["3.10"])
-def tests(session: Session) -> None:
-    session.run("poetry", "run", "pytest", "-m", "not integration")
 
 
 @nox.session(python=["3.10"])
@@ -41,3 +30,8 @@ def linting(session: Session) -> None:
         "--show-fixes",
         "--exit-non-zero-on-fix",
     )
+
+
+@nox.session(python=["3.10"])
+def tests(session: Session) -> None:
+    session.run("poetry", "run", "pytest", "-m", "not integration")
