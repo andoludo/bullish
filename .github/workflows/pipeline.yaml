@@ -2,9 +2,6 @@ name: Pipeline
 
 on:
   push:
-env:
-  TIINGO_API_KEY: ${{secrets.TIINGO_API_KEY}}
-  FMP_API_KEY: ${{secrets.FMP_API_KEY}}
 jobs:
   linting:
     runs-on: ubuntu-latest
