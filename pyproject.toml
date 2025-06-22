@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "bullish"
+name = "bullishpy"
 version = "0.2.0"
 description = ""
 authors = ["aan <andoludovic.andriamamonjy@gmail.com>"]
