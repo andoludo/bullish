@@ -153,7 +153,9 @@ def _abs(data: pd.Series) -> pd.Series:  # type: ignore
 
 
 class TechnicalAnalysis(BaseModel):
-    rsi_last_value: Optional[float] = None
+    rsi_last_value: Optional[float] = Field(
+        None, alias="RSI Last value", description="RSI last value", ge=0, le=100
+    )
     macd_12_26_9_buy_date: Optional[date] = None
     ma_50_200_buy_date: Optional[date] = None
     slope_7: Optional[float] = None
@@ -332,26 +334,28 @@ class TechnicalAnalysis(BaseModel):
 
 
 class BaseFundamentalAnalysis(BaseModel):
-    positive_free_cash_flow: Optional[float] = None
-    growing_operating_cash_flow: Optional[float] = None
-    operating_cash_flow_is_higher_than_net_income: Optional[float] = None
+    positive_debt_to_equity: Optional[bool] = None
+    positive_return_on_assets: Optional[bool] = None
+    positive_return_on_equity: Optional[bool] = None
+    positive_diluted_eps: Optional[bool] = None
+    positive_basic_eps: Optional[bool] = None
+    growing_basic_eps: Optional[bool] = None
+    growing_diluted_eps: Optional[bool] = None
+    positive_net_income: Optional[bool] = None
+    positive_operating_income: Optional[bool] = None
+    growing_net_income: Optional[bool] = None
+    growing_operating_income: Optional[bool] = None
+    positive_free_cash_flow: Optional[bool] = None
+    growing_operating_cash_flow: Optional[bool] = None
+    operating_cash_flow_is_higher_than_net_income: Optional[bool] = None
+
     mean_capex_ratio: Optional[float] = None
     max_capex_ratio: Optional[float] = None
     min_capex_ratio: Optional[float] = None
     mean_dividend_payout_ratio: Optional[float] = None
     max_dividend_payout_ratio: Optional[float] = None
     min_dividend_payout_ratio: Optional[float] = None
-    positive_net_income: Optional[float] = None
-    positive_operating_income: Optional[float] = None
-    growing_net_income: Optional[float] = None
-    growing_operating_income: Optional[float] = None
-    positive_diluted_eps: Optional[float] = None
-    positive_basic_eps: Optional[float] = None
-    growing_basic_eps: Optional[float] = None
-    growing_diluted_eps: Optional[float] = None
-    positive_debt_to_equity: Optional[float] = None
-    positive_return_on_assets: Optional[float] = None
-    positive_return_on_equity: Optional[float] = None
+
     earning_per_share: Optional[float] = None
 
     def is_empty(self) -> bool:
@@ -481,13 +485,12 @@ class BaseFundamentalAnalysis(BaseModel):
             return cls()
 
 
-class YearlyFundamentalAnalysis(BaseFundamentalAnalysis):
-    ...
+class YearlyFundamentalAnalysis(BaseFundamentalAnalysis): ...
 
 
 fields_with_prefix = {
-    f"{QUARTERLY}_{name}": (Optional[float], Field(default=None))
-    for name in BaseFundamentalAnalysis.model_fields
+    f"{QUARTERLY}_{name}": (field_info.annotation, Field(default=None))
+    for name, field_info in BaseFundamentalAnalysis.model_fields.items()
 }
 
 # Create the new model

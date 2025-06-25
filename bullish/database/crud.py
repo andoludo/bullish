@@ -1,3 +1,4 @@
+import json
 import logging
 from functools import cached_property
 from pathlib import Path
@@ -140,7 +141,13 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
 
     def write_filtered_results(self, filtered_results: FilteredResults) -> None:
         with Session(self._engine) as session:
-            data = filtered_results.model_dump()
-            stmt = insert(FilteredResultsORM).prefix_with("OR REPLACE").values(data)
+            data = filtered_results.model_dump_json(
+                exclude_unset=True, exclude_defaults=True
+            )
+            stmt = (
+                insert(FilteredResultsORM)
+                .prefix_with("OR REPLACE")
+                .values(json.loads(data))
+            )
             session.exec(stmt)  # type: ignore
             session.commit()

@@ -1,7 +1,7 @@
 import shelve
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Type, Dict, Any
 
 import pandas as pd
 import streamlit as st
@@ -18,9 +18,14 @@ from bullish.analysis.filter import (
     FilterUpdate,
     FilteredResults,
     FilterQueryStored,
+    TechnicalAnalysisFilter,
+    FundamentalAnalysisFilter,
+    GROUP_MAPPING,
+    GeneralFilter,
 )
 from bullish.jobs.models import JobTracker
 from bullish.jobs.tasks import update, news
+from pydantic import BaseModel
 
 CACHE_SHELVE = "user_cache"
 DB_KEY = "db_path"
@@ -97,6 +102,55 @@ def dialog_pick_database() -> None:
         st.stop()
 
 
+def build_filter(model: Type[BaseModel]) -> Dict[str, Any]:
+    data: Dict[str, Any] = {}
+    for field, info in model.model_fields.items():
+        name = info.alias or field
+        if info.annotation == Optional[List[str]]:  # type: ignore
+            data[field] = st.multiselect(name, GROUP_MAPPING[field], key=name)
+
+        else:
+            ge = next((item.ge for item in info.metadata if hasattr(item, "ge")), None)
+            le = next((item.le for item in info.metadata if hasattr(item, "le")), None)
+            data[field] = list(st.slider(name, le, ge, tuple(info.default)))  # type: ignore
+    return data
+
+
+@st.dialog("🔍  Filter", width="large")
+def filter() -> None:
+
+    st.markdown(
+        """
+    <style>
+    div[data-testid="stDialog"] div[role="dialog"]:has(.big-dialog) {
+        width: 90vw;
+        height: 110vh;
+    }
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+    with st.expander("Technical Analysis"):
+        data_ = build_filter(TechnicalAnalysisFilter)
+        st.session_state.filter_query.update(data_)
+    with st.expander("Fundamental Analysis"):
+        data_ = build_filter(FundamentalAnalysisFilter)
+        st.session_state.filter_query.update(data_)
+    with st.expander("General filter"):
+        data_ = build_filter(GeneralFilter)
+        st.session_state.filter_query.update(data_)
+    if st.button("🔍 Apply"):
+        query = FilterQuery.model_validate(st.session_state.filter_query)
+        if query.valid():
+            st.session_state.data = bearish_db(
+                st.session_state.database_path
+            ).read_filter_query(query)
+            st.session_state.ticker_figure = None
+            st.session_state.filter_query = {}
+            st.session_state.query = query
+            st.rerun()
+
+
 @st.dialog("📈  Price history and analysis", width="large")
 def dialog_plot_figure() -> None:
     st.markdown(
@@ -115,8 +169,43 @@ def dialog_plot_figure() -> None:
     st.session_state.ticker_figure = None
 
 
-def main() -> None:  # noqa: PLR0915, C901
+@st.dialog("⭐ Save filtered results")
+def save_filtered_results(bearish_db_: BullishDb) -> None:
+    user_input = st.text_input("Selection name").strip()
+    headless = st.checkbox("Headless mode", value=True)
+    apply = st.button("Apply")
+    if apply:
+        if not user_input:
+            st.error("This field is required.")
+        else:
+            symbols = st.session_state.data["symbol"].unique().tolist()
+            filtered_results = FilteredResults(
+                name=user_input,
+                filter_query=FilterQueryStored.model_validate(
+                    st.session_state.query.model_dump(
+                        exclude_unset=True, exclude_defaults=True
+                    )
+                ),
+                symbols=symbols,
+            )
+
+            bearish_db_.write_filtered_results(filtered_results)
+            res = news(
+                database_path=st.session_state.database_path,
+                symbols=symbols,
+                headless=headless,
+            )
+            bearish_db_.write_job_tracker(
+                JobTracker(job_id=str(res.id), type="Fetching news")
+            )
+            st.session_state.filter_query = None
+            st.session_state.query = None
+            st.rerun()
+
+
+def main() -> None:
     assign_db_state()
+
     if st.session_state.database_path is None:
         dialog_pick_database()
     bearish_db_ = bearish_db(st.session_state.database_path)
@@ -124,43 +213,6 @@ def main() -> None:  # noqa: PLR0915, C901
     if "data" not in st.session_state:
         st.session_state.data = load_analysis_data(bearish_db_)
     with st.sidebar:
-        with st.expander("Filter"):
-            view_query = sp.pydantic_form(key="my_form", model=FilterQuery)
-            if view_query:
-                st.session_state.data = bearish_db_.read_filter_query(view_query)
-                st.session_state.ticker_figure = None
-                st.session_state.filter_query = view_query
-            with st.container(border=True):
-                disabled = "filter_query" not in st.session_state
-                if "filter_query" in st.session_state:
-                    disabled = st.session_state.filter_query is None
-                user_input = st.text_input("Enter your name:", disabled=disabled)
-                headless = st.checkbox("Headless mode", value=True, disabled=disabled)
-                if st.button("Save", disabled=disabled):
-                    name = user_input.strip()
-                    if not name:
-                        st.error("This field is required.")
-                    else:
-                        symbols = st.session_state.data["symbol"].unique().tolist()
-                        filtered_results = FilteredResults(
-                            name=name,
-                            filter_query=FilterQueryStored.model_validate(
-                                st.session_state.filter_query.model_dump()
-                            ),
-                            symbols=symbols,
-                        )
-
-                        bearish_db_.write_filtered_results(filtered_results)
-                        res = news(
-                            database_path=st.session_state.database_path,
-                            symbols=symbols,
-                            headless=headless,
-                        )
-                        bearish_db_.write_job_tracker(
-                            JobTracker(job_id=str(res.id), type="Fetching news")
-                        )
-                        st.session_state.filter_query = None
-                        st.success(f"Hello, {user_input}!")
         with st.expander("Load"):
             existing_filtered_results = bearish_db_.read_list_filtered_results()
             option = st.selectbox("Saved results", ["", *existing_filtered_results])
@@ -190,20 +242,38 @@ def main() -> None:  # noqa: PLR0915, C901
                 st.success("Data update job has been enqueued.")
                 st.rerun()
     with charts_tab:
-        st.header("✅ Data overview")
-        st.dataframe(
-            st.session_state.data,
-            on_select=on_table_select,
-            selection_mode="single-row",
-            key="selected_data",
-            use_container_width=True,
-            height=600,
-        )
-        if (
-            "ticker_figure" in st.session_state
-            and st.session_state.ticker_figure is not None
-        ):
-            dialog_plot_figure()
+        with st.container():
+            col1, col2, _ = st.columns([0.5, 0.5, 5])
+            with col1:
+                if st.button("🔍 Filter"):
+                    st.session_state.filter_query = {}
+                    filter()
+            with col2:
+                if (
+                    "query" in st.session_state
+                    and st.session_state.query is not None
+                    and st.session_state.query.valid()
+                ):
+                    favorite = st.button(" ⭐ ")
+                    if favorite:
+                        save_filtered_results(bearish_db_)
+
+        with st.container():
+            st.header("✅ Data overview")
+
+            st.dataframe(
+                st.session_state.data,
+                on_select=on_table_select,
+                selection_mode="single-row",
+                key="selected_data",
+                use_container_width=True,
+                height=600,
+            )
+            if (
+                "ticker_figure" in st.session_state
+                and st.session_state.ticker_figure is not None
+            ):
+                dialog_plot_figure()
 
     with jobs_tab:
         job_trackers = bearish_db_.read_job_trackers()

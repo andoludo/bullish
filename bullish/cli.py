@@ -64,7 +64,9 @@ def serve(
             time.sleep(1)
 
     except Exception as exc:  # pragma: no cover
-        typer.secho(f"❌ Failed to start services: {exc}", fg=typer.colors.RED, err=True)
+        typer.secho(
+            f"❌ Failed to start services: {exc}", fg=typer.colors.RED, err=True
+        )
         _shutdown()
 
 

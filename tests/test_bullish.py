@@ -107,7 +107,9 @@ def test_bearish_update_price(bullish_db: BullishDb) -> None:
 
 def test_filtered_results(bullish_db: BullishDb) -> None:
     filtered_results = FilteredResults(
-        name="test_results", filter_query=FilterQueryStored(), symbols=["AAPL", "GOOGL"]
+        name="test_results_3",
+        filter_query=FilterQueryStored(market_capitalization=[0, 100]),
+        symbols=["AAPL", "GOOGL"],
     )
     bullish_db.write_filtered_results(filtered_results)
     filtered_results = bullish_db.read_filtered_results(filtered_results.name)
