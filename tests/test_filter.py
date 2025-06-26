@@ -1,7 +1,7 @@
 import datetime
 from datetime import date
 
-from bullish.analysis.analysis import TechnicalAnalysis
+from bullish.analysis.analysis import TechnicalAnalysis, run_analysis
 from bullish.database.crud import BullishDb
 from bullish.analysis.filter import FilterQuery
 

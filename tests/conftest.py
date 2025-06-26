@@ -1,8 +1,10 @@
 import sqlite3
 from pathlib import Path
 
+import pandas as pd
 import pytest
-
+from bearish.models.base import Ticker
+from bearish.models.price.prices import Prices
 from bullish.analysis.analysis import run_analysis
 from bullish.database.crud import BullishDb
 
@@ -36,3 +38,10 @@ def bullish_db_with_analysis(bullish_db: BullishDb) -> BullishDb:
 @pytest.fixture
 def bullish_view() -> BullishDb:
     return BullishDb(database_path=DATABASE_PATH_VIEW)
+
+
+@pytest.fixture
+def data_aapl(bullish_db: BullishDb) -> pd.DataFrame:
+    ticker = Ticker(symbol="AAPL")
+    prices = Prices.from_ticker(bullish_db, ticker)
+    return prices.to_dataframe()

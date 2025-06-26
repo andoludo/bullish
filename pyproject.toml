@@ -15,6 +15,7 @@ streamlit-file-browser = "^3.2.22"
 huey = "^2.5.3"
 pandas-ta = "^0.3.14b0"
 plotly = "^6.1.2"
+ta-lib = "^0.6.4"
 
 [tool.poetry.scripts]
 bullish = "bullish.cli:app"
@@ -102,7 +103,7 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "W", "F", "B006","RUF","UP","SIM","FURB","PIE","PERF","C4","B","PL","S","C901","N","ANN", "ERA001", "PD"]
 ignore = []
-extend-ignore = ["ANN101","ANN102","PLR6301","E203","W291","ANN401"]
+extend-ignore = ["ANN101","ANN102","PLR6301","E203","W291","ANN401","PLR2004"]
 
 fixable = ["ALL"]
 unfixable = []
