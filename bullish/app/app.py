@@ -178,11 +178,12 @@ def filter() -> None:
                 with st.expander(filter._description):  # type: ignore
                     data_ = build_filter(filter)
                     st.session_state.filter_query.update(data_)
-        with column_2, st.expander("Fundamental Analysis"):
-            for filter in FundamentalAnalysisFilters:
-                with st.expander(filter._description):  # type: ignore
-                    data_ = build_filter(filter)
-                    st.session_state.filter_query.update(data_)
+        with column_2:
+            with st.expander("Fundamental Analysis"):
+                for filter in FundamentalAnalysisFilters:
+                    with st.expander(filter._description):  # type: ignore
+                        data_ = build_filter(filter)
+                        st.session_state.filter_query.update(data_)
             with st.expander("General filter"):
                 data_ = build_filter(GeneralFilter)
                 st.session_state.filter_query.update(data_)
