@@ -1,50 +1,64 @@
 import logging
 from datetime import date
-from typing import Optional, List, Callable, Any, Literal, Dict, Union
+from typing import Optional, List, Callable, Any, Literal, Dict, Union, Self
 
+import numpy as np
 import pandas as pd
-import talib
-from pydantic import BaseModel, Field, PrivateAttr, create_model
-import pandas_ta as ta  # type: ignore
+from pydantic import BaseModel, Field, PrivateAttr, create_model, model_validator
+
+from bullish.analysis.functions import (
+    cross,
+    cross_value,
+    ADX,
+    MACD,
+    RSI,
+    STOCH,
+    MFI,
+    ROC,
+    CANDLESTOCK_PATTERNS,
+    SMA,
+)
 
 logger = logging.getLogger(__name__)
 SignalType = Literal["Short", "Long", "Oversold", "Overbought", "Value"]
-
-
-def cross(
-    series_a: pd.Series, series_b: pd.Series, above: bool = True  # type: ignore
-) -> Optional[date]:
-    crossing = ta.cross(series_a=series_a, series_b=series_b, above=above)
-    if not crossing[crossing == 1].index.empty:
-        return pd.Timestamp(crossing[crossing == 1].index[-1]).date()
-    return None
-
-
-def cross_value(series: pd.Series, number: int, above: bool = True) -> Optional[date]:  # type: ignore
-    return cross(series, pd.Series(number, index=series.index), above=above)
 
 
 class Signal(BaseModel):
     name: str
     type_info: SignalType
     type: Any
+    range: Optional[List[float]] = None
     function: Callable[[pd.DataFrame], Optional[Union[date, float]]]
-    description: Optional[str] = None
+    description: str
     date: Optional[date] = None
     value: Optional[float] = None
 
-    def compute(self, data: pd.DataFrame) -> None:
+    def is_date(self) -> bool:
         if self.type == Optional[date]:
-            self.date = self.function(data)  # type: ignore
+            return True
         elif self.type == Optional[float]:
-            self.value = self.function(data)  # type: ignore
+            return False
         else:
             raise NotImplementedError
+
+    def compute(self, data: pd.DataFrame) -> None:
+        if self.is_date():
+            self.date = self.function(data)  # type: ignore
+        else:
+            self.value = self.function(data)  # type: ignore
+
+    @model_validator(mode="after")
+    def _validate(self) -> Self:
+        if self.type == Optional[float] and self.range is None:
+            raise ValueError(
+                "Range must be defined for signals of type Optional[float]"
+            )
+        return self
 
 
 class Indicator(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str
     expected_columns: List[str]
     function: Callable[[pd.DataFrame], pd.DataFrame]
     _data: pd.DataFrame = PrivateAttr(default=pd.DataFrame())
@@ -69,101 +83,30 @@ class Indicator(BaseModel):
                 )
 
 
-def compute_adx(data: pd.DataFrame) -> pd.DataFrame:
-    results = pd.DataFrame(index=data.index)
-    results["ADX_14"] = talib.ADX(data.high, data.low, close=data.close)  # type: ignore
-    results["MINUS_DM"] = talib.MINUS_DI(data.high, data.low, data.close)  # type: ignore
-    results["PLUS_DM"] = talib.PLUS_DI(data.high, data.low, data.close)  # type: ignore
-    return results
-
-
-def compute_macd(data: pd.DataFrame) -> pd.DataFrame:
-    results = pd.DataFrame(index=data.index)
-    (
-        results["MACD_12_26_9"],
-        results["MACD_12_26_9_SIGNAL"],
-        results["MACD_12_26_9_HIST"],
-    ) = talib.MACD(
-        data.close  # type: ignore
-    )
-    return results
-
-
-def compute_rsi(data: pd.DataFrame) -> pd.DataFrame:
-    results = pd.DataFrame(index=data.index)
-    results["RSI"] = talib.RSI(data.close)  # type: ignore
-    return results
-
-
-def compute_stoch(data: pd.DataFrame) -> pd.DataFrame:
-    results = pd.DataFrame(index=data.index)
-    results["SLOW_K"], results["SLOW_D"] = talib.STOCH(data.high, data.low, data.close)  # type: ignore
-    return results
-
-
-def compute_mfi(data: pd.DataFrame) -> pd.DataFrame:
-    results = pd.DataFrame(index=data.index)
-    results["MFI"] = talib.MFI(data.high, data.low, data.close, data.volume)  # type: ignore
-    return results
-
-
-def compute_roc(data: pd.DataFrame) -> pd.DataFrame:
-    results = pd.DataFrame(index=data.index)
-    results["ROC_7"] = talib.ROC(data.close, timeperiod=7)  # type: ignore
-    results["ROC_30"] = talib.ROC(data.close, timeperiod=30)  # type: ignore
-    results["ROC_90"] = talib.ROC(data.close, timeperiod=90)  # type: ignore
-    results["ROC_180"] = talib.ROC(data.close, timeperiod=180)  # type: ignore
-    return results
-
-
-def compute_patterns(data: pd.DataFrame) -> pd.DataFrame:
-    results = pd.DataFrame(index=data.index)
-    results["CDLMORNINGSTAR"] = talib.CDLMORNINGSTAR(
-        data.open, data.high, data.low, data.close  # type: ignore
-    )
-    results["CDL3LINESTRIKE"] = talib.CDL3LINESTRIKE(
-        data.open, data.high, data.low, data.close  # type: ignore
-    )
-    results["CDL3WHITESOLDIERS"] = talib.CDL3WHITESOLDIERS(
-        data.open, data.high, data.low, data.close  # type: ignore
-    )
-    results["CDLABANDONEDBABY"] = talib.CDLABANDONEDBABY(
-        data.open, data.high, data.low, data.close  # type: ignore
-    )
-    results["CDLTASUKIGAP"] = talib.CDLTASUKIGAP(
-        data.open, data.high, data.low, data.close  # type: ignore
-    )
-    results["CDLPIERCING"] = talib.CDLPIERCING(
-        data.open, data.high, data.low, data.close  # type: ignore
-    )
-    results["CDLENGULFING"] = talib.CDLENGULFING(
-        data.open, data.high, data.low, data.close  # type: ignore
-    )
-    return results
-
-
 def indicators_factory() -> List[Indicator]:
     return [
         Indicator(
             name="ADX_14",
             description="Average Directional Movement Index",
-            expected_columns=["ADX_14", "MINUS_DM", "PLUS_DM"],
-            function=compute_adx,
+            expected_columns=["ADX_14", "MINUS_DI", "PLUS_DI"],
+            function=ADX.call,
             signals=[
                 Signal(
                     name="ADX_14_LONG",
+                    description="ADX 14 Long Signal",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: d[
-                        (d.ADX_14 > 20) & (d.PLUS_DM > d.MINUS_DM)
+                        (d.ADX_14 > 20) & (d.PLUS_DI > d.MINUS_DI)
                     ].index[-1],
                 ),
                 Signal(
                     name="ADX_14_SHORT",
+                    description="ADX 14 Short Signal",
                     type_info="Short",
                     type=Optional[date],
                     function=lambda d: d[
-                        (d.ADX_14 > 20) & (d.MINUS_DM > d.PLUS_DM)
+                        (d.ADX_14 > 20) & (d.MINUS_DI > d.PLUS_DI)
                     ].index[-1],
                 ),
             ],
@@ -176,28 +119,32 @@ def indicators_factory() -> List[Indicator]:
                 "MACD_12_26_9_SIGNAL",
                 "MACD_12_26_9_HIST",
             ],
-            function=compute_macd,
+            function=MACD.call,
             signals=[
                 Signal(
                     name="MACD_12_26_9_BULLISH_CROSSOVER",
+                    description="MACD 12-26-9 Bullish Crossover",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: cross(d.MACD_12_26_9, d.MACD_12_26_9_SIGNAL),
                 ),
                 Signal(
                     name="MACD_12_26_9_BEARISH_CROSSOVER",
+                    description="MACD 12-26-9 Bearish Crossover",
                     type_info="Short",
                     type=Optional[date],
                     function=lambda d: cross(d.MACD_12_26_9_SIGNAL, d.MACD_12_26_9),
                 ),
                 Signal(
                     name="MACD_12_26_9_ZERO_LINE_CROSS_UP",
+                    description="MACD 12-26-9 Zero Line Cross Up",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: cross_value(d.MACD_12_26_9, 0),
                 ),
                 Signal(
                     name="MACD_12_26_9_ZERO_LINE_CROSS_DOWN",
+                    description="MACD 12-26-9 Zero Line Cross Down",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: cross_value(d.MACD_12_26_9, 0, above=False),
@@ -208,28 +155,32 @@ def indicators_factory() -> List[Indicator]:
             name="RSI",
             description="Relative Strength Index",
             expected_columns=["RSI"],
-            function=compute_rsi,
+            function=RSI.call,
             signals=[
                 Signal(
                     name="RSI_BULLISH_CROSSOVER",
+                    description="RSI Bullish Crossover",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: cross_value(d.RSI, 30),
                 ),
                 Signal(
                     name="RSI_BEARISH_CROSSOVER",
+                    description="RSI Bearish Crossover",
                     type_info="Short",
                     type=Optional[date],
                     function=lambda d: cross_value(d.RSI, 70, above=False),
                 ),
                 Signal(
                     name="RSI_OVERSOLD",
+                    description="RSI Oversold Signal",
                     type_info="Oversold",
                     type=Optional[date],
                     function=lambda d: d[(d.RSI < 30) & (d.RSI > 0)].index[-1],
                 ),
                 Signal(
                     name="RSI_OVERBOUGHT",
+                    description="RSI Overbought Signal",
                     type_info="Overbought",
                     type=Optional[date],
                     function=lambda d: d[(d.RSI < 100) & (d.RSI > 70)].index[-1],
@@ -240,16 +191,18 @@ def indicators_factory() -> List[Indicator]:
             name="STOCH",
             description="Stochastic",
             expected_columns=["SLOW_K", "SLOW_D"],
-            function=compute_stoch,
+            function=STOCH.call,
             signals=[
                 Signal(
                     name="STOCH_OVERSOLD",
+                    description="Stoch Oversold Signal",
                     type_info="Oversold",
                     type=Optional[date],
                     function=lambda d: d[(d.SLOW_K < 20) & (d.SLOW_K > 0)].index[-1],
                 ),
                 Signal(
                     name="STOCH_OVERBOUGHT",
+                    description="Stoch Overbought Signal",
                     type_info="Overbought",
                     type=Optional[date],
                     function=lambda d: d[(d.SLOW_K < 100) & (d.SLOW_K > 80)].index[-1],
@@ -260,16 +213,18 @@ def indicators_factory() -> List[Indicator]:
             name="MFI",
             description="Money Flow Index",
             expected_columns=["MFI"],
-            function=compute_mfi,
+            function=MFI.call,
             signals=[
                 Signal(
                     name="MFI_OVERSOLD",
+                    description="MFI Oversold Signal",
                     type_info="Oversold",
                     type=Optional[date],
                     function=lambda d: d[(d.MFI < 20)].index[-1],
                 ),
                 Signal(
                     name="MFI_OVERBOUGHT",
+                    description="MFI Overbought Signal",
                     type_info="Overbought",
                     type=Optional[date],
                     function=lambda d: d[(d.MFI > 80)].index[-1],
@@ -277,34 +232,64 @@ def indicators_factory() -> List[Indicator]:
             ],
         ),
         Indicator(
-            name="ROC",
-            description="Rate Of Change",
-            expected_columns=["ROC_7", "ROC_30", "ROC_90", "ROC_180"],
-            function=compute_roc,
+            name="SMA",
+            description="Money Flow Index",
+            expected_columns=["SMA_50", "SMA_200"],
+            function=SMA.call,
             signals=[
                 Signal(
-                    name="RATE_OF_CHANGE_7",
+                    name="GOLDEN_CROSS",
+                    description="Golden cross: SMA 50 crosses above SMA 200",
+                    type_info="Oversold",
+                    type=Optional[date],
+                    function=lambda d: cross(d.SMA_50, d.SMA_200),
+                ),
+                Signal(
+                    name="DEATH_CROSS",
+                    description="Death cross: SMA 50 crosses below SMA 200",
+                    type_info="Overbought",
+                    type=Optional[date],
+                    function=lambda d: cross(d.SMA_50, d.SMA_200, above=False),
+                ),
+            ],
+        ),
+        Indicator(
+            name="ROC",
+            description="Rate Of Change",
+            expected_columns=["ROC_7", "ROC_30", "ROC_1"],
+            function=ROC.call,
+            signals=[
+                Signal(
+                    name="RATE_OF_CHANGE_1",
                     type_info="Value",
+                    description="Median daily Rate of Change of the last 30 days",
                     type=Optional[float],
-                    function=lambda d: d.ROC_7.tolist()[-1],
+                    range=[-100, 100],
+                    function=lambda d: np.median(d.ROC_1.tolist()[-30:]),
+                ),
+                Signal(
+                    name="RATE_OF_CHANGE_7_4",
+                    type_info="Value",
+                    description="Median weekly Rate of Change of the last 4 weeks",
+                    type=Optional[float],
+                    range=[-100, 100],
+                    function=lambda d: np.median(d.ROC_7.tolist()[-4:]),
+                ),
+                Signal(
+                    name="RATE_OF_CHANGE_7_12",
+                    type_info="Value",
+                    description="Median weekly Rate of Change of the last 12 weeks",
+                    type=Optional[float],
+                    range=[-100, 100],
+                    function=lambda d: np.median(d.ROC_7.tolist()[-12:]),
                 ),
                 Signal(
                     name="RATE_OF_CHANGE_30",
                     type_info="Value",
+                    description="Median monthly Rate of Change of the last 12 Months",
                     type=Optional[float],
-                    function=lambda d: d.ROC_30.tolist()[-1],
-                ),
-                Signal(
-                    name="RATE_OF_CHANGE_90",
-                    type_info="Value",
-                    type=Optional[float],
-                    function=lambda d: d.ROC_90.tolist()[-1],
-                ),
-                Signal(
-                    name="RATE_OF_CHANGE_180",
-                    type_info="Value",
-                    type=Optional[float],
-                    function=lambda d: d.ROC_180.tolist()[-1],
+                    range=[-100, 100],
+                    function=lambda d: np.median(d.ROC_30.tolist()[-12:]),
                 ),
             ],
         ),
@@ -320,46 +305,53 @@ def indicators_factory() -> List[Indicator]:
                 "CDLPIERCING",
                 "CDLENGULFING",
             ],
-            function=compute_patterns,
+            function=CANDLESTOCK_PATTERNS.call,
             signals=[
                 Signal(
                     name="CDLMORNINGSTAR",
                     type_info="Long",
+                    description="Morning Star Candlestick Pattern",
                     type=Optional[date],
                     function=lambda d: d[(d.CDLMORNINGSTAR == 100)].index[-1],
                 ),
                 Signal(
                     name="CDL3LINESTRIKE",
+                    description="3 Line Strike Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: d[(d.CDL3LINESTRIKE == 100)].index[-1],
                 ),
                 Signal(
                     name="CDL3WHITESOLDIERS",
+                    description="3 White Soldiers Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: d[(d.CDL3WHITESOLDIERS == 100)].index[-1],
                 ),
                 Signal(
                     name="CDLABANDONEDBABY",
+                    description="Abandoned Baby Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: d[(d.CDLABANDONEDBABY == 100)].index[-1],
                 ),
                 Signal(
                     name="CDLTASUKIGAP",
+                    description="Tasukigap Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: d[(d.CDLTASUKIGAP == 100)].index[-1],
                 ),
                 Signal(
                     name="CDLPIERCING",
+                    description="Piercing Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: d[(d.CDLPIERCING == 100)].index[-1],
                 ),
                 Signal(
                     name="CDLENGULFING",
+                    description="Engulfing Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: d[(d.CDLENGULFING == 100)].index[-1],
@@ -384,21 +376,34 @@ class Indicators(BaseModel):
         res = {}
         for indicator in self.indicators:
             for signal in indicator.signals:
-                res[signal.name.lower()] = signal.date
+                res[signal.name.lower()] = (
+                    signal.date if signal.is_date() else signal.value
+                )
         return res
 
-    def create_indicator_model(self) -> type[BaseModel]:
-        model_parameters = {}
+    def create_indicator_models(self) -> List[type[BaseModel]]:
+        models = []
         for indicator in self.indicators:
+            model_parameters = {}
             for signal in indicator.signals:
+                range_ = {}
+                if signal.range:
+                    range_ = {"ge": signal.range[0], "le": signal.range[1]}
                 model_parameters[signal.name.lower()] = (
                     signal.type,
-                    Field(
+                    Field(  # type: ignore
                         None,
+                        **range_,
                         description=(
                             signal.description
                             or " ".join(signal.name.lower().capitalize().split("_"))
                         ),
                     ),
                 )
-        return create_model("IndicatorModel", **model_parameters)  # type: ignore
+            model = create_model(indicator.name, **model_parameters)  # type: ignore
+            model._description = indicator.description
+            models.append(model)
+        return models
+
+
+IndicatorModels = Indicators().create_indicator_models()

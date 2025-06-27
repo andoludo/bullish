@@ -4,6 +4,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from bullish.analysis.functions import add_indicators
+
 
 def plot(
     data: pd.DataFrame,
@@ -11,13 +13,9 @@ def plot(
     name: Optional[str] = None,
     dates: Optional[pd.Series] = None,  # type: ignore
 ) -> go.Figure:
-    data.ta.sma(50, append=True)
-    data.ta.sma(200, append=True)
-    data.ta.adx(append=True)
-    data.ta.macd(append=True)
-    data.ta.rsi(append=True)
+    data = add_indicators(data)
     fig = make_subplots(
-        rows=4,
+        rows=5,
         cols=1,
         shared_xaxes=True,
         vertical_spacing=0.1,
@@ -26,11 +24,13 @@ def plot(
             [None],  # Row 2: skipped (part of row 1)
             [{}],  # Row 3: RSI
             [{}],  # Row 4: MACD
+            [{}],  # Row 5: ADX
         ],
         subplot_titles=(
             f"Price + SMAs ({symbol} [{name}])",
             f"RSI ({symbol} [{name}])",
             f"MACD ({symbol} [{name}])",
+            f"ADX ({symbol} [{name}])",
         ),
     )
     # Row 1: Candlestick + SMAs
@@ -61,7 +61,7 @@ def plot(
 
     # Row 2: RSI
     fig.add_trace(
-        go.Scatter(x=data.index, y=data.RSI_14, name="RSI 14", mode="lines"),
+        go.Scatter(x=data.index, y=data.RSI, name="RSI 14", mode="lines"),
         row=3,
         col=1,
     )
@@ -75,15 +75,35 @@ def plot(
 
     fig.add_trace(
         go.Scatter(
-            x=data.index, y=data.MACDs_12_26_9, name="MACD Signal", mode="lines"
+            x=data.index, y=data.MACD_12_26_9_SIGNAL, name="MACD Signal", mode="lines"
         ),
         row=4,
         col=1,
     )
 
     fig.add_trace(
-        go.Bar(x=data.index, y=data.MACDh_12_26_9, name="MACD Histogram", opacity=0.5),
+        go.Bar(
+            x=data.index, y=data.MACD_12_26_9_HIST, name="MACD Histogram", opacity=0.5
+        ),
         row=4,
+        col=1,
+    )
+
+    # Row 4: ADX
+    fig.add_trace(
+        go.Scatter(x=data.index, y=data.ADX_14, name="ADX_14", mode="lines"),
+        row=5,
+        col=1,
+    )
+
+    fig.add_trace(
+        go.Scatter(x=data.index, y=data.MINUS_DI, name="-DI", mode="lines"),
+        row=5,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=data.index, y=data.PLUS_DI, name="+DI", mode="lines"),
+        row=5,
         col=1,
     )
     if dates is not None and not dates.empty:
@@ -94,7 +114,7 @@ def plot(
 
     # Layout tweaks
     fig.update_layout(
-        height=900,
+        height=1080,
         showlegend=True,
         title="Technical Indicator Dashboard",
         margin={"t": 60, "b": 40},
@@ -103,5 +123,6 @@ def plot(
     # Optional: Add horizontal lines for RSI (e.g., 70/30 levels)
     fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1)
     fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1)
+    fig.add_hline(y=25, line_dash="dash", line_color="red", row=5, col=1)
 
     return fig

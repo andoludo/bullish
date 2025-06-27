@@ -18,10 +18,10 @@ from bullish.analysis.filter import (
     FilterUpdate,
     FilteredResults,
     FilterQueryStored,
-    TechnicalAnalysisFilter,
-    FundamentalAnalysisFilter,
+    FundamentalAnalysisFilters,
     GROUP_MAPPING,
     GeneralFilter,
+    TechnicalAnalysisFilters,
 )
 from bullish.jobs.models import JobTracker
 from bullish.jobs.tasks import update, news
@@ -102,43 +102,90 @@ def dialog_pick_database() -> None:
         st.stop()
 
 
+@st.cache_resource
+def symbols() -> List[str]:
+    bearish_db_ = bearish_db(st.session_state.database_path)
+    return bearish_db_.read_symbols()
+
+
+def groups_mapping() -> Dict[str, List[str]]:
+    GROUP_MAPPING["symbol"] = symbols()
+    return GROUP_MAPPING
+
+
 def build_filter(model: Type[BaseModel]) -> Dict[str, Any]:
     data: Dict[str, Any] = {}
     for field, info in model.model_fields.items():
-        name = info.alias or field
+        name = info.description or info.alias or field
         if info.annotation == Optional[List[str]]:  # type: ignore
-            data[field] = st.multiselect(name, GROUP_MAPPING[field], key=name)
+            data[field] = st.multiselect(
+                name, groups_mapping()[field], key=hash((model.__name__, field))
+            )
 
         else:
             ge = next((item.ge for item in info.metadata if hasattr(item, "ge")), None)
             le = next((item.le for item in info.metadata if hasattr(item, "le")), None)
-            data[field] = list(st.slider(name, le, ge, tuple(info.default)))  # type: ignore
+            data[field] = list(
+                st.slider(  # type: ignore
+                    name, ge, le, tuple(info.default), key=hash((model.__name__, field))
+                )
+            )
     return data
+
+
+@st.dialog("⏳  Jobs", width="large")
+def jobs() -> None:
+    with st.expander("Update data"):
+        bearish_db_ = bearish_db(st.session_state.database_path)
+        update_query = sp.pydantic_form(key="update", model=FilterUpdate)
+        if (
+            update_query
+            and st.session_state.data is not None
+            and not st.session_state.data.empty
+        ):
+            symbols = st.session_state.data["symbol"].unique().tolist()
+            res = update(
+                database_path=st.session_state.database_path,
+                symbols=symbols,
+                update_query=update_query,
+            )  # enqueue & get result-handle
+            bearish_db_.write_job_tracker(
+                JobTracker(job_id=str(res.id), type="Update data")
+            )
+            st.success("Data update job has been enqueued.")
+            st.rerun()
+
+
+@st.dialog("📥  Load", width="large")
+def load() -> None:
+    bearish_db_ = bearish_db(st.session_state.database_path)
+    existing_filtered_results = bearish_db_.read_list_filtered_results()
+    option = st.selectbox("", ["", *existing_filtered_results])
+    if option:
+        filtered_results_ = bearish_db_.read_filtered_results(option)
+        if filtered_results_:
+            st.session_state.data = bearish_db_.read_analysis_data(
+                symbols=filtered_results_.symbols
+            )
 
 
 @st.dialog("🔍  Filter", width="large")
 def filter() -> None:
-
-    st.markdown(
-        """
-    <style>
-    div[data-testid="stDialog"] div[role="dialog"]:has(.big-dialog) {
-        width: 90vw;
-        height: 110vh;
-    }
-    </style>
-    """,
-        unsafe_allow_html=True,
-    )
-    with st.expander("Technical Analysis"):
-        data_ = build_filter(TechnicalAnalysisFilter)
-        st.session_state.filter_query.update(data_)
-    with st.expander("Fundamental Analysis"):
-        data_ = build_filter(FundamentalAnalysisFilter)
-        st.session_state.filter_query.update(data_)
-    with st.expander("General filter"):
-        data_ = build_filter(GeneralFilter)
-        st.session_state.filter_query.update(data_)
+    with st.container():
+        column_1, column_2 = st.columns(2)
+        with column_1, st.expander("Technical Analysis"):
+            for filter in TechnicalAnalysisFilters:
+                with st.expander(filter._description):  # type: ignore
+                    data_ = build_filter(filter)
+                    st.session_state.filter_query.update(data_)
+        with column_2, st.expander("Fundamental Analysis"):
+            for filter in FundamentalAnalysisFilters:
+                with st.expander(filter._description):  # type: ignore
+                    data_ = build_filter(filter)
+                    st.session_state.filter_query.update(data_)
+            with st.expander("General filter"):
+                data_ = build_filter(GeneralFilter)
+                st.session_state.filter_query.update(data_)
     if st.button("🔍 Apply"):
         query = FilterQuery.model_validate(st.session_state.filter_query)
         if query.valid():
@@ -158,7 +205,7 @@ def dialog_plot_figure() -> None:
     <style>
     div[data-testid="stDialog"] div[role="dialog"]:has(.big-dialog) {
         width: 90vw;
-        height: 110vh;
+        height: 130vh;
     }
     </style>
     """,
@@ -204,6 +251,16 @@ def save_filtered_results(bearish_db_: BullishDb) -> None:
 
 
 def main() -> None:
+    hide_elements = """
+            <style>
+                div[data-testid="stSliderTickBarMin"],
+                div[data-testid="stSliderTickBarMax"] {
+                    display: none;
+                }
+            </style>
+    """
+
+    st.markdown(hide_elements, unsafe_allow_html=True)
     assign_db_state()
 
     if st.session_state.database_path is None:
@@ -212,55 +269,28 @@ def main() -> None:
     charts_tab, jobs_tab = st.tabs(["Charts", "Jobs"])
     if "data" not in st.session_state:
         st.session_state.data = load_analysis_data(bearish_db_)
-    with st.sidebar:
-        with st.expander("Load"):
-            existing_filtered_results = bearish_db_.read_list_filtered_results()
-            option = st.selectbox("Saved results", ["", *existing_filtered_results])
-            if option:
-                filtered_results_ = bearish_db_.read_filtered_results(option)
-                if filtered_results_:
-                    st.session_state.data = bearish_db_.read_analysis_data(
-                        symbols=filtered_results_.symbols
-                    )
 
-        with st.expander("Update"):
-            update_query = sp.pydantic_form(key="update", model=FilterUpdate)
-            if (
-                update_query
-                and st.session_state.data is not None
-                and not st.session_state.data.empty
-            ):
-                symbols = st.session_state.data["symbol"].unique().tolist()
-                res = update(
-                    database_path=st.session_state.database_path,
-                    symbols=symbols,
-                    update_query=update_query,
-                )  # enqueue & get result-handle
-                bearish_db_.write_job_tracker(
-                    JobTracker(job_id=str(res.id), type="Update data")
-                )
-                st.success("Data update job has been enqueued.")
-                st.rerun()
     with charts_tab:
         with st.container():
-            col1, col2, _ = st.columns([0.5, 0.5, 5])
-            with col1:
-                if st.button("🔍 Filter"):
+            columns = st.columns(12)
+            with columns[0]:
+                if st.button(" 🔍 ", use_container_width=True):
                     st.session_state.filter_query = {}
                     filter()
-            with col2:
+            with columns[1]:
                 if (
                     "query" in st.session_state
                     and st.session_state.query is not None
                     and st.session_state.query.valid()
                 ):
-                    favorite = st.button(" ⭐ ")
+                    favorite = st.button(" ⭐ ", use_container_width=True)
                     if favorite:
                         save_filtered_results(bearish_db_)
+            with columns[-1]:
+                if st.button(" 📥 ", use_container_width=True):
+                    load()
 
         with st.container():
-            st.header("✅ Data overview")
-
             st.dataframe(
                 st.session_state.data,
                 on_select=on_table_select,
@@ -276,6 +306,11 @@ def main() -> None:
                 dialog_plot_figure()
 
     with jobs_tab:
+        columns = st.columns(12)
+        with columns[0]:
+            if st.button(" ⏳ ", use_container_width=True):
+                jobs()
+
         job_trackers = bearish_db_.read_job_trackers()
         st.dataframe(
             job_trackers,

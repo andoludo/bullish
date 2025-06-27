@@ -65,6 +65,11 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                 return None
             return Analysis.model_validate(analysis)
 
+    def read_symbols(self) -> List[str]:
+        query = "SELECT DISTINCT symbol FROM analysis"
+        data = pd.read_sql_query(query, self._engine)
+        return data["symbol"].tolist()
+
     def _read_analysis_data(
         self, columns: List[str], symbols: Optional[List[str]] = None
     ) -> pd.DataFrame:

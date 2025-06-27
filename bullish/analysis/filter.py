@@ -1,6 +1,6 @@
 import datetime
 from datetime import date
-from typing import Literal, get_args, Any, Optional, List, Tuple, Type
+from typing import Literal, get_args, Any, Optional, List, Tuple, Type, Dict
 
 from bearish.types import SeriesLength  # type: ignore
 from pydantic import BaseModel, Field, ConfigDict
@@ -8,9 +8,9 @@ from pydantic import create_model
 from pydantic.fields import FieldInfo
 
 from bullish.analysis.analysis import (
-    TechnicalAnalysis,
     YearlyFundamentalAnalysis,
     QuarterlyFundamentalAnalysis,
+    TechnicalAnalysisModels,
 )
 
 Industry = Literal[
@@ -425,11 +425,18 @@ def _get_type(name: str, info: FieldInfo) -> Tuple[Any, Any]:
     if info.annotation == Optional[float]:  # type: ignore
         ge = next((item.ge for item in info.metadata if hasattr(item, "ge")), 0)
         le = next((item.le for item in info.metadata if hasattr(item, "le")), 100)
-        return (Optional[List[float]], Field(default=[ge, le], alias=alias))
+        default = [ge, le]
+        return (
+            Optional[List[float]],
+            Field(default=default, alias=alias, description=info.description),
+        )
     elif info.annotation == Optional[date]:  # type: ignore
         le = date.today()
-        ge = le - datetime.timedelta(days=30 * 12)  # 30 days * 12 months
-        return (List[date], Field(default=[ge, le], alias=alias))
+        ge = le - datetime.timedelta(days=30 * 2)  # 30 days * 12 months
+        return (
+            List[date],
+            Field(default=[ge, le], alias=alias, description=info.description),
+        )
     else:
         raise NotImplementedError
 
@@ -467,49 +474,80 @@ PROPERTIES_GROUP = list(
     )
 )
 
-GROUP_MAPPING = {
+GROUP_MAPPING: Dict[str, List[str]] = {
     "income": INCOME_GROUP,
     "cash_flow": CASH_FLOW_GROUP,
     "eps": EPS_GROUP,
     "properties": PROPERTIES_GROUP,
-    "country": get_args(Country),
-    "industry": get_args(Industry),
-    "industry_group": get_args(IndustryGroup),
-    "sector": get_args(Sector),
+    "country": list(get_args(Country)),
+    "industry": list(get_args(Industry)),
+    "industry_group": list(get_args(IndustryGroup)),
+    "sector": list(get_args(Sector)),
+    "symbol": [],
 }
 
 
-def _create_fundamental_analysis_model() -> Type[BaseModel]:
+def _create_fundamental_analysis_models() -> List[Type[BaseModel]]:
+    models = []
     boolean_fields = {
-        "income": (Optional[List[str]], Field(default=None)),
-        "cash_flow": (Optional[List[str]], Field(default=None)),
-        "eps": (Optional[List[str]], Field(default=None)),
-        "properties": (Optional[List[str]], Field(default=None)),
+        "income": (Optional[List[str]], Field(default=None, description="Income")),
+        "cash_flow": (
+            Optional[List[str]],
+            Field(default=None, description="Cash flow"),
+        ),
+        "eps": (
+            Optional[List[str]],
+            Field(default=None, description="Earnings per share"),
+        ),
+        "properties": (
+            Optional[List[str]],
+            Field(default=None, description="General properties"),
+        ),
     }
-    remaining_fields = {
+    yearly_fields = {
         name: _get_type(name, info)
-        for name, info in {
-            **YearlyFundamentalAnalysis.model_fields,
-            **QuarterlyFundamentalAnalysis.model_fields,
-        }.items()
+        for name, info in YearlyFundamentalAnalysis.model_fields.items()
+        if info.annotation != Optional[bool]  # type: ignore
+    }
+    quarterly_fields = {
+        name: _get_type(name, info)
+        for name, info in QuarterlyFundamentalAnalysis.model_fields.items()
         if info.annotation != Optional[bool]
     }
-    return create_model(
-        "FundamentalAnalysisFilter",
-        __config__=ConfigDict(populate_by_name=True),
-        **(boolean_fields | remaining_fields),
-    )
+    for property in [
+        (boolean_fields, "Selection filter", "SelectionFilter"),
+        (yearly_fields, "Yearly properties", "YearlyFilter"),
+        (quarterly_fields, "Quarterly properties", "QuarterlyFilter"),
+    ]:
+        model_ = create_model(  # type: ignore
+            property[-1],
+            __config__=ConfigDict(populate_by_name=True),
+            **property[0],
+        )
+        model_._description = property[1]
+        models.append(model_)
+
+    return models
 
 
-TechnicalAnalysisFilter = create_model(  # type: ignore
-    "TechnicalAnalysisFilter",
-    __config__=ConfigDict(populate_by_name=True),
-    **{
-        name: _get_type(name, info)
-        for name, info in TechnicalAnalysis.model_fields.items()
-    },
-)
-FundamentalAnalysisFilter = _create_fundamental_analysis_model()
+def create_technical_analysis_models() -> List[Type[BaseModel]]:
+    models = []
+    for model in TechnicalAnalysisModels:
+        model_ = create_model(  # type: ignore
+            f"{model.__name__}Filter",  # type: ignore
+            __config__=ConfigDict(populate_by_name=True),
+            **{
+                name: _get_type(name, info) for name, info in model.model_fields.items()  # type: ignore
+            },
+        )
+
+        model_._description = model._description  # type: ignore
+        models.append(model_)
+    return models
+
+
+TechnicalAnalysisFilters = create_technical_analysis_models()
+FundamentalAnalysisFilters = _create_fundamental_analysis_models()
 
 
 class GeneralFilter(BaseModel):
@@ -517,12 +555,11 @@ class GeneralFilter(BaseModel):
     industry: Optional[List[str]] = None
     industry_group: Optional[List[str]] = None
     sector: Optional[List[str]] = None
-    market_capitalization: Optional[List[float]] = Field(
-        default_factory=lambda: [5e8, 1e12]
-    )
+    symbol: Optional[List[str]] = None
+    market_capitalization: Optional[List[float]] = Field(default=[5e8, 1e12])
 
 
-class FilterQuery(GeneralFilter, TechnicalAnalysisFilter, FundamentalAnalysisFilter):  # type: ignore
+class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysisFilters):  # type: ignore
 
     def valid(self) -> bool:
         return bool(self.model_dump(exclude_defaults=True, exclude_unset=True))

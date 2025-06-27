@@ -8,6 +8,7 @@ from typing import (
     Type,
     get_args,
     TYPE_CHECKING,
+    ClassVar,
 )
 
 import pandas as pd
@@ -38,7 +39,7 @@ from bearish.models.query.query import AssetQuery, Symbols  # type: ignore
 from bearish.types import TickerOnlySources  # type: ignore
 from pydantic import BaseModel, BeforeValidator, Field, create_model
 
-from bullish.analysis.indicators import Indicators
+from bullish.analysis.indicators import Indicators, IndicatorModels
 
 if TYPE_CHECKING:
     from bullish.database.crud import BullishDb
@@ -98,10 +99,8 @@ def _abs(data: pd.Series) -> pd.Series:  # type: ignore
         return data
 
 
-IndicatorModel = Indicators().create_indicator_model()
-
-
-class TechnicalAnalysis(IndicatorModel):  # type: ignore
+class TechnicalAnalysisBase(BaseModel):
+    _description: ClassVar[str] = "General technical indicators"
     last_price: Annotated[
         Optional[float],
         BeforeValidator(to_float),
@@ -109,6 +108,12 @@ class TechnicalAnalysis(IndicatorModel):  # type: ignore
             default=None,
         ),
     ]
+
+
+TechnicalAnalysisModels = [*IndicatorModels, TechnicalAnalysisBase]
+
+
+class TechnicalAnalysis(*TechnicalAnalysisModels):  # type: ignore
 
     @classmethod
     def from_data(cls, prices: pd.DataFrame) -> "TechnicalAnalysis":
@@ -121,29 +126,95 @@ class TechnicalAnalysis(IndicatorModel):  # type: ignore
 
 
 class BaseFundamentalAnalysis(BaseModel):
-    positive_debt_to_equity: Optional[bool] = None
-    positive_return_on_assets: Optional[bool] = None
-    positive_return_on_equity: Optional[bool] = None
-    positive_diluted_eps: Optional[bool] = None
-    positive_basic_eps: Optional[bool] = None
-    growing_basic_eps: Optional[bool] = None
-    growing_diluted_eps: Optional[bool] = None
-    positive_net_income: Optional[bool] = None
-    positive_operating_income: Optional[bool] = None
-    growing_net_income: Optional[bool] = None
-    growing_operating_income: Optional[bool] = None
-    positive_free_cash_flow: Optional[bool] = None
-    growing_operating_cash_flow: Optional[bool] = None
-    operating_cash_flow_is_higher_than_net_income: Optional[bool] = None
+    positive_debt_to_equity: Optional[bool] = Field(
+        None,
+        description="True if the company's debt-to-equity ratio is favorable (typically low or improving).",
+    )
+    positive_return_on_assets: Optional[bool] = Field(
+        None,
+        description="True if the company reports a positive return on assets (ROA), "
+        "indicating efficient use of its assets.",
+    )
+    positive_return_on_equity: Optional[bool] = Field(
+        None,
+        description="True if the return on equity (ROE) is positive, "
+        "showing profitability relative to shareholder equity.",
+    )
+    positive_diluted_eps: Optional[bool] = Field(
+        None,
+        description="True if the diluted earnings per share (EPS), "
+        "which includes the effect of convertible securities, is positive.",
+    )
+    positive_basic_eps: Optional[bool] = Field(
+        None,
+        description="True if the basic earnings per share (EPS) is positive, reflecting profitable operations.",
+    )
+    growing_basic_eps: Optional[bool] = Field(
+        None,
+        description="True if the basic EPS has shown consistent growth over a defined time period.",
+    )
+    growing_diluted_eps: Optional[bool] = Field(
+        None,
+        description="True if the diluted EPS has consistently increased over time.",
+    )
+    positive_net_income: Optional[bool] = Field(
+        None,
+        description="True if the net income is positive, indicating overall profitability.",
+    )
+    positive_operating_income: Optional[bool] = Field(
+        None,
+        description="True if the company has positive operating income from its core business operations.",
+    )
+    growing_net_income: Optional[bool] = Field(
+        None, description="True if net income has shown consistent growth over time."
+    )
+    growing_operating_income: Optional[bool] = Field(
+        None,
+        description="True if the operating income has consistently increased over a period.",
+    )
+    positive_free_cash_flow: Optional[bool] = Field(
+        None,
+        description="True if the company has positive free cash flow, indicating financial flexibility and health.",
+    )
+    growing_operating_cash_flow: Optional[bool] = Field(
+        None,
+        description="True if the company's operating cash flow is growing steadily.",
+    )
+    operating_cash_flow_is_higher_than_net_income: Optional[bool] = Field(
+        None,
+        description="True if the operating cash flow exceeds net income, often a sign of high-quality earnings.",
+    )
 
-    mean_capex_ratio: Optional[float] = None
-    max_capex_ratio: Optional[float] = None
-    min_capex_ratio: Optional[float] = None
-    mean_dividend_payout_ratio: Optional[float] = None
-    max_dividend_payout_ratio: Optional[float] = None
-    min_dividend_payout_ratio: Optional[float] = None
+    # Capital Expenditure Ratios
+    mean_capex_ratio: Optional[float] = Field(
+        None,
+        description="Average capital expenditure (CapEx) ratio, usually "
+        "calculated as CapEx divided by revenue or operating cash flow.",
+    )
+    max_capex_ratio: Optional[float] = Field(
+        None, description="Maximum observed CapEx ratio over the evaluation period."
+    )
+    min_capex_ratio: Optional[float] = Field(
+        None, description="Minimum observed CapEx ratio over the evaluation period."
+    )
 
-    earning_per_share: Optional[float] = None
+    # Dividend Payout Ratios
+    mean_dividend_payout_ratio: Optional[float] = Field(
+        None,
+        description="Average dividend payout ratio, representing the proportion of earnings paid out as dividends.",
+    )
+    max_dividend_payout_ratio: Optional[float] = Field(
+        None, description="Maximum dividend payout ratio observed over the period."
+    )
+    min_dividend_payout_ratio: Optional[float] = Field(
+        None, description="Minimum dividend payout ratio observed over the period."
+    )
+
+    # EPS Value
+    earning_per_share: Optional[float] = Field(
+        None,
+        description="The latest or most relevant value of earnings per share (EPS), indicating net income per share.",
+    )
 
     def is_empty(self) -> bool:
         return all(getattr(self, field) is None for field in self.model_fields)
@@ -276,7 +347,10 @@ class YearlyFundamentalAnalysis(BaseFundamentalAnalysis): ...
 
 
 fields_with_prefix = {
-    f"{QUARTERLY}_{name}": (field_info.annotation, Field(default=None))
+    f"{QUARTERLY}_{name}": (
+        field_info.annotation,
+        Field(default=None, description=field_info.description),
+    )
     for name, field_info in BaseFundamentalAnalysis.model_fields.items()
 }
 
@@ -297,7 +371,7 @@ class QuarterlyFundamentalAnalysis(BaseQuarterlyFundamentalAnalysis):  # type: i
             cash_flows=financials.quarterly_cash_flows,
             ticker=ticker,
         )
-        return cls.model_validate({f"{QUARTERLY}_{k}": v for k, v in base_financial_analisys.model_dump().items()})  # type: ignore # noqa: E501
+        return cls.model_validate({f"{QUARTERLY}_{k}": v for k, v in base_financial_analisys.model_dump().items()})  # type: ignore
 
 
 class FundamentalAnalysis(YearlyFundamentalAnalysis, QuarterlyFundamentalAnalysis):

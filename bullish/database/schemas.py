@@ -5,6 +5,7 @@ from sqlalchemy import Column, JSON
 from bullish.analysis.analysis import Analysis
 from bullish.analysis.filter import FilteredResults
 from bullish.jobs.models import JobTracker
+from sqlalchemy import Index
 
 
 class BaseTable(SQLModel):
@@ -12,9 +13,21 @@ class BaseTable(SQLModel):
     source: str = Field(primary_key=True)
 
 
+dynamic_indexes = tuple(
+    Index(f"ix_analysis_{col}", col) for col in Analysis.model_fields
+)
+
+
 class AnalysisORM(BaseTable, Analysis, table=True):
     __tablename__ = "analysis"
     __table_args__ = {"extend_existing": True}  # noqa:RUF012
+
+
+AnalysisORM.__table_args__ = tuple(  # type: ignore # noqa: RUF005
+    Index(f"ix_{AnalysisORM.__tablename__}_{col.name}", col)
+    for col in AnalysisORM.__table__.columns
+    if not col.primary_key and not col.index and col.name != "id"
+) + (AnalysisORM.__table_args__,)
 
 
 class JobTrackerORM(SQLModel, JobTracker, table=True):

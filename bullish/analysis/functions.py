@@ -1,0 +1,230 @@
+import logging
+from datetime import date
+from typing import Optional, Callable
+
+import pandas as pd
+import pandas_ta as ta  # type: ignore
+import talib
+from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
+
+
+def cross(
+    series_a: pd.Series, series_b: pd.Series, above: bool = True  # type: ignore
+) -> Optional[date]:
+    crossing = ta.cross(series_a=series_a, series_b=series_b, above=above)
+    if not crossing[crossing == 1].index.empty:
+        return pd.Timestamp(crossing[crossing == 1].index[-1]).date()
+    return None
+
+
+def cross_value(series: pd.Series, number: int, above: bool = True) -> Optional[date]:  # type: ignore
+    return cross(series, pd.Series(number, index=series.index), above=above)
+
+
+def compute_adx(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["ADX_14"] = talib.ADX(data.high, data.low, close=data.close)  # type: ignore
+    results["MINUS_DI"] = talib.MINUS_DI(data.high, data.low, data.close)  # type: ignore
+    results["PLUS_DI"] = talib.PLUS_DI(data.high, data.low, data.close)  # type: ignore
+    return results
+
+
+def compute_pandas_ta_adx(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    adx = ta.adx(data.high, data.low, data.close, length=14)
+    results["ADX_14"] = adx["ADX_14"]
+    results["MINUS_DI"] = adx["DMN_14"]
+    results["PLUS_DI"] = adx["DMP_14"]
+    return results
+
+
+def compute_macd(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    (
+        results["MACD_12_26_9"],
+        results["MACD_12_26_9_SIGNAL"],
+        results["MACD_12_26_9_HIST"],
+    ) = talib.MACD(
+        data.close  # type: ignore
+    )
+    return results
+
+
+def compute_pandas_ta_macd(data: pd.DataFrame) -> pd.DataFrame:
+
+    macd = ta.macd(data.close, fast=12, slow=26, signal=9)
+    results = pd.DataFrame(index=macd.index)
+    results["MACD_12_26_9"] = macd["MACD_12_26_9"]
+    results["MACD_12_26_9_SIGNAL"] = macd["MACDs_12_26_9"]
+    results["MACD_12_26_9_HIST"] = macd["MACDh_12_26_9"]
+    return results
+
+
+def compute_rsi(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["RSI"] = talib.RSI(data.close)  # type: ignore
+    return results
+
+
+def compute_pandas_ta_rsi(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["RSI"] = ta.rsi(data.close, length=14)
+    return results
+
+
+def compute_stoch(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["SLOW_K"], results["SLOW_D"] = talib.STOCH(data.high, data.low, data.close)  # type: ignore
+    return results
+
+
+def compute_pandas_ta_stoch(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    stoch = ta.stoch(data.high, data.low, data.close, k=5, d=3, smooth_k=3)
+    results["SLOW_K"] = stoch["STOCHk_5_3_3"]
+    results["SLOW_D"] = stoch["STOCHd_5_3_3"]
+    return results
+
+
+def compute_mfi(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["MFI"] = talib.MFI(data.high, data.low, data.close, data.volume)  # type: ignore
+    return results
+
+
+def compute_pandas_ta_mfi(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["MFI"] = ta.mfi(data.high, data.low, data.close, data.volume, length=14)
+    return results
+
+
+def compute_roc(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["ROC_7"] = talib.ROC(data.close, timeperiod=7)  # type: ignore
+    results["ROC_1"] = talib.ROC(data.close, timeperiod=1)  # type: ignore
+    results["ROC_30"] = talib.ROC(data.close, timeperiod=30)  # type: ignore
+    return results
+
+
+def compute_pandas_ta_roc(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["ROC_7"] = ta.roc(data.close, length=7)
+    results["ROC_1"] = ta.roc(data.close, length=1)
+    results["ROC_30"] = ta.roc(data.close, length=30)
+    return results
+
+
+def compute_sma(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["SMA_50"] = talib.SMA(data.close, timeperiod=50)  # type: ignore
+    results["SMA_200"] = talib.SMA(data.close, timeperiod=200)  # type: ignore
+    return results
+
+
+def compute_pandas_ta_sma(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["SMA_50"] = ta.sma(data.close, length=50)
+    results["SMA_200"] = ta.sma(data.close, length=200)
+    return results
+
+
+def compute_patterns(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["CDLMORNINGSTAR"] = talib.CDLMORNINGSTAR(
+        data.open, data.high, data.low, data.close  # type: ignore
+    )
+    results["CDL3LINESTRIKE"] = talib.CDL3LINESTRIKE(
+        data.open, data.high, data.low, data.close  # type: ignore
+    )
+    results["CDL3WHITESOLDIERS"] = talib.CDL3WHITESOLDIERS(
+        data.open, data.high, data.low, data.close  # type: ignore
+    )
+    results["CDLABANDONEDBABY"] = talib.CDLABANDONEDBABY(
+        data.open, data.high, data.low, data.close  # type: ignore
+    )
+    results["CDLTASUKIGAP"] = talib.CDLTASUKIGAP(
+        data.open, data.high, data.low, data.close  # type: ignore
+    )
+    results["CDLPIERCING"] = talib.CDLPIERCING(
+        data.open, data.high, data.low, data.close  # type: ignore
+    )
+    results["CDLENGULFING"] = talib.CDLENGULFING(
+        data.open, data.high, data.low, data.close  # type: ignore
+    )
+    return results
+
+
+class IndicatorFunction(BaseModel):
+    expected_columns: list[str]
+    functions: list[Callable[[pd.DataFrame], pd.DataFrame]]
+
+    def call(self, data: pd.DataFrame) -> pd.DataFrame:
+        data_ = None
+        for function in self.functions:
+            try:
+                data_ = function(data)
+                break
+            except Exception as e:
+                logger.warning(f"Fail to compute function {function.__name__}: {e}")
+        if data_ is None:
+            raise ValueError("No data returned from indicator functions.")
+        if not set(self.expected_columns).issubset(set(data_.columns)):
+            raise ValueError(
+                f"Expected columns {self.expected_columns} not found in data columns {data_.columns.tolist()}"
+            )
+        return data_
+
+
+ADX = IndicatorFunction(
+    expected_columns=["ADX_14", "MINUS_DI", "PLUS_DI"],
+    functions=[compute_adx, compute_pandas_ta_adx],
+)
+MACD = IndicatorFunction(
+    expected_columns=["MACD_12_26_9", "MACD_12_26_9_SIGNAL", "MACD_12_26_9_HIST"],
+    functions=[compute_macd, compute_pandas_ta_macd],
+)
+RSI = IndicatorFunction(
+    expected_columns=["RSI"], functions=[compute_rsi, compute_pandas_ta_rsi]
+)
+STOCH = IndicatorFunction(
+    expected_columns=["SLOW_K", "SLOW_D"],
+    functions=[compute_stoch, compute_pandas_ta_stoch],
+)
+MFI = IndicatorFunction(
+    expected_columns=["MFI"], functions=[compute_mfi, compute_pandas_ta_mfi]
+)
+ROC = IndicatorFunction(
+    expected_columns=["ROC_7", "ROC_1", "ROC_30"],
+    functions=[compute_roc, compute_pandas_ta_roc],
+)
+CANDLESTOCK_PATTERNS = IndicatorFunction(
+    expected_columns=[
+        "CDLMORNINGSTAR",
+        "CDL3LINESTRIKE",
+        "CDL3WHITESOLDIERS",
+        "CDLABANDONEDBABY",
+        "CDLTASUKIGAP",
+        "CDLPIERCING",
+        "CDLENGULFING",
+    ],
+    functions=[compute_patterns],
+)
+
+SMA = IndicatorFunction(
+    expected_columns=["SMA_50", "SMA_200"],
+    functions=[compute_sma, compute_pandas_ta_sma],
+)
+
+
+def add_indicators(data: pd.DataFrame) -> pd.DataFrame:
+    indicators = [ADX, MACD, RSI, STOCH, SMA]
+    expected_columns = [c for i in indicators for c in i.expected_columns]
+    for indicator in indicators:
+        data = pd.concat([data, indicator.call(data)], axis=1)
+    if not set(expected_columns).issubset(set(data.columns)):
+        raise ValueError(
+            f"Expected columns {expected_columns} not found in data columns {data.columns.tolist()}"
+        )
+    return data

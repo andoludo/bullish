@@ -80,3 +80,6 @@ class BullishDbBase(BearishDbBase):  # type: ignore
 
     @abc.abstractmethod
     def write_filtered_results(self, filtered_results: FilteredResults) -> None: ...
+
+    @abc.abstractmethod
+    def read_symbols(self) -> List[str]: ...

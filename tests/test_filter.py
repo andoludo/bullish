@@ -19,3 +19,7 @@ def test_read_filter_query(bullish_view: BullishDb) -> None:
     view_query = FilterQuery.model_validate(data)
     data = bullish_view.read_filter_query(view_query)
     assert not data.empty
+
+
+def test_run_analysis(bullish_view: BullishDb) -> None:
+    run_analysis(bullish_view)
