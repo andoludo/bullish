@@ -11,6 +11,7 @@ from bearish.models.price.prices import Prices  # type: ignore
 from bearish.models.query.query import AssetQuery, Symbols  # type: ignore
 from streamlit_file_browser import st_file_browser  # type: ignore
 
+from bullish.analysis.predefined_filters import PredefinedFilters
 from bullish.database.crud import BullishDb
 from bullish.figures.figures import plot
 from bullish.analysis.filter import (
@@ -113,13 +114,19 @@ def groups_mapping() -> Dict[str, List[str]]:
     return GROUP_MAPPING
 
 
-def build_filter(model: Type[BaseModel]) -> Dict[str, Any]:
-    data: Dict[str, Any] = {}
+def build_filter(model: Type[BaseModel], data: Dict[str, Any]) -> Dict[str, Any]:
+
     for field, info in model.model_fields.items():
         name = info.description or info.alias or field
+        default = info.default
+        if data.get(field) and data[field] != info.default:
+            default = data[field]
         if info.annotation == Optional[List[str]]:  # type: ignore
             data[field] = st.multiselect(
-                name, groups_mapping()[field], key=hash((model.__name__, field))
+                name,
+                groups_mapping()[field],
+                default=default,
+                key=hash((model.__name__, field)),
             )
 
         else:
@@ -127,7 +134,7 @@ def build_filter(model: Type[BaseModel]) -> Dict[str, Any]:
             le = next((item.le for item in info.metadata if hasattr(item, "le")), None)
             data[field] = list(
                 st.slider(  # type: ignore
-                    name, ge, le, tuple(info.default), key=hash((model.__name__, field))
+                    name, ge, le, tuple(default), key=hash((model.__name__, field))
                 )
             )
     return data
@@ -173,20 +180,31 @@ def load() -> None:
 def filter() -> None:
     with st.container():
         column_1, column_2 = st.columns(2)
-        with column_1, st.expander("Technical Analysis"):
-            for filter in TechnicalAnalysisFilters:
-                with st.expander(filter._description):  # type: ignore
-                    data_ = build_filter(filter)
+        with column_1:
+            with st.expander("Technical Analysis"):
+                for filter in TechnicalAnalysisFilters:
+                    with st.expander(filter._description):  # type: ignore
+                        build_filter(filter, st.session_state.filter_query)
+            with st.expander("Predefined filters"):
+                predefined_filter_names = (
+                    PredefinedFilters().get_predefined_filter_names()
+                )
+                option = st.selectbox(
+                    "Select a predefined filter",
+                    ["", *predefined_filter_names],
+                )
+                if option:
+                    data_ = PredefinedFilters().get_predefined_filter(option)
                     st.session_state.filter_query.update(data_)
+
         with column_2:
             with st.expander("Fundamental Analysis"):
                 for filter in FundamentalAnalysisFilters:
                     with st.expander(filter._description):  # type: ignore
-                        data_ = build_filter(filter)
-                        st.session_state.filter_query.update(data_)
+                        build_filter(filter, st.session_state.filter_query)
             with st.expander("General filter"):
-                data_ = build_filter(GeneralFilter)
-                st.session_state.filter_query.update(data_)
+                build_filter(GeneralFilter, st.session_state.filter_query)
+
     if st.button("🔍 Apply"):
         query = FilterQuery.model_validate(st.session_state.filter_query)
         if query.valid():

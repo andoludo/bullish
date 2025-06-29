@@ -562,7 +562,12 @@ class GeneralFilter(BaseModel):
 class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysisFilters):  # type: ignore
 
     def valid(self) -> bool:
-        return bool(self.model_dump(exclude_defaults=True, exclude_unset=True))
+        return any(
+            bool(v)
+            for _, v in self.model_dump(
+                exclude_defaults=True, exclude_unset=True
+            ).items()
+        )
 
     def to_query(self) -> str:
         parameters = self.model_dump(exclude_defaults=True, exclude_unset=True)

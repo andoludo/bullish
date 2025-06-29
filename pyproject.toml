@@ -96,7 +96,8 @@ exclude = [
     "venv",
     "test_*",
     "conftest.py",
-    "*env.py"
+    "*env.py",
+    "bullish/database/alembic/versions/*"
 ]
 
 

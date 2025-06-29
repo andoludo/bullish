@@ -9,3 +9,4 @@ def test_plot(data_aapl: pd.DataFrame) -> None:
         "AAPL",
     )
     fig.show()
+    assert fig is not None

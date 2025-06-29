@@ -1,7 +1,6 @@
 import datetime
 from pathlib import Path
 
-import pandas as pd
 import pytest
 from bearish.main import Bearish
 from bearish.models.base import Ticker
@@ -9,14 +8,13 @@ from bearish.models.price.prices import Prices
 from bearish.models.query.query import AssetQuery, Symbols
 from sqlalchemy import inspect
 
-
 from bullish.analysis.analysis import (
     Analysis,
     TechnicalAnalysis,
     run_analysis,
 )
-from bullish.database.crud import BullishDb
 from bullish.analysis.filter import FilteredResults, FilterQueryStored
+from bullish.database.crud import BullishDb
 from bullish.jobs.models import JobTracker
 
 
