@@ -6,7 +6,7 @@ authors = ["aan <andoludovic.andriamamonjy@gmail.com>"]
 readme = "README.md"
 packages = [{ include = "bullish" }]
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
+python = ">=3.12,<3.13"
 bearishpy = "^0.20.0"
 tickermood = "^0.4.0"
 streamlit = "^1.45.1"
