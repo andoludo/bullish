@@ -4,10 +4,14 @@ from typing import Optional, Callable
 
 import pandas as pd
 import pandas_ta as ta  # type: ignore
-import talib
+
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+try:
+    import talib
+except Exception:
+    logger.warning("Talib is not installed, skipping analysis")
 
 
 def cross(

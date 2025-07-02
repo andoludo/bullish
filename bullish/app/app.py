@@ -31,6 +31,7 @@ from pydantic import BaseModel
 from bullish.utils.checks import (
     compatible_bearish_database,
     compatible_bullish_database,
+    empty_analysis_table,
 )
 
 CACHE_SHELVE = "user_cache"
@@ -105,7 +106,10 @@ def dialog_pick_database() -> None:
             st.stop()
         st.session_state.database_path = db_path
         store_db(db_path)
-        if not compatible_bullish_database(db_path):
+        compatible_bullish_db = compatible_bullish_database(db_path)
+        if (not compatible_bullish_db) or (
+            compatible_bullish_db and empty_analysis_table(db_path)
+        ):
             st.warning(
                 f"The database {db_path} has not the necessary data to run this application. "
                 "A backround job will be started to update the data."
@@ -174,6 +178,9 @@ def jobs() -> None:
             )
             st.success("Data update job has been enqueued.")
             st.rerun()
+    with st.expander("Update analysis"):
+        if st.button("Update analysis"):
+            analysis(st.session_state.database_path)
 
 
 @st.dialog("📥  Load", width="large")

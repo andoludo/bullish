@@ -39,6 +39,16 @@ def get_table_names_from_path(database_path: Path) -> List[str]:
         return tables
 
 
+def empty_analysis_table(database_path: Path) -> bool:
+    with get_sqlite_connection(database_path) as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*) FROM analysis")
+        count = cursor.fetchone()[0]
+        conn.close()
+        return bool(count == 0)
+
+
 def _compatible_table(database_path: Path, module_name: str) -> bool:
     if not database_path.exists() and not database_path.is_file():
         raise FileNotFoundError(f"Database file {database_path} does not exist.")
