@@ -25,8 +25,13 @@ from bullish.analysis.filter import (
     TechnicalAnalysisFilters,
 )
 from bullish.jobs.models import JobTracker
-from bullish.jobs.tasks import update, news
+from bullish.jobs.tasks import update, news, analysis
 from pydantic import BaseModel
+
+from bullish.utils.checks import (
+    compatible_bearish_database,
+    compatible_bullish_database,
+)
 
 CACHE_SHELVE = "user_cache"
 DB_KEY = "db_path"
@@ -94,10 +99,18 @@ def dialog_pick_database() -> None:
     if event:
         db_path = Path(current_working_directory).joinpath(event["target"]["path"])
         if not (db_path.exists() and db_path.is_file()):
-            st.error("Please choose a valid file.")
+            st.stop()
+        if not compatible_bearish_database(db_path):
+            st.error(f"The database {db_path} is not compatible with this application.")
             st.stop()
         st.session_state.database_path = db_path
         store_db(db_path)
+        if not compatible_bullish_database(db_path):
+            st.warning(
+                f"The database {db_path} has not the necessary data to run this application. "
+                "A backround job will be started to update the data."
+            )
+            analysis(db_path)
         st.rerun()
     if event is None:
         st.stop()

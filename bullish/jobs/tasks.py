@@ -67,6 +67,16 @@ def update(
 
 @huey.task(context=True)  # type: ignore
 @job_tracker
+def analysis(
+    database_path: Path,
+    task: Optional[Task] = None,
+) -> None:
+    bullish_db = BullishDb(database_path=database_path)
+    run_analysis(bullish_db)
+
+
+@huey.task(context=True)  # type: ignore
+@job_tracker
 def news(
     database_path: Path,
     symbols: List[str],
