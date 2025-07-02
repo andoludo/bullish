@@ -167,13 +167,14 @@ def jobs() -> None:
 def load() -> None:
     bearish_db_ = bearish_db(st.session_state.database_path)
     existing_filtered_results = bearish_db_.read_list_filtered_results()
-    option = st.selectbox("", ["", *existing_filtered_results])
+    option = st.selectbox("Select portfolio", ["", *existing_filtered_results])
     if option:
         filtered_results_ = bearish_db_.read_filtered_results(option)
         if filtered_results_:
             st.session_state.data = bearish_db_.read_analysis_data(
                 symbols=filtered_results_.symbols
             )
+            st.rerun()
 
 
 @st.dialog("🔍  Filter", width="large")
@@ -224,7 +225,7 @@ def dialog_plot_figure() -> None:
     <style>
     div[data-testid="stDialog"] div[role="dialog"]:has(.big-dialog) {
         width: 90vw;
-        height: 130vh;
+        height: 170vh;
     }
     </style>
     """,

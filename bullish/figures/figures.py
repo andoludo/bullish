@@ -15,22 +15,26 @@ def plot(
 ) -> go.Figure:
     data = add_indicators(data)
     fig = make_subplots(
-        rows=5,
+        rows=7,
         cols=1,
         shared_xaxes=True,
-        vertical_spacing=0.1,
+        vertical_spacing=0.05,
         specs=[
             [{"rowspan": 2}],  # Row 1: main chart
             [None],  # Row 2: skipped (part of row 1)
             [{}],  # Row 3: RSI
             [{}],  # Row 4: MACD
             [{}],  # Row 5: ADX
+            [{}],  # Row 6: OBV
+            [{}],  # Row 7: ATR
         ],
         subplot_titles=(
             f"Price + SMAs ({symbol} [{name}])",
             f"RSI ({symbol} [{name}])",
             f"MACD ({symbol} [{name}])",
             f"ADX ({symbol} [{name}])",
+            f"OBV ({symbol} [{name}])",
+            f"ATR ({symbol} [{name}])",
         ),
     )
     # Row 1: Candlestick + SMAs
@@ -106,6 +110,21 @@ def plot(
         row=5,
         col=1,
     )
+    fig.add_trace(
+        go.Scatter(x=data.index, y=data.OBV, name="OBV", mode="lines"),
+        row=6,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=data.index, y=data.ADOSC, name="ADOSC", mode="lines"),
+        row=6,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=data.index, y=data.ATR, name="ATR", mode="lines"),
+        row=7,
+        col=1,
+    )
     if dates is not None and not dates.empty:
         for date in dates:
             fig.add_vline(
@@ -114,7 +133,7 @@ def plot(
 
     # Layout tweaks
     fig.update_layout(
-        height=1080,
+        height=1500,
         showlegend=True,
         title="Technical Indicator Dashboard",
         margin={"t": 60, "b": 40},

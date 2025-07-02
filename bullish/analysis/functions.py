@@ -130,6 +130,90 @@ def compute_pandas_ta_sma(data: pd.DataFrame) -> pd.DataFrame:
     return results
 
 
+def compute_adosc(data: pd.DataFrame) -> pd.DataFrame:
+    data_ = data.copy()
+    results = pd.DataFrame(index=data.index)
+    results["ADOSC"] = talib.ADOSC(data.high, data.low, data.close, data.volume)  # type: ignore
+    data_["ADOSC"] = results["ADOSC"]
+    data_["HIGHEST_20"] = data_.close.rolling(window=20).max()
+    results["ADOSC_SIGNAL"] = (data_.close > data_["HIGHEST_20"].shift(1)) & (
+        data_["ADOSC"] > 0
+    )
+    return results
+
+
+def compute_pandas_ta_adosc(data: pd.DataFrame) -> pd.DataFrame:
+    data_ = data.copy()
+    results = pd.DataFrame(index=data.index)
+    results["ADOSC"] = ta.adosc(data.high, data.low, data.close, data.volume)
+    data_["ADOSC"] = results["ADOSC"]
+    data_["HIGHEST_20"] = data_.close.rolling(window=20).max()
+    results["ADOSC_SIGNAL"] = (data_.close > data_["HIGHEST_20"].shift(1)) & (
+        data_["ADOSC"] > 0
+    )
+    return results
+
+
+def compute_ad(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["AD"] = talib.AD(data.high, data.low, data.close, data.volume)  # type: ignore
+    return results
+
+
+def compute_pandas_ta_ad(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["AD"] = ta.ad(data.high, data.low, data.close, data.volume)
+    return results
+
+
+def compute_obv(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["OBV"] = talib.OBV(data.close, data.volume)  # type: ignore
+    return results
+
+
+def compute_pandas_ta_obv(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["OBV"] = ta.obv(data.close, data.volume)
+    return results
+
+
+def compute_atr(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["ATR"] = talib.ATR(data.high, data.low, data.close)  # type: ignore
+    return results
+
+
+def compute_pandas_ta_atr(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["ATR"] = ta.atr(data.high, data.low, data.close, length=14)
+    return results
+
+
+def compute_natr(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["NATR"] = talib.NATR(data.high, data.low, data.close)  # type: ignore
+    return results
+
+
+def compute_pandas_ta_natr(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["NATR"] = ta.natr(data.high, data.low, data.close, length=14)
+    return results
+
+
+def compute_trange(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["TRANGE"] = talib.TRANGE(data.high, data.low, data.close)  # type: ignore
+    return results
+
+
+def compute_pandas_ta_trange(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["TRANGE"] = ta.true_range(data.high, data.low, data.close)
+    return results
+
+
 def compute_patterns(data: pd.DataFrame) -> pd.DataFrame:
     results = pd.DataFrame(index=data.index)
     results["CDLMORNINGSTAR"] = talib.CDLMORNINGSTAR(
@@ -217,9 +301,35 @@ SMA = IndicatorFunction(
     functions=[compute_sma, compute_pandas_ta_sma],
 )
 
+ADOSC = IndicatorFunction(
+    expected_columns=["ADOSC", "ADOSC_SIGNAL"],
+    functions=[compute_adosc, compute_pandas_ta_adosc],
+)
+
+AD = IndicatorFunction(
+    expected_columns=["AD"],
+    functions=[compute_ad, compute_pandas_ta_ad],
+)
+OBV = IndicatorFunction(
+    expected_columns=["OBV"],
+    functions=[compute_obv, compute_pandas_ta_obv],
+)
+ATR = IndicatorFunction(
+    expected_columns=["ATR"],
+    functions=[compute_atr, compute_pandas_ta_atr],
+)
+NATR = IndicatorFunction(
+    expected_columns=["NATR"],
+    functions=[compute_natr, compute_pandas_ta_natr],
+)
+TRANGE = IndicatorFunction(
+    expected_columns=["TRANGE"],
+    functions=[compute_trange, compute_pandas_ta_trange],
+)
+
 
 def add_indicators(data: pd.DataFrame) -> pd.DataFrame:
-    indicators = [ADX, MACD, RSI, STOCH, SMA]
+    indicators = [ADX, MACD, RSI, STOCH, SMA, ADOSC, AD, OBV, ATR, NATR, TRANGE]
     expected_columns = [c for i in indicators for c in i.expected_columns]
     for indicator in indicators:
         data = pd.concat([data, indicator.call(data)], axis=1)

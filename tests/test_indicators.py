@@ -25,6 +25,24 @@ from bullish.analysis.functions import (
     compute_pandas_ta_sma,
     SMA,
     add_indicators,
+    compute_adosc,
+    compute_pandas_ta_adosc,
+    ADOSC,
+    compute_ad,
+    compute_pandas_ta_ad,
+    AD,
+    compute_pandas_ta_obv,
+    compute_obv,
+    OBV,
+    compute_atr,
+    compute_pandas_ta_atr,
+    ATR,
+    NATR,
+    compute_pandas_ta_natr,
+    compute_natr,
+    compute_trange,
+    compute_pandas_ta_trange,
+    TRANGE,
 )
 
 
@@ -123,3 +141,57 @@ def test_indicator_function_sma(data_aapl: pd.DataFrame) -> None:
 def test_add_indicators(data_aapl: pd.DataFrame) -> None:
     data = add_indicators(data_aapl)
     assert not data.empty
+
+
+def test_indicator_function_adosc(data_aapl: pd.DataFrame) -> None:
+    d1 = compute_adosc(data_aapl)
+    d2 = compute_pandas_ta_adosc(data_aapl)
+    d3 = ADOSC.call(data_aapl)
+    assert not d1.empty
+    assert not d2.empty
+    assert not d3.empty
+
+
+def test_indicator_function_ad(data_aapl: pd.DataFrame) -> None:
+    d1 = compute_ad(data_aapl)
+    d2 = compute_pandas_ta_ad(data_aapl)
+    d3 = AD.call(data_aapl)
+    assert not d1.empty
+    assert not d2.empty
+    assert not d3.empty
+
+
+def test_indicator_function_obv(data_aapl: pd.DataFrame) -> None:
+    d1 = compute_obv(data_aapl)
+    d2 = compute_pandas_ta_obv(data_aapl)
+    d3 = OBV.call(data_aapl)
+    assert not d1.empty
+    assert not d2.empty
+    assert not d3.empty
+
+
+def test_indicator_function_atr(data_aapl: pd.DataFrame) -> None:
+    d1 = compute_atr(data_aapl)
+    d2 = compute_pandas_ta_atr(data_aapl)
+    d3 = ATR.call(data_aapl)
+    assert not d1.empty
+    assert not d2.empty
+    assert not d3.empty
+
+
+def test_indicator_function_natr(data_aapl: pd.DataFrame) -> None:
+    d1 = compute_natr(data_aapl)
+    d2 = compute_pandas_ta_natr(data_aapl)
+    d3 = NATR.call(data_aapl)
+    assert not d1.empty
+    assert not d2.empty
+    assert not d3.empty
+
+
+def test_indicator_function_trange(data_aapl: pd.DataFrame) -> None:
+    d1 = compute_trange(data_aapl)
+    d2 = compute_pandas_ta_trange(data_aapl)
+    d3 = TRANGE.call(data_aapl)
+    assert not d1.empty
+    assert not d2.empty
+    assert not d3.empty

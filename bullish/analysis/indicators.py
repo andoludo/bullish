@@ -17,6 +17,7 @@ from bullish.analysis.functions import (
     ROC,
     CANDLESTOCK_PATTERNS,
     SMA,
+    ADOSC,
 )
 
 logger = logging.getLogger(__name__)
@@ -290,6 +291,28 @@ def indicators_factory() -> List[Indicator]:
                     type=Optional[float],
                     range=[-100, 100],
                     function=lambda d: np.median(d.ROC_30.tolist()[-12:]),
+                ),
+            ],
+        ),
+        Indicator(
+            name="ADOSC",
+            description="Chaikin A/D Oscillator",
+            expected_columns=["ADOSC", "ADOSC_SIGNAL"],
+            function=ADOSC.call,
+            signals=[
+                Signal(
+                    name="ADOSC_CROSSES_ABOVE_0",
+                    type_info="Oversold",
+                    description="Bullish momentum in money flow",
+                    type=Optional[date],
+                    function=lambda d: cross_value(d.ADOSC, 0, above=True),
+                ),
+                Signal(
+                    name="POSITIVE_ADOSC_20_DAY_BREAKOUT",
+                    type_info="Oversold",
+                    description="20-day breakout confirmed by positive ADOSC",
+                    type=Optional[date],
+                    function=lambda d: d[(d.ADOSC_SIGNAL is True)].index[-1],
                 ),
             ],
         ),
