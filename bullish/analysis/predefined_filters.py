@@ -134,6 +134,7 @@ def predefined_filters() -> list[NamedFilterQuery]:
         MICRO_CAP_EVENT_SPECULATION,
         MOMENTUM_BREAKOUT_HUNTER,
         DEEP_VALUE_PLUS_CATALYST,
+        END_OF_TREND_REVERSAL,
     ]
 
 
