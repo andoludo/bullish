@@ -18,6 +18,7 @@ from bullish.analysis.functions import (
     CANDLESTOCK_PATTERNS,
     SMA,
     ADOSC,
+    PRICE,
 )
 
 logger = logging.getLogger(__name__)
@@ -186,6 +187,13 @@ def indicators_factory() -> List[Indicator]:
                     type=Optional[date],
                     function=lambda d: d[(d.RSI < 100) & (d.RSI > 70)].index[-1],
                 ),
+                Signal(
+                    name="RSI_NEUTRAL",
+                    description="RSI Neutral Signal",
+                    type_info="Overbought",
+                    type=Optional[date],
+                    function=lambda d: d[(d.RSI < 60) & (d.RSI > 40)].index[-1],
+                ),
             ],
         ),
         Indicator(
@@ -251,6 +259,32 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Overbought",
                     type=Optional[date],
                     function=lambda d: cross(d.SMA_50, d.SMA_200, above=False),
+                ),
+            ],
+        ),
+        Indicator(
+            name="PRICE",
+            description="Price based indicators",
+            expected_columns=PRICE.expected_columns,
+            function=PRICE.call,
+            signals=[
+                Signal(
+                    name="LOWER_THAN_200_DAY_HIGH",
+                    description="Current price is lower than the 200-day high",
+                    type_info="Oversold",
+                    type=Optional[date],
+                    function=lambda d: d[0.6 * d["200_DAY_HIGH"] > d.LAST_PRICE].index[
+                        -1
+                    ],
+                ),
+                Signal(
+                    name="LOWER_THAN_20_DAY_HIGH",
+                    description="Current price is lower than the 20-day high",
+                    type_info="Oversold",
+                    type=Optional[date],
+                    function=lambda d: d[0.6 * d["20_DAY_HIGH"] > d.LAST_PRICE].index[
+                        -1
+                    ],
                 ),
             ],
         ),

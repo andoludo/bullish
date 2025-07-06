@@ -244,6 +244,16 @@ def compute_patterns(data: pd.DataFrame) -> pd.DataFrame:
     return results
 
 
+def compute_price(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["200_DAY_HIGH"] = data.close.rolling(window=200).max()
+    results["200_DAY_LOW"] = data.close.rolling(window=200).min()
+    results["20_DAY_HIGH"] = data.close.rolling(window=20).max()
+    results["20_DAY_LOW"] = data.close.rolling(window=20).min()
+    results["LAST_PRICE"] = data.close
+    return results
+
+
 class IndicatorFunction(BaseModel):
     expected_columns: list[str]
     functions: list[Callable[[pd.DataFrame], pd.DataFrame]]
@@ -329,6 +339,16 @@ NATR = IndicatorFunction(
 TRANGE = IndicatorFunction(
     expected_columns=["TRANGE"],
     functions=[compute_trange, compute_pandas_ta_trange],
+)
+PRICE = IndicatorFunction(
+    expected_columns=[
+        "200_DAY_HIGH",
+        "200_DAY_LOW",
+        "20_DAY_HIGH",
+        "20_DAY_LOW",
+        "LAST_PRICE",
+    ],
+    functions=[compute_price],
 )
 
 

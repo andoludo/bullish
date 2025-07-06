@@ -69,9 +69,72 @@ MICRO_CAP_EVENT_SPECULATION = NamedFilterQuery(
     market_capitalization=[0, 5e8],
 )
 
+MOMENTUM_BREAKOUT_HUNTER = NamedFilterQuery(
+    name="Momentum Breakout Hunter",
+    description="A confluence of medium-term (50/200 MA) and "
+    "shorter oscillators suggests fresh upside momentum with fuel left.",
+    income=[
+        "positive_operating_income",
+        "positive_net_income",
+    ],
+    cash_flow=["positive_free_cash_flow"],
+    golden_cross=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+    adx_14_long=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+    rate_of_change_30=[0, 100],
+    rsi_neutral=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+)
+
+DEEP_VALUE_PLUS_CATALYST = NamedFilterQuery(
+    name="Deep-Value Plus Catalyst",
+    description="Seeks beaten-down names that just printed a bullish "
+    "candle and early accumulation signals—often the first leg of a bottom.",
+    income=[
+        "positive_operating_income",
+        "positive_net_income",
+    ],
+    lower_than_200_day_high=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+    rate_of_change_30=[3, 100],
+    rsi_bullish_crossover=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+)
+END_OF_TREND_REVERSAL = NamedFilterQuery(
+    name="End of trend reversal",
+    description="Layers long-term MA breach with momentum exhaustion and a "
+    "bullish candle—classic setup for mean-reversion traders.",
+    death_cross=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+    rsi_oversold=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+    candlesticks=["cdlmorningstart", "cdlabandonedbaby", "cdl3whitesoldiers"],
+)
+
 
 def predefined_filters() -> list[NamedFilterQuery]:
-    return [STRONG_FUNDAMENTALS, GOOD_FUNDAMENTALS, MICRO_CAP_EVENT_SPECULATION]
+    return [
+        STRONG_FUNDAMENTALS,
+        GOOD_FUNDAMENTALS,
+        MICRO_CAP_EVENT_SPECULATION,
+        MOMENTUM_BREAKOUT_HUNTER,
+        DEEP_VALUE_PLUS_CATALYST,
+    ]
 
 
 class PredefinedFilters(BaseModel):

@@ -43,6 +43,8 @@ from bullish.analysis.functions import (
     compute_trange,
     compute_pandas_ta_trange,
     TRANGE,
+    compute_price,
+    PRICE,
 )
 
 
@@ -74,7 +76,7 @@ def test_indicators_factory(data_aapl: pd.DataFrame) -> None:
     for indicator in indicators:
         indicator.compute(data_aapl)
         assert not indicator._data.empty
-        if indicator.name not in ["CANDLESTICKS"]:
+        if indicator.name not in ["CANDLESTICKS", "PRICE"]:
             try:
                 assert all(
                     (s.date is not None or s.value is not None)
@@ -199,3 +201,11 @@ def test_indicator_function_trange(data_aapl: pd.DataFrame) -> None:
     assert not d1.empty
     assert not d2.empty
     assert not d3.empty
+
+
+def test_indicator_price(data_aapl: pd.DataFrame) -> None:
+    d1 = compute_price(data_aapl)
+    d2 = PRICE.call(data_aapl)
+    assert not d1.empty
+    assert not d2.empty
+    assert set(d2.columns) == set(PRICE.expected_columns)
