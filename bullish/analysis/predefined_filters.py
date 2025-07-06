@@ -1,4 +1,5 @@
-from typing import Dict, Any
+import datetime
+from typing import Dict, Any, Optional
 
 from bullish.analysis.filter import FilterQuery
 from pydantic import BaseModel, Field
@@ -6,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class NamedFilterQuery(FilterQuery):
     name: str
+    description: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return self.model_dump(
@@ -51,9 +53,25 @@ GOOD_FUNDAMENTALS = NamedFilterQuery(
     market_capitalization=[1e10, 1e12],  # 1 billion to 1 trillion
 )
 
+MICRO_CAP_EVENT_SPECULATION = NamedFilterQuery(
+    name="Micro-Cap Event Speculation",
+    description="seeks tiny names where unusual volume and price gaps hint at "
+    "pending corporate events (patent win, FDA news, buy-out rumors).",
+    positive_adosc_20_day_breakout=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+    cdltasukigap=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+    rate_of_change_30=[20, 100],  # 10% to 50% in the last 30 days
+    market_capitalization=[0, 5e8],
+)
+
 
 def predefined_filters() -> list[NamedFilterQuery]:
-    return [STRONG_FUNDAMENTALS, GOOD_FUNDAMENTALS]
+    return [STRONG_FUNDAMENTALS, GOOD_FUNDAMENTALS, MICRO_CAP_EVENT_SPECULATION]
 
 
 class PredefinedFilters(BaseModel):

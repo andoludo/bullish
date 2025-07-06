@@ -75,9 +75,13 @@ def test_indicators_factory(data_aapl: pd.DataFrame) -> None:
         indicator.compute(data_aapl)
         assert not indicator._data.empty
         if indicator.name not in ["CANDLESTICKS"]:
-            assert all(
-                (s.date is not None or s.value is not None) for s in indicator.signals
-            )
+            try:
+                assert all(
+                    (s.date is not None or s.value is not None)
+                    for s in indicator.signals
+                )
+            except:
+                raise
 
 
 def test_create_model() -> None:

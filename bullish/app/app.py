@@ -147,8 +147,14 @@ def build_filter(model: Type[BaseModel], data: Dict[str, Any]) -> Dict[str, Any]
             )
 
         else:
-            ge = next((item.ge for item in info.metadata if hasattr(item, "ge")), None)
-            le = next((item.le for item in info.metadata if hasattr(item, "le")), None)
+            ge = next(
+                (item.ge for item in info.metadata if hasattr(item, "ge")),
+                info.default[0] if info.default and len(info.default) == 2 else None,
+            )
+            le = next(
+                (item.le for item in info.metadata if hasattr(item, "le")),
+                info.default[1] if info.default and len(info.default) == 2 else None,
+            )
             data[field] = list(
                 st.slider(  # type: ignore
                     name, ge, le, tuple(default), key=hash((model.__name__, field))
@@ -202,10 +208,7 @@ def filter() -> None:
     with st.container():
         column_1, column_2 = st.columns(2)
         with column_1:
-            with st.expander("Technical Analysis"):
-                for filter in TechnicalAnalysisFilters:
-                    with st.expander(filter._description):  # type: ignore
-                        build_filter(filter, st.session_state.filter_query)
+            # TODO: order here matters
             with st.expander("Predefined filters"):
                 predefined_filter_names = (
                     PredefinedFilters().get_predefined_filter_names()
@@ -217,6 +220,10 @@ def filter() -> None:
                 if option:
                     data_ = PredefinedFilters().get_predefined_filter(option)
                     st.session_state.filter_query.update(data_)
+            with st.expander("Technical Analysis"):
+                for filter in TechnicalAnalysisFilters:
+                    with st.expander(filter._description):  # type: ignore
+                        build_filter(filter, st.session_state.filter_query)
 
         with column_2:
             with st.expander("Fundamental Analysis"):

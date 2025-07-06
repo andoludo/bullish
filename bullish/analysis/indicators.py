@@ -261,7 +261,7 @@ def indicators_factory() -> List[Indicator]:
             function=ROC.call,
             signals=[
                 Signal(
-                    name="RATE_OF_CHANGE_1",
+                    name="MEDIAN_RATE_OF_CHANGE_1",
                     type_info="Value",
                     description="Median daily Rate of Change of the last 30 days",
                     type=Optional[float],
@@ -269,7 +269,7 @@ def indicators_factory() -> List[Indicator]:
                     function=lambda d: np.median(d.ROC_1.tolist()[-30:]),
                 ),
                 Signal(
-                    name="RATE_OF_CHANGE_7_4",
+                    name="MEDIAN_RATE_OF_CHANGE_7_4",
                     type_info="Value",
                     description="Median weekly Rate of Change of the last 4 weeks",
                     type=Optional[float],
@@ -277,7 +277,7 @@ def indicators_factory() -> List[Indicator]:
                     function=lambda d: np.median(d.ROC_7.tolist()[-4:]),
                 ),
                 Signal(
-                    name="RATE_OF_CHANGE_7_12",
+                    name="MEDIAN_RATE_OF_CHANGE_7_12",
                     type_info="Value",
                     description="Median weekly Rate of Change of the last 12 weeks",
                     type=Optional[float],
@@ -285,12 +285,28 @@ def indicators_factory() -> List[Indicator]:
                     function=lambda d: np.median(d.ROC_7.tolist()[-12:]),
                 ),
                 Signal(
-                    name="RATE_OF_CHANGE_30",
+                    name="MEDIAN_RATE_OF_CHANGE_30",
                     type_info="Value",
                     description="Median monthly Rate of Change of the last 12 Months",
                     type=Optional[float],
                     range=[-100, 100],
                     function=lambda d: np.median(d.ROC_30.tolist()[-12:]),
+                ),
+                Signal(
+                    name="RATE_OF_CHANGE_30",
+                    type_info="Value",
+                    description="30-day Rate of Change",
+                    type=Optional[float],
+                    range=[-100, 100],
+                    function=lambda d: d.ROC_30.tolist()[-1],
+                ),
+                Signal(
+                    name="RATE_OF_CHANGE_7",
+                    type_info="Value",
+                    description="7-day Rate of Change",
+                    type=Optional[float],
+                    range=[-100, 100],
+                    function=lambda d: d.ROC_7.tolist()[-1],
                 ),
             ],
         ),
@@ -312,7 +328,9 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Oversold",
                     description="20-day breakout confirmed by positive ADOSC",
                     type=Optional[date],
-                    function=lambda d: d[(d.ADOSC_SIGNAL is True)].index[-1],
+                    function=lambda d: d[(d.ADOSC_SIGNAL == True)].index[  # noqa: E712
+                        -1
+                    ],
                 ),
             ],
         ),

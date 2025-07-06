@@ -75,23 +75,23 @@ def _load_data(
         return pd.DataFrame(columns=columns).sort_index()
 
 
-def _compute_growth(series: pd.Series) -> bool:  # type: ignore
+def _compute_growth(series: pd.Series) -> bool:
     if series.empty:
         return False
     return all(series.pct_change(fill_method=None).dropna() > 0)
 
 
-def _all_positive(series: pd.Series) -> bool:  # type: ignore
+def _all_positive(series: pd.Series) -> bool:
     if series.empty:
         return False
     return all(series.dropna() > 0)
 
 
-def _get_last(data: pd.Series) -> Optional[float]:  # type: ignore
+def _get_last(data: pd.Series) -> Optional[float]:
     return data.iloc[-1] if not data.empty else None
 
 
-def _abs(data: pd.Series) -> pd.Series:  # type: ignore
+def _abs(data: pd.Series) -> pd.Series:
     try:
         return abs(data)
     except Exception as e:

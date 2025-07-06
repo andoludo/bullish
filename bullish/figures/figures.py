@@ -11,7 +11,7 @@ def plot(
     data: pd.DataFrame,
     symbol: str,
     name: Optional[str] = None,
-    dates: Optional[pd.Series] = None,  # type: ignore
+    dates: Optional[pd.Series] = None,
 ) -> go.Figure:
     data = add_indicators(data)
     fig = make_subplots(

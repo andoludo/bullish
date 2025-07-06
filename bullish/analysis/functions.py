@@ -15,7 +15,7 @@ except Exception:
 
 
 def cross(
-    series_a: pd.Series, series_b: pd.Series, above: bool = True  # type: ignore
+    series_a: pd.Series, series_b: pd.Series, above: bool = True
 ) -> Optional[date]:
     crossing = ta.cross(series_a=series_a, series_b=series_b, above=above)
     if not crossing[crossing == 1].index.empty:
@@ -23,7 +23,7 @@ def cross(
     return None
 
 
-def cross_value(series: pd.Series, number: int, above: bool = True) -> Optional[date]:  # type: ignore
+def cross_value(series: pd.Series, number: int, above: bool = True) -> Optional[date]:
     return cross(series, pd.Series(number, index=series.index), above=above)
 
 
