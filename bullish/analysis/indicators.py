@@ -334,7 +334,7 @@ def indicators_factory() -> List[Indicator]:
         Indicator(
             name="ROC",
             description="Rate Of Change",
-            expected_columns=["ROC_7", "ROC_30", "ROC_1"],
+            expected_columns=ROC.expected_columns,
             function=ROC.call,
             signals=[
                 Signal(
@@ -378,6 +378,13 @@ def indicators_factory() -> List[Indicator]:
                     description="7-day Rate of Change",
                     type=Optional[float],
                     function=lambda d: d.ROC_7.tolist()[-1],
+                ),
+                Signal(
+                    name="MOMENTUM",
+                    type_info="Value",
+                    description="7-day Rate of Change",
+                    type=Optional[float],
+                    function=lambda d: d.MOM.iloc[-1],
                 ),
             ],
         ),

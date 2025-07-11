@@ -122,6 +122,9 @@ def compute_roc(data: pd.DataFrame) -> pd.DataFrame:
     results["ROC_7"] = talib.ROC(data.close, timeperiod=7)  # type: ignore
     results["ROC_1"] = talib.ROC(data.close, timeperiod=1)  # type: ignore
     results["ROC_30"] = talib.ROC(data.close, timeperiod=30)  # type: ignore
+    mom = talib.MOM(data.close, timeperiod=252)  # type: ignore
+    results["MOM"] = mom.shift(21)  # type: ignore
+
     return results
 
 
@@ -334,7 +337,7 @@ MFI = IndicatorFunction(
     expected_columns=["MFI"], functions=[compute_mfi, compute_pandas_ta_mfi]
 )
 ROC = IndicatorFunction(
-    expected_columns=["ROC_7", "ROC_1", "ROC_30"],
+    expected_columns=["ROC_7", "ROC_1", "ROC_30", "MOM"],
     functions=[compute_roc, compute_pandas_ta_roc],
 )
 CANDLESTOCK_PATTERNS = IndicatorFunction(
