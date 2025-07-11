@@ -37,8 +37,12 @@ def test_order_by(bullish_view: BullishDb):
         "last_price_date": (start_date, today),
         "income": ["positive_net_income"],
         "cash_flow": ["positive_free_cash_flow", "growing_operating_cash_flow"],
-        "order_by_desc": "price_per_earning_ratio",
+        "order_by_desc": "market_capitalization",
     }
     view_query = FilterQuery.model_validate(data)
+    assert (
+        view_query.to_query()
+        == "positive_net_income=1 AND positive_free_cash_flow=1 AND growing_operating_cash_flow=1 AND last_price BETWEEN 1.0 AND 1000.0 ORDER BY market_capitalization DESC"
+    )
     data = bullish_view.read_filter_query(view_query)
-    assert np.all(np.diff(data.price_per_earning_ratio.values) < 0)
+    assert np.all(np.diff(data.market_capitalization.values) < 0)

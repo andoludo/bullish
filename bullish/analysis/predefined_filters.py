@@ -70,15 +70,61 @@ SHOOTING_STARS = NamedFilterQuery(
     order_by_asc="last_price",
 )
 
-RSI_CROSSOVER = NamedFilterQuery(
+RSI_CROSSOVER_TECH = NamedFilterQuery(
     name="RSI cross-over",
     cash_flow=["positive_free_cash_flow"],
     properties=["operating_cash_flow_is_higher_than_net_income"],
     return_after_rsi_crossover_45_period_90=[0.0, 100],
     rsi_bullish_crossover_45=DATE_THRESHOLD,
-    market_capitalization=[1e9, 1e12],  # 1 billion to 1 trillion
+    market_capitalization=[5e8, 1e11],  # 1 billion to 1 trillion
     order_by_desc="market_capitalization",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+    industry=[
+        "Semiconductors",
+        "Software - Application",
+        "Software - Infrastructure",
+        "Biotechnology",
+        "Diagnostics & Research",
+        "Medical Devices",
+        "Health Information Services",
+        "Internet Retail",
+        "Electronic Gaming & Multimedia",
+        "Internet Content & Information",
+        "Solar",
+        "Information Technology Services",
+        "Scientific & Technical Instruments",
+        "Semiconductor Equipment & Materials",
+        "Diagnostics & Research",
+    ],
 )
+RSI_CROSSOVER_TECH_PE = NamedFilterQuery(
+    name="RSI cross-over P/E",
+    cash_flow=["positive_free_cash_flow"],
+    properties=["operating_cash_flow_is_higher_than_net_income"],
+    price_per_earning_ratio=[5, 30],  # P/E ratio between 10 and 100
+    rsi_bullish_crossover_45=DATE_THRESHOLD,
+    market_capitalization=[5e8, 1e12],  # 1 billion to 1 trillion
+    order_by_desc="market_capitalization",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+    industry=[
+        "Semiconductors",
+        "Software - Application",
+        "Software - Infrastructure",
+        "Biotechnology",
+        "Diagnostics & Research",
+        "Medical Devices",
+        "Health Information Services",
+        "Internet Retail",
+        "Electronic Gaming & Multimedia",
+        "Internet Content & Information",
+        "Solar",
+        "Information Technology Services",
+        "Scientific & Technical Instruments",
+        "Semiconductor Equipment & Materials",
+        "Diagnostics & Research",
+    ],
+)
+
 MICRO_CAP_EVENT_SPECULATION = NamedFilterQuery(
     name="Micro-Cap Event Speculation",
     description="seeks tiny names where unusual volume and price gaps hint at "
@@ -185,23 +231,94 @@ OVERSOLD_MEAN_REVERSION = NamedFilterQuery(
     mfi_oversold=DATE_THRESHOLD,
     lower_than_200_day_high=DATE_THRESHOLD,
 )
+RSI_CROSSOVER_30_GROWTH_STOCK_STRONG_FUNDAMENTAL = NamedFilterQuery(
+    name="RSI cross-over 30 growth stock strong fundamental",
+    income=[
+        "positive_operating_income",
+        "growing_operating_income",
+        "positive_net_income",
+        "growing_net_income",
+    ],
+    cash_flow=["positive_free_cash_flow"],
+    properties=["operating_cash_flow_is_higher_than_net_income"],
+    price_per_earning_ratio=[20, 40],
+    rsi_bullish_crossover_30=DATE_THRESHOLD,
+    market_capitalization=[5e8, 1e12],
+    order_by_desc="market_capitalization",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
+RSI_CROSSOVER_40_GROWTH_STOCK_STRONG_FUNDAMENTAL = NamedFilterQuery(
+    name="RSI cross-over 40 growth stock strong fundamental",
+    income=[
+        "positive_operating_income",
+        "growing_operating_income",
+        "positive_net_income",
+        "growing_net_income",
+    ],
+    cash_flow=["positive_free_cash_flow"],
+    properties=["operating_cash_flow_is_higher_than_net_income"],
+    price_per_earning_ratio=[20, 40],
+    rsi_bullish_crossover_40=DATE_THRESHOLD,
+    market_capitalization=[5e8, 1e12],
+    order_by_desc="market_capitalization",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
+RSI_CROSSOVER_45_GROWTH_STOCK_STRONG_FUNDAMENTAL = NamedFilterQuery(
+    name="RSI cross-over 45 growth stock strong fundamental",
+    income=[
+        "positive_operating_income",
+        "growing_operating_income",
+        "positive_net_income",
+        "growing_net_income",
+    ],
+    cash_flow=["positive_free_cash_flow"],
+    properties=["operating_cash_flow_is_higher_than_net_income"],
+    price_per_earning_ratio=[20, 40],
+    rsi_bullish_crossover_45=DATE_THRESHOLD,
+    market_capitalization=[5e8, 1e12],
+    order_by_desc="market_capitalization",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
+RSI_CROSSOVER_30_GROWTH_STOCK = NamedFilterQuery(
+    name="RSI cross-over 30 growth stock",
+    cash_flow=["positive_free_cash_flow"],
+    properties=["operating_cash_flow_is_higher_than_net_income"],
+    price_per_earning_ratio=[20, 40],
+    rsi_bullish_crossover_30=DATE_THRESHOLD,
+    market_capitalization=[5e8, 1e12],
+    order_by_desc="market_capitalization",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
+RSI_CROSSOVER_40_GROWTH_STOCK = NamedFilterQuery(
+    name="RSI cross-over 40 growth stock",
+    cash_flow=["positive_free_cash_flow"],
+    properties=["operating_cash_flow_is_higher_than_net_income"],
+    price_per_earning_ratio=[20, 40],
+    rsi_bullish_crossover_40=DATE_THRESHOLD,
+    market_capitalization=[5e8, 1e12],
+    order_by_desc="market_capitalization",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
+RSI_CROSSOVER_45_GROWTH_STOCK = NamedFilterQuery(
+    name="RSI cross-over 45 growth stock",
+    cash_flow=["positive_free_cash_flow"],
+    properties=["operating_cash_flow_is_higher_than_net_income"],
+    price_per_earning_ratio=[20, 40],
+    rsi_bullish_crossover_45=DATE_THRESHOLD,
+    market_capitalization=[5e8, 1e12],
+    order_by_desc="market_capitalization",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
 
 
 def predefined_filters() -> list[NamedFilterQuery]:
     return [
-        STRONG_FUNDAMENTALS,
-        GOOD_FUNDAMENTALS,
-        MICRO_CAP_EVENT_SPECULATION,
-        MOMENTUM_BREAKOUT_HUNTER,
-        DEEP_VALUE_PLUS_CATALYST,
-        END_OF_TREND_REVERSAL,
-        HIGH_QUALITY_CASH_GENERATOR,
-        EARNINGS_ACCELERATION_TREND_CONFIRMATION,
-        DIVIDEND_GROWTH_COMPOUNDER,
-        BREAK_OUT_MOMENTUM,
-        OVERSOLD_MEAN_REVERSION,
-        SHOOTING_STARS,
-        RSI_CROSSOVER,
+        RSI_CROSSOVER_30_GROWTH_STOCK_STRONG_FUNDAMENTAL,
+        RSI_CROSSOVER_40_GROWTH_STOCK_STRONG_FUNDAMENTAL,
+        RSI_CROSSOVER_45_GROWTH_STOCK_STRONG_FUNDAMENTAL,
+        RSI_CROSSOVER_30_GROWTH_STOCK,
+        RSI_CROSSOVER_40_GROWTH_STOCK,
+        RSI_CROSSOVER_45_GROWTH_STOCK,
     ]
 
 

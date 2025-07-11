@@ -1,3 +1,4 @@
+import logging
 import shelve
 import uuid
 from pathlib import Path
@@ -37,6 +38,7 @@ CACHE_SHELVE = "user_cache"
 DB_KEY = "db_path"
 
 st.set_page_config(layout="wide")
+logger = logging.getLogger(__name__)
 
 
 @st.cache_resource
@@ -146,10 +148,11 @@ def build_filter(model: Type[BaseModel], data: Dict[str, Any]) -> Dict[str, Any]
                 key=hash((model.__name__, field)),
             )
         elif info.annotation == Optional[str]:  # type: ignore
+            options = ["", *groups_mapping()[field]]
             data[field] = st.selectbox(
                 name,
-                ["", *groups_mapping()[field]],
-                index=0 if not default else groups_mapping()[field].index(default),
+                options,
+                index=0 if not default else options.index(default),
                 key=hash((model.__name__, field)),
             )
 
@@ -162,11 +165,22 @@ def build_filter(model: Type[BaseModel], data: Dict[str, Any]) -> Dict[str, Any]
                 (item.le for item in info.metadata if hasattr(item, "le")),
                 info.default[1] if info.default and len(info.default) == 2 else None,
             )
-            data[field] = list(
-                st.slider(  # type: ignore
-                    name, ge, le, tuple(default), key=hash((model.__name__, field))
+            if info.annotation == Optional[List[float]]:  # type: ignore
+                ge = int(ge)  # type: ignore
+                le = int(le)  # type: ignore
+                default = [int(d) for d in default]
+            try:
+                data[field] = list(
+                    st.slider(  # type: ignore
+                        name, ge, le, tuple(default), key=hash((model.__name__, field))
+                    )
                 )
-            )
+            except Exception as e:
+                logger.error(
+                    f"Error building filter for {model.__name__}.{field} "
+                    f"with the parameters {(info.annotation, name, ge, le, tuple(default))}: {e}"
+                )
+                raise e
     return data
 
 
