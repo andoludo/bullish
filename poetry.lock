@@ -116,14 +116,14 @@ tests-mypy = ["mypy (>=1.11.1)", "pytest-mypy-plugins"]
 
 [[package]]
 name = "bearishpy"
-version = "0.20.0"
+version = "0.22.0"
 description = ""
 category = "main"
 optional = false
 python-versions = "<3.13,>=3.10"
 files = [
-    {file = "bearishpy-0.20.0-py3-none-any.whl", hash = "sha256:40dc641b43dc0fe4b0b89c4e21b6576507fbcf91f29bdaa428015627de891d3d"},
-    {file = "bearishpy-0.20.0.tar.gz", hash = "sha256:7d0eafb3fbdaf736701dc168c026fd121e19170780c707411c60a6858c83894e"},
+    {file = "bearishpy-0.22.0-py3-none-any.whl", hash = "sha256:f5d5fa11de66af196eb0e5c75d4b86e1345103e4437882cab751c6840ce12a00"},
+    {file = "bearishpy-0.22.0.tar.gz", hash = "sha256:41fd276e41203cae3af5d2d5f5ec1a7174546c15b635bc3790653010ce09e9c8"},
 ]
 
 [package.dependencies]
@@ -5307,4 +5307,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.12,<3.13"
-content-hash = "dbc953e5cb46124a3d50794718cfa2d324a65a18d2e45b0e34b9b4fd7f457800"
+content-hash = "a5b0fd01ae9dc72fa0c6a1ef0cd550127244deb8f2e7dab16da8199ffd010200"
