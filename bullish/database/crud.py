@@ -67,6 +67,16 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             session.exec(stmt)  # type: ignore
             session.commit()
 
+    def _write_many_analysis(self, many_analysis: List[Analysis]) -> None:
+        with Session(self._engine) as session:
+            stmt = (
+                insert(AnalysisORM)
+                .prefix_with("OR REPLACE")
+                .values([a.model_dump() for a in many_analysis])
+            )
+            session.exec(stmt)  # type: ignore
+            session.commit()
+
     def _read_analysis(self, ticker: Ticker) -> Optional[Analysis]:
         with Session(self._engine) as session:
             query = select(AnalysisORM).where(AnalysisORM.symbol == ticker.symbol)

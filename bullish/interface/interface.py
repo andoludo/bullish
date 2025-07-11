@@ -19,6 +19,9 @@ class BullishDbBase(BearishDbBase):  # type: ignore
     def write_analysis(self, analysis: "Analysis") -> None:
         return self._write_analysis(analysis)
 
+    def write_many_analysis(self, many_analysis: List["Analysis"]) -> None:
+        return self._write_many_analysis(many_analysis)
+
     def read_analysis(self, ticker: Ticker) -> Optional["Analysis"]:
         return self._read_analysis(ticker)
 
@@ -61,6 +64,9 @@ class BullishDbBase(BearishDbBase):  # type: ignore
 
     @abc.abstractmethod
     def _write_analysis(self, analysis: "Analysis") -> None: ...
+
+    @abc.abstractmethod
+    def _write_many_analysis(self, many_analysis: List["Analysis"]) -> None: ...
 
     @abc.abstractmethod
     def _read_analysis(self, ticker: Ticker) -> Optional["Analysis"]: ...

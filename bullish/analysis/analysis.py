@@ -1,4 +1,7 @@
 import logging
+import time
+from itertools import batched
+from pathlib import Path
 from typing import (
     Annotated,
     Any,
@@ -40,6 +43,7 @@ from bearish.types import TickerOnlySources  # type: ignore
 from pydantic import BaseModel, BeforeValidator, Field, create_model
 
 from bullish.analysis.indicators import Indicators, IndicatorModels
+from joblib import Parallel, delayed  # type: ignore
 
 if TYPE_CHECKING:
     from bullish.database.crud import BullishDb
@@ -482,10 +486,27 @@ class Analysis(AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis)
         )
 
 
+def compute_analysis(database_path: Path, ticker: Ticker) -> Analysis:
+    from bullish.database.crud import BullishDb
+
+    bullish_db = BullishDb(database_path=database_path)
+    return Analysis.from_ticker(bullish_db, ticker)
+
+
 def run_analysis(bullish_db: "BullishDb") -> None:
     price_trackers = set(bullish_db._read_tracker(TrackerQuery(), PriceTracker))
     finance_trackers = set(bullish_db._read_tracker(TrackerQuery(), FinancialsTracker))
     tickers = list(price_trackers.intersection(finance_trackers))
-    for ticker in tickers:
-        analysis = Analysis.from_ticker(bullish_db, ticker)
-        bullish_db.write_analysis(analysis)
+    parallel = Parallel(n_jobs=-1)
+
+    for batch_ticker in batched(tickers, 1000):
+        start = time.perf_counter()
+        many_analysis = parallel(
+            delayed(compute_analysis)(bullish_db.database_path, ticker)
+            for ticker in batch_ticker
+        )
+        bullish_db.write_many_analysis(many_analysis)
+        elapsed_time = time.perf_counter() - start
+        print(
+            f"Computed analysis for {len(batch_ticker)} tickers in {elapsed_time:.2f} seconds."
+        )
