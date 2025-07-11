@@ -1,17 +1,19 @@
-from typing import Optional
+import datetime
+from typing import Optional, List
 
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from bullish.analysis.functions import add_indicators
+from datetime import date
 
 
 def plot(
     data: pd.DataFrame,
     symbol: str,
     name: Optional[str] = None,
-    dates: Optional[pd.Series] = None,
+    dates: Optional[List[date]] = None,
 ) -> go.Figure:
     data = add_indicators(data)
     fig = make_subplots(
@@ -125,10 +127,21 @@ def plot(
         row=7,
         col=1,
     )
-    if dates is not None and not dates.empty:
+    if dates is not None and dates:
         for date in dates:
+            if (
+                data.first_valid_index().date() > date  # type: ignore
+                or data.last_valid_index().date() + datetime.timedelta(days=31 * 3)  # type: ignore
+                < date
+            ):
+                continue
             fig.add_vline(
-                x=date, line_dash="dashdot", line_color="MediumPurple", line_width=3
+                x=date,
+                line_dash="dashdot",
+                line_color="MediumPurple",
+                line_width=1,
+                row=1,
+                col=1,
             )
 
     # Layout tweaks

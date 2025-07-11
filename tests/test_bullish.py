@@ -29,25 +29,25 @@ def test_read_financials(bullish_db: BullishDb) -> None:
 def test_analysis(bullish_db: BullishDb) -> None:
 
     analysis = Analysis.from_ticker(bullish_db, Ticker(symbol="AAPL"))
-    assert analysis.rsi_bullish_crossover is not None
+    assert analysis.rsi_bullish_crossover_30 is not None
     assert analysis.positive_net_income is not None
     bullish_db.write_analysis(analysis)
     analysis_db = bullish_db.read_analysis(Ticker(symbol="AAPL"))
-    assert analysis_db.rsi_bullish_crossover is not None
+    assert analysis_db.rsi_bullish_crossover_30 is not None
     assert analysis_db.positive_net_income is not None
 
 
 def test_technical_analysis() -> None:
 
     prices = Prices.from_csv(Path(__file__).parent / "data" / "prices.csv")
-    ta = TechnicalAnalysis.from_data(prices.to_dataframe())
+    ta = TechnicalAnalysis.from_data(prices.to_dataframe(), Ticker(symbol="AAPL"))
     assert ta
 
 
 def test_run_analysis(bullish_db: BullishDb) -> None:
     run_analysis(bullish_db)
     analysis_db = bullish_db.read_analysis(Ticker(symbol="AAPL"))
-    assert analysis_db.rsi_bullish_crossover is not None
+    assert analysis_db.rsi_bullish_crossover_30 is not None
     assert analysis_db.positive_net_income is not None
 
 
@@ -101,3 +101,8 @@ def test_ticker_mood_instantiation(bullish_db: BullishDb) -> None:
     TickerMoodDb(database_path=bullish_db.database_path, no_migration=True)
     insp = inspect(bullish_db._engine)
     assert insp.has_table("subject")
+
+
+def test_read_dates(bullish_db: BullishDb) -> None:
+    dates = bullish_db.read_dates(symbol="AAPL")
+    assert len(dates) > 0

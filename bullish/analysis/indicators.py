@@ -1,10 +1,10 @@
 import logging
 from datetime import date
-from typing import Optional, List, Callable, Any, Literal, Dict, Union, Self
+from typing import Optional, List, Callable, Any, Literal, Dict, Union
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field, PrivateAttr, create_model, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, create_model
 
 from bullish.analysis.functions import (
     cross,
@@ -19,6 +19,7 @@ from bullish.analysis.functions import (
     SMA,
     ADOSC,
     PRICE,
+    compute_percentile_return_after_rsi_crossover,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,14 +49,6 @@ class Signal(BaseModel):
             self.date = self.function(data)  # type: ignore
         else:
             self.value = self.function(data)  # type: ignore
-
-    @model_validator(mode="after")
-    def _validate(self) -> Self:
-        if self.type == Optional[float] and self.range is None:
-            raise ValueError(
-                "Range must be defined for signals of type Optional[float]"
-            )
-        return self
 
 
 class Indicator(BaseModel):
@@ -100,7 +93,7 @@ def indicators_factory() -> List[Indicator]:
                     type=Optional[date],
                     function=lambda d: d[
                         (d.ADX_14 > 20) & (d.PLUS_DI > d.MINUS_DI)
-                    ].index[-1],
+                    ].last_valid_index(),
                 ),
                 Signal(
                     name="ADX_14_SHORT",
@@ -109,7 +102,7 @@ def indicators_factory() -> List[Indicator]:
                     type=Optional[date],
                     function=lambda d: d[
                         (d.ADX_14 > 20) & (d.MINUS_DI > d.PLUS_DI)
-                    ].index[-1],
+                    ].last_valid_index(),
                 ),
             ],
         ),
@@ -156,15 +149,29 @@ def indicators_factory() -> List[Indicator]:
         Indicator(
             name="RSI",
             description="Relative Strength Index",
-            expected_columns=["RSI"],
+            expected_columns=RSI.expected_columns,
             function=RSI.call,
             signals=[
                 Signal(
-                    name="RSI_BULLISH_CROSSOVER",
+                    name="RSI_BULLISH_CROSSOVER_30",
                     description="RSI Bullish Crossover",
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: cross_value(d.RSI, 30),
+                ),
+                Signal(
+                    name="RSI_BULLISH_CROSSOVER_40",
+                    description="RSI Bullish Crossover 40",
+                    type_info="Long",
+                    type=Optional[date],
+                    function=lambda d: cross_value(d.RSI, 40),
+                ),
+                Signal(
+                    name="RSI_BULLISH_CROSSOVER_45",
+                    description="RSI Bullish Crossover 45",
+                    type_info="Long",
+                    type=Optional[date],
+                    function=lambda d: cross_value(d.RSI, 45),
                 ),
                 Signal(
                     name="RSI_BEARISH_CROSSOVER",
@@ -178,21 +185,32 @@ def indicators_factory() -> List[Indicator]:
                     description="RSI Oversold Signal",
                     type_info="Oversold",
                     type=Optional[date],
-                    function=lambda d: d[(d.RSI < 30) & (d.RSI > 0)].index[-1],
+                    function=lambda d: d[(d.RSI < 30) & (d.RSI > 0)].last_valid_index(),
                 ),
                 Signal(
                     name="RSI_OVERBOUGHT",
                     description="RSI Overbought Signal",
                     type_info="Overbought",
                     type=Optional[date],
-                    function=lambda d: d[(d.RSI < 100) & (d.RSI > 70)].index[-1],
+                    function=lambda d: d[
+                        (d.RSI < 100) & (d.RSI > 70)
+                    ].last_valid_index(),
                 ),
                 Signal(
                     name="RSI_NEUTRAL",
                     description="RSI Neutral Signal",
                     type_info="Overbought",
                     type=Optional[date],
-                    function=lambda d: d[(d.RSI < 60) & (d.RSI > 40)].index[-1],
+                    function=lambda d: d[
+                        (d.RSI < 60) & (d.RSI > 40)
+                    ].last_valid_index(),
+                ),
+                Signal(
+                    name="RETURN_AFTER_RSI_CROSSOVER_45_PERIOD_90",
+                    description="Percentile 30 return after RSI crossover 45 in the next 90 days",
+                    type_info="Long",
+                    type=Optional[float],
+                    function=lambda d: compute_percentile_return_after_rsi_crossover(d),
                 ),
             ],
         ),
@@ -207,14 +225,18 @@ def indicators_factory() -> List[Indicator]:
                     description="Stoch Oversold Signal",
                     type_info="Oversold",
                     type=Optional[date],
-                    function=lambda d: d[(d.SLOW_K < 20) & (d.SLOW_K > 0)].index[-1],
+                    function=lambda d: d[
+                        (d.SLOW_K < 20) & (d.SLOW_K > 0)
+                    ].last_valid_index(),
                 ),
                 Signal(
                     name="STOCH_OVERBOUGHT",
                     description="Stoch Overbought Signal",
                     type_info="Overbought",
                     type=Optional[date],
-                    function=lambda d: d[(d.SLOW_K < 100) & (d.SLOW_K > 80)].index[-1],
+                    function=lambda d: d[
+                        (d.SLOW_K < 100) & (d.SLOW_K > 80)
+                    ].last_valid_index(),
                 ),
             ],
         ),
@@ -229,14 +251,14 @@ def indicators_factory() -> List[Indicator]:
                     description="MFI Oversold Signal",
                     type_info="Oversold",
                     type=Optional[date],
-                    function=lambda d: d[(d.MFI < 20)].index[-1],
+                    function=lambda d: d[(d.MFI < 20)].last_valid_index(),
                 ),
                 Signal(
                     name="MFI_OVERBOUGHT",
                     description="MFI Overbought Signal",
                     type_info="Overbought",
                     type=Optional[date],
-                    function=lambda d: d[(d.MFI > 80)].index[-1],
+                    function=lambda d: d[(d.MFI > 80)].last_valid_index(),
                 ),
             ],
         ),
@@ -273,18 +295,39 @@ def indicators_factory() -> List[Indicator]:
                     description="Current price is lower than the 200-day high",
                     type_info="Oversold",
                     type=Optional[date],
-                    function=lambda d: d[0.6 * d["200_DAY_HIGH"] > d.LAST_PRICE].index[
-                        -1
-                    ],
+                    function=lambda d: d[
+                        0.6 * d["200_DAY_HIGH"] > d.LAST_PRICE
+                    ].last_valid_index(),
                 ),
                 Signal(
                     name="LOWER_THAN_20_DAY_HIGH",
                     description="Current price is lower than the 20-day high",
                     type_info="Oversold",
                     type=Optional[date],
-                    function=lambda d: d[0.6 * d["20_DAY_HIGH"] > d.LAST_PRICE].index[
-                        -1
-                    ],
+                    function=lambda d: d[
+                        0.6 * d["20_DAY_HIGH"] > d.LAST_PRICE
+                    ].last_valid_index(),
+                ),
+                Signal(
+                    name="MEDIAN_WEEKLY_GROWTH",
+                    description="Median weekly growth",
+                    type_info="Oversold",
+                    type=Optional[float],
+                    function=lambda d: np.median(d.WEEKLY_GROWTH.unique()),
+                ),
+                Signal(
+                    name="MEDIAN_MONTHLY_GROWTH",
+                    description="Median monthly growth",
+                    type_info="Oversold",
+                    type=Optional[float],
+                    function=lambda d: np.median(d.MONTHLY_GROWTH.unique()),
+                ),
+                Signal(
+                    name="MEDIAN_YEARLY_GROWTH",
+                    description="Median yearly growth",
+                    type_info="Oversold",
+                    type=Optional[float],
+                    function=lambda d: np.median(d.YEARLY_GROWTH.unique()),
                 ),
             ],
         ),
@@ -299,7 +342,6 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Value",
                     description="Median daily Rate of Change of the last 30 days",
                     type=Optional[float],
-                    range=[-100, 100],
                     function=lambda d: np.median(d.ROC_1.tolist()[-30:]),
                 ),
                 Signal(
@@ -307,7 +349,6 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Value",
                     description="Median weekly Rate of Change of the last 4 weeks",
                     type=Optional[float],
-                    range=[-100, 100],
                     function=lambda d: np.median(d.ROC_7.tolist()[-4:]),
                 ),
                 Signal(
@@ -315,7 +356,6 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Value",
                     description="Median weekly Rate of Change of the last 12 weeks",
                     type=Optional[float],
-                    range=[-100, 100],
                     function=lambda d: np.median(d.ROC_7.tolist()[-12:]),
                 ),
                 Signal(
@@ -323,7 +363,6 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Value",
                     description="Median monthly Rate of Change of the last 12 Months",
                     type=Optional[float],
-                    range=[-100, 100],
                     function=lambda d: np.median(d.ROC_30.tolist()[-12:]),
                 ),
                 Signal(
@@ -331,7 +370,6 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Value",
                     description="30-day Rate of Change",
                     type=Optional[float],
-                    range=[-100, 100],
                     function=lambda d: d.ROC_30.tolist()[-1],
                 ),
                 Signal(
@@ -339,7 +377,6 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Value",
                     description="7-day Rate of Change",
                     type=Optional[float],
-                    range=[-100, 100],
                     function=lambda d: d.ROC_7.tolist()[-1],
                 ),
             ],
@@ -362,9 +399,9 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Oversold",
                     description="20-day breakout confirmed by positive ADOSC",
                     type=Optional[date],
-                    function=lambda d: d[(d.ADOSC_SIGNAL == True)].index[  # noqa: E712
-                        -1
-                    ],
+                    function=lambda d: d[
+                        (d.ADOSC_SIGNAL == True)  # noqa: E712
+                    ].last_valid_index(),
                 ),
             ],
         ),
@@ -387,49 +424,53 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Long",
                     description="Morning Star Candlestick Pattern",
                     type=Optional[date],
-                    function=lambda d: d[(d.CDLMORNINGSTAR == 100)].index[-1],
+                    function=lambda d: d[(d.CDLMORNINGSTAR == 100)].last_valid_index(),
                 ),
                 Signal(
                     name="CDL3LINESTRIKE",
                     description="3 Line Strike Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
-                    function=lambda d: d[(d.CDL3LINESTRIKE == 100)].index[-1],
+                    function=lambda d: d[(d.CDL3LINESTRIKE == 100)].last_valid_index(),
                 ),
                 Signal(
                     name="CDL3WHITESOLDIERS",
                     description="3 White Soldiers Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
-                    function=lambda d: d[(d.CDL3WHITESOLDIERS == 100)].index[-1],
+                    function=lambda d: d[
+                        (d.CDL3WHITESOLDIERS == 100)
+                    ].last_valid_index(),
                 ),
                 Signal(
                     name="CDLABANDONEDBABY",
                     description="Abandoned Baby Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
-                    function=lambda d: d[(d.CDLABANDONEDBABY == 100)].index[-1],
+                    function=lambda d: d[
+                        (d.CDLABANDONEDBABY == 100)
+                    ].last_valid_index(),
                 ),
                 Signal(
                     name="CDLTASUKIGAP",
                     description="Tasukigap Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
-                    function=lambda d: d[(d.CDLTASUKIGAP == 100)].index[-1],
+                    function=lambda d: d[(d.CDLTASUKIGAP == 100)].last_valid_index(),
                 ),
                 Signal(
                     name="CDLPIERCING",
                     description="Piercing Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
-                    function=lambda d: d[(d.CDLPIERCING == 100)].index[-1],
+                    function=lambda d: d[(d.CDLPIERCING == 100)].last_valid_index(),
                 ),
                 Signal(
                     name="CDLENGULFING",
                     description="Engulfing Candlestick Pattern",
                     type_info="Long",
                     type=Optional[date],
-                    function=lambda d: d[(d.CDLENGULFING == 100)].index[-1],
+                    function=lambda d: d[(d.CDLENGULFING == 100)].last_valid_index(),
                 ),
             ],
         ),
@@ -441,7 +482,11 @@ class Indicators(BaseModel):
 
     def compute(self, data: pd.DataFrame) -> None:
         for indicator in self.indicators:
-            indicator.compute(data)
+            try:
+                indicator.compute(data)
+            except Exception as e:
+                logger.error(f"Failed to compute indicator {indicator.name}: {e}")
+                continue
             logger.info(
                 f"Computed {indicator.name} with {len(indicator.signals)} signals"
             )

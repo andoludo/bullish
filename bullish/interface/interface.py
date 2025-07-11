@@ -1,5 +1,6 @@
 import abc
 import logging
+from datetime import date
 from typing import List, Optional
 
 import pandas as pd
@@ -83,3 +84,9 @@ class BullishDbBase(BearishDbBase):  # type: ignore
 
     @abc.abstractmethod
     def read_symbols(self) -> List[str]: ...
+
+    @abc.abstractmethod
+    def read_job_tracker(self, task_id: str) -> Optional[JobTracker]: ...
+
+    @abc.abstractmethod
+    def read_dates(self, symbol: str) -> List[date]: ...

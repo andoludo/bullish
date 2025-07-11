@@ -1,7 +1,9 @@
+import datetime
 import logging
 from datetime import date
-from typing import Optional, Callable
+from typing import Optional, Callable, cast
 
+import numpy as np
 import pandas as pd
 import pandas_ta as ta  # type: ignore
 
@@ -19,12 +21,21 @@ def cross(
 ) -> Optional[date]:
     crossing = ta.cross(series_a=series_a, series_b=series_b, above=above)
     if not crossing[crossing == 1].index.empty:
-        return pd.Timestamp(crossing[crossing == 1].index[-1]).date()
+        return crossing[crossing == 1].last_valid_index().date()  # type: ignore
     return None
 
 
 def cross_value(series: pd.Series, number: int, above: bool = True) -> Optional[date]:
     return cross(series, pd.Series(number, index=series.index), above=above)
+
+
+def cross_value_series(
+    series_a: pd.Series, number: int, above: bool = True
+) -> pd.Series:
+    crossing = ta.cross(
+        series_a=series_a, series_b=pd.Series(number, index=series_a.index), above=above
+    )
+    return crossing  # type: ignore
 
 
 def compute_adx(data: pd.DataFrame) -> pd.DataFrame:
@@ -69,12 +80,14 @@ def compute_pandas_ta_macd(data: pd.DataFrame) -> pd.DataFrame:
 def compute_rsi(data: pd.DataFrame) -> pd.DataFrame:
     results = pd.DataFrame(index=data.index)
     results["RSI"] = talib.RSI(data.close)  # type: ignore
+    results["CLOSE"] = data.close
     return results
 
 
 def compute_pandas_ta_rsi(data: pd.DataFrame) -> pd.DataFrame:
     results = pd.DataFrame(index=data.index)
     results["RSI"] = ta.rsi(data.close, length=14)
+    results["CLOSE"] = data.close
     return results
 
 
@@ -244,6 +257,12 @@ def compute_patterns(data: pd.DataFrame) -> pd.DataFrame:
     return results
 
 
+def perc(data: pd.Series) -> float:
+    if len(data) < 2 or data.iloc[0] == 0:
+        return np.nan
+    return cast(float, ((data.iloc[-1] - data.iloc[0]) / data.iloc[0]) * 100)
+
+
 def compute_price(data: pd.DataFrame) -> pd.DataFrame:
     results = pd.DataFrame(index=data.index)
     results["200_DAY_HIGH"] = data.close.rolling(window=200).max()
@@ -251,7 +270,28 @@ def compute_price(data: pd.DataFrame) -> pd.DataFrame:
     results["20_DAY_HIGH"] = data.close.rolling(window=20).max()
     results["20_DAY_LOW"] = data.close.rolling(window=20).min()
     results["LAST_PRICE"] = data.close
+    results["WEEKLY_GROWTH"] = data.close.resample("W").transform(perc)  # type: ignore
+    results["MONTHLY_GROWTH"] = data.close.resample("ME").transform(perc)  # type: ignore
+    results["YEARLY_GROWTH"] = data.close.resample("YE").transform(perc)  # type: ignore
     return results
+
+
+def compute_percentile_return_after_rsi_crossover(
+    data: pd.DataFrame, rsi_threshold: int = 45, period: int = 90
+) -> float:
+    data_ = cross_value_series(data.RSI, rsi_threshold)
+    values = []
+    for crossing_date in data_[data_ == 1].index:
+        data_crossed = data[
+            (data.index >= crossing_date)
+            & (data.index <= crossing_date + datetime.timedelta(days=period))
+        ]
+        v = (
+            data_crossed.CLOSE.pct_change(periods=len(data_crossed.CLOSE) - 1).iloc[-1]
+            * 100
+        )
+        values.append(v)
+    return float(np.percentile(values, 30))
 
 
 class IndicatorFunction(BaseModel):
@@ -265,7 +305,7 @@ class IndicatorFunction(BaseModel):
                 data_ = function(data)
                 break
             except Exception as e:
-                logger.warning(f"Fail to compute function {function.__name__}: {e}")
+                logger.error(f"Fail to compute function {function.__name__}: {e}")
         if data_ is None:
             raise ValueError("No data returned from indicator functions.")
         if not set(self.expected_columns).issubset(set(data_.columns)):
@@ -347,6 +387,9 @@ PRICE = IndicatorFunction(
         "20_DAY_HIGH",
         "20_DAY_LOW",
         "LAST_PRICE",
+        "WEEKLY_GROWTH",
+        "MONTHLY_GROWTH",
+        "YEARLY_GROWTH",
     ],
     functions=[compute_price],
 )

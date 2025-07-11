@@ -1,12 +1,15 @@
 import json
 import logging
+from datetime import date
 from functools import cached_property
 from pathlib import Path
+from sqlite3 import OperationalError
 from typing import TYPE_CHECKING, Any, List, Optional
 
 import pandas as pd
 from bearish.database.crud import BearishDb  # type: ignore
 from bearish.models.base import Ticker  # type: ignore
+from bearish.database.schemas import EarningsDateORM  # type: ignore
 from pydantic import ConfigDict
 from sqlalchemy import Engine, create_engine, insert, delete, update
 from sqlmodel import Session, select
@@ -40,7 +43,14 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
         if not self.valid():
             raise DatabaseFileNotFoundError("Database file not found.")
         database_url = f"sqlite:///{Path(self.database_path)}"
-        upgrade(self.database_path)
+        try:
+            upgrade(self.database_path)
+        except OperationalError as e:
+            logger.warning(
+                f"Failed to upgrade the database at {self.database_path}. "
+                f"Reason: {e}"
+                "Skipping upgrade. "
+            )
         engine = create_engine(database_url)
         return engine
 
@@ -101,6 +111,14 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             session.exec(stmt)  # type: ignore
             session.commit()
 
+    def read_job_tracker(self, task_id: str) -> Optional[JobTracker]:
+        stmt = select(JobTrackerORM).where(JobTrackerORM.job_id == task_id)
+        with Session(self._engine) as session:
+            result = session.execute(stmt).scalar_one_or_none()
+            if result:
+                return JobTracker.model_validate(result.model_dump())
+            return None
+
     def delete_job_trackers(self, job_ids: List[str]) -> None:
         with Session(self._engine) as session:
             stmt = delete(JobTrackerORM).where(JobTrackerORM.job_id.in_(job_ids))  # type: ignore
@@ -156,3 +174,12 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             )
             session.exec(stmt)  # type: ignore
             session.commit()
+
+    def read_dates(self, symbol: str) -> List[date]:
+        with Session(self._engine) as session:
+            return [
+                r.date()
+                for r in session.exec(
+                    select(EarningsDateORM.date).where(EarningsDateORM.symbol == symbol)
+                )
+            ]

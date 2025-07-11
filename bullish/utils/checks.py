@@ -40,6 +40,8 @@ def get_table_names_from_path(database_path: Path) -> List[str]:
 
 
 def empty_analysis_table(database_path: Path) -> bool:
+    if "analysis" not in get_table_names_from_path(database_path):
+        return True
     with get_sqlite_connection(database_path) as conn:
         cursor = conn.cursor()
 

@@ -10,7 +10,7 @@ from .app import huey
 from pathlib import Path
 from huey.api import Task  # type: ignore
 
-from .models import JobTrackerStatus
+from .models import JobTrackerStatus, JobTracker, JobType
 from ..analysis.analysis import run_analysis
 from ..database.crud import BullishDb
 from bullish.analysis.filter import FilterUpdate
@@ -21,16 +21,22 @@ logger = logging.getLogger(__name__)
 def job_tracker(func: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(func)
     def wrapper(
-        database_path: Path, *args: Any, task: Optional[Task] = None, **kwargs: Any
+        database_path: Path,
+        job_type: JobType,
+        *args: Any,
+        task: Optional[Task] = None,
+        **kwargs: Any,
     ) -> None:
         bullish_db = BullishDb(database_path=database_path)
         if task is None:
             raise ValueError("Task must be provided for job tracking.")
+        if bullish_db.read_job_tracker(task.id) is None:
+            bullish_db.write_job_tracker(JobTracker(job_id=str(task.id), type=job_type))
         bullish_db.update_job_tracker_status(
             JobTrackerStatus(job_id=task.id, status="Running")
         )
         try:
-            func(database_path, *args, task=task, **kwargs)
+            func(database_path, job_type, *args, task=task, **kwargs)
             bullish_db.update_job_tracker_status(
                 JobTrackerStatus(job_id=task.id, status="Completed")
             )
@@ -47,6 +53,7 @@ def job_tracker(func: Callable[..., Any]) -> Callable[..., Any]:
 @job_tracker
 def update(
     database_path: Path,
+    job_type: JobType,
     symbols: List[str],
     update_query: FilterUpdate,
     task: Optional[Task] = None,
@@ -69,6 +76,7 @@ def update(
 @job_tracker
 def analysis(
     database_path: Path,
+    job_type: JobType,
     task: Optional[Task] = None,
 ) -> None:
     bullish_db = BullishDb(database_path=database_path)
@@ -79,6 +87,7 @@ def analysis(
 @job_tracker
 def news(
     database_path: Path,
+    job_type: JobType,
     symbols: List[str],
     headless: bool = True,
     task: Optional[Task] = None,

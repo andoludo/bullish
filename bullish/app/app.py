@@ -24,7 +24,6 @@ from bullish.analysis.filter import (
     GeneralFilter,
     TechnicalAnalysisFilters,
 )
-from bullish.jobs.models import JobTracker
 from bullish.jobs.tasks import update, news, analysis
 from pydantic import BaseModel
 
@@ -85,8 +84,9 @@ def on_table_select() -> None:
     query = AssetQuery(symbols=Symbols(equities=[Ticker(symbol=symbol)]))
     prices = db.read_series(query, months=24)
     data = Prices(prices=prices).to_dataframe()
+    dates = db.read_dates(symbol)
 
-    fig = plot(data, symbol)
+    fig = plot(data, symbol, dates=dates)
 
     st.session_state.ticker_figure = fig
 
@@ -145,6 +145,13 @@ def build_filter(model: Type[BaseModel], data: Dict[str, Any]) -> Dict[str, Any]
                 default=default,
                 key=hash((model.__name__, field)),
             )
+        elif info.annotation == Optional[str]:  # type: ignore
+            data[field] = st.selectbox(
+                name,
+                ["", *groups_mapping()[field]],
+                index=0 if not default else groups_mapping()[field].index(default),
+                key=hash((model.__name__, field)),
+            )
 
         else:
             ge = next(
@@ -166,7 +173,6 @@ def build_filter(model: Type[BaseModel], data: Dict[str, Any]) -> Dict[str, Any]
 @st.dialog("⏳  Jobs", width="large")
 def jobs() -> None:
     with st.expander("Update data"):
-        bearish_db_ = bearish_db(st.session_state.database_path)
         update_query = sp.pydantic_form(key="update", model=FilterUpdate)
         if (
             update_query
@@ -174,19 +180,20 @@ def jobs() -> None:
             and not st.session_state.data.empty
         ):
             symbols = st.session_state.data["symbol"].unique().tolist()
-            res = update(
+            update(
                 database_path=st.session_state.database_path,
+                job_type="Update data",
                 symbols=symbols,
                 update_query=update_query,
             )  # enqueue & get result-handle
-            bearish_db_.write_job_tracker(
-                JobTracker(job_id=str(res.id), type="Update data")
-            )
+
             st.success("Data update job has been enqueued.")
             st.rerun()
     with st.expander("Update analysis"):
         if st.button("Update analysis"):
-            analysis(st.session_state.database_path)
+            analysis(st.session_state.database_path, job_type="Update analysis")
+            st.success("Data update job has been enqueued.")
+            st.rerun()
 
 
 @st.dialog("📥  Load", width="large")
@@ -284,13 +291,11 @@ def save_filtered_results(bearish_db_: BullishDb) -> None:
             )
 
             bearish_db_.write_filtered_results(filtered_results)
-            res = news(
+            news(
                 database_path=st.session_state.database_path,
+                job_type="Fetching news",
                 symbols=symbols,
                 headless=headless,
-            )
-            bearish_db_.write_job_tracker(
-                JobTracker(job_id=str(res.id), type="Fetching news")
             )
             st.session_state.filter_query = None
             st.session_state.query = None

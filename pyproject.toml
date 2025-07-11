@@ -16,6 +16,7 @@ huey = "^2.5.3"
 pandas-ta = "^0.3.14b0"
 plotly = "^6.1.2"
 ta-lib = "^0.6.4"
+click = ">=7.0,<=8.1"
 
 [tool.poetry.scripts]
 bullish = "bullish.cli:app"

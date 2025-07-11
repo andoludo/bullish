@@ -116,12 +116,21 @@ TechnicalAnalysisModels = [*IndicatorModels, TechnicalAnalysisBase]
 class TechnicalAnalysis(*TechnicalAnalysisModels):  # type: ignore
 
     @classmethod
-    def from_data(cls, prices: pd.DataFrame) -> "TechnicalAnalysis":
+    def from_data(cls, prices: pd.DataFrame, ticker: Ticker) -> "TechnicalAnalysis":
+        if "close" not in prices.columns:
+            logger.warning(
+                f"Ticker {ticker.symbol} does not have valid 'close' values.",
+                exc_info=True,
+            )
+            return cls()
         try:
             res = Indicators().to_dict(prices)
             return cls(last_price=prices.close.iloc[-1], **res)
         except Exception as e:
-            logger.error(f"Failing to calculate technical analysis: {e}", exc_info=True)
+            logger.error(
+                f"Failing to calculate technical analysis for {ticker.symbol}: {e}",
+                exc_info=True,
+            )
             return cls()
 
 
@@ -426,10 +435,20 @@ class AnalysisView(BaseModel):
         Optional[str],
         Field(None, description="Full name of the company"),
     ]
+    price_per_earning_ratio: Optional[float] = None
+    last_price: Annotated[
+        Optional[float],
+        BeforeValidator(to_float),
+        Field(
+            default=None,
+        ),
+    ]
+    median_yearly_growth: Optional[float] = None
+    median_weekly_growth: Optional[float] = None
+    median_monthly_growth: Optional[float] = None
 
 
 class Analysis(AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis):  # type: ignore
-    price_per_earning_ratio: Optional[float] = None
 
     @classmethod
     def from_ticker(cls, bearish_db: BearishDbBase, ticker: Ticker) -> "Analysis":
@@ -443,7 +462,7 @@ class Analysis(AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis)
         financials = Financials.from_ticker(bearish_db, ticker)
         fundamental_analysis = FundamentalAnalysis.from_financials(financials, ticker)
         prices = Prices.from_ticker(bearish_db, ticker)
-        technical_analysis = TechnicalAnalysis.from_data(prices.to_dataframe())
+        technical_analysis = TechnicalAnalysis.from_data(prices.to_dataframe(), ticker)
         return cls.model_validate(
             equity.model_dump()
             | fundamental_analysis.model_dump()

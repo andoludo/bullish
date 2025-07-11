@@ -1,3 +1,6 @@
+import datetime
+
+import numpy as np
 import pandas as pd
 
 from bullish.analysis.indicators import (
@@ -45,6 +48,9 @@ from bullish.analysis.functions import (
     TRANGE,
     compute_price,
     PRICE,
+    cross_value,
+    cross_value_series,
+    compute_percentile_return_after_rsi_crossover,
 )
 
 
@@ -209,3 +215,10 @@ def test_indicator_price(data_aapl: pd.DataFrame) -> None:
     assert not d1.empty
     assert not d2.empty
     assert set(d2.columns) == set(PRICE.expected_columns)
+
+
+def test_compute_mean_return_after_rsi_crossover(data_aapl: pd.DataFrame) -> None:
+
+    value = compute_percentile_return_after_rsi_crossover(RSI.call(data_aapl))
+    assert isinstance(value, float)
+    assert value > 0

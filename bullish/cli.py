@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import os
 import subprocess
 import signal
 import sys
@@ -57,6 +59,7 @@ def serve(
                     host,
                     "--server.port",
                     str(port),
+                    os.devnull,
                 ]
             )
         )

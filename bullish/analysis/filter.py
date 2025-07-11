@@ -11,6 +11,8 @@ from bullish.analysis.analysis import (
     YearlyFundamentalAnalysis,
     QuarterlyFundamentalAnalysis,
     TechnicalAnalysisModels,
+    TechnicalAnalysis,
+    AnalysisView,
 )
 
 Industry = Literal[
@@ -455,6 +457,16 @@ def _get_fundamental_analysis_boolean_fields() -> List[str]:
     ]
 
 
+def _get_technical_analysis_float_fields() -> List[str]:
+    return [
+        name
+        for name, info in (
+            TechnicalAnalysis.model_fields | AnalysisView.model_fields
+        ).items()
+        if info.annotation == Optional[float]
+    ]
+
+
 def get_boolean_field_group(group: str) -> List[str]:
     groups = FUNDAMENTAL_ANALYSIS_GROUP.copy()
     groups.remove(group)
@@ -484,6 +496,8 @@ GROUP_MAPPING: Dict[str, List[str]] = {
     "industry_group": list(get_args(IndustryGroup)),
     "sector": list(get_args(Sector)),
     "symbol": [],
+    "order_by_asc": _get_technical_analysis_float_fields(),
+    "order_by_desc": _get_technical_analysis_float_fields(),
 }
 
 
@@ -552,11 +566,14 @@ FundamentalAnalysisFilters = _create_fundamental_analysis_models()
 
 class GeneralFilter(BaseModel):
     country: Optional[List[str]] = None
+    order_by_asc: Optional[str] = None
+    order_by_desc: Optional[str] = None
     industry: Optional[List[str]] = None
     industry_group: Optional[List[str]] = None
     sector: Optional[List[str]] = None
     symbol: Optional[List[str]] = None
     market_capitalization: Optional[List[float]] = Field(default=[5e8, 1e12])
+    price_per_earning_ratio: Optional[List[float]] = Field(default=[0.0, 1000.0])
 
 
 class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysisFilters):  # type: ignore
@@ -572,6 +589,8 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
     def to_query(self) -> str:
         parameters = self.model_dump(exclude_defaults=True, exclude_unset=True)
         query = []
+        order_by_desc = ""
+        order_by_asc = ""
         for parameter, value in parameters.items():
             if not value:
                 continue
@@ -582,6 +601,12 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
                 and parameter not in GeneralFilter.model_fields
             ):
                 query.append(" AND ".join([f"{v}=1" for v in value]))
+            elif (
+                isinstance(value, str) and bool(value) and parameter == "order_by_desc"
+            ):
+                order_by_desc = f"ORDER BY {value} DESC"
+            elif isinstance(value, str) and bool(value) and parameter == "order_by_asc":
+                order_by_asc = f"ORDER BY {value} ASC"
             elif (
                 isinstance(value, list)
                 and len(value) == SIZE_RANGE
@@ -604,7 +629,7 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
             else:
                 raise NotImplementedError
         query_ = " AND ".join(query)
-        return query_
+        return f"{query_} {order_by_desc.strip()} {order_by_asc.strip()}".strip()
 
 
 class FilterQueryStored(FilterQuery): ...
