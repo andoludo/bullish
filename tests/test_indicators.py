@@ -51,6 +51,7 @@ from bullish.analysis.functions import (
     cross_value,
     cross_value_series,
     compute_percentile_return_after_rsi_crossover,
+    find_last_true_run_start,
 )
 
 
@@ -222,3 +223,15 @@ def test_compute_mean_return_after_rsi_crossover(data_aapl: pd.DataFrame) -> Non
     value = compute_percentile_return_after_rsi_crossover(RSI.call(data_aapl))
     assert isinstance(value, float)
     assert value > 0
+
+
+def test_indicator_function_sma_momentum(data_aapl: pd.DataFrame) -> None:
+    d1 = compute_sma(data_aapl)
+    data = d1.SMA_50 > d1.SMA_200
+    data[-12:] = True
+    data2 = d1.SMA_50 > d1.SMA_200
+    data2[-15:] = True
+    res = find_last_true_run_start(data)
+    res_ = find_last_true_run_start(data2)
+    assert isinstance(res, datetime.date)
+    assert isinstance(res_, datetime.date)

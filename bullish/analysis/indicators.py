@@ -20,6 +20,7 @@ from bullish.analysis.functions import (
     ADOSC,
     PRICE,
     compute_percentile_return_after_rsi_crossover,
+    momentum,
 )
 
 logger = logging.getLogger(__name__)
@@ -281,6 +282,13 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Overbought",
                     type=Optional[date],
                     function=lambda d: cross(d.SMA_50, d.SMA_200, above=False),
+                ),
+                Signal(
+                    name="MOMENTUM_TIME_SPAN",
+                    description="Momentum time span",
+                    type_info="Overbought",
+                    type=Optional[date],
+                    function=lambda d: momentum(d),
                 ),
             ],
         ),

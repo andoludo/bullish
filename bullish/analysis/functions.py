@@ -140,6 +140,7 @@ def compute_sma(data: pd.DataFrame) -> pd.DataFrame:
     results = pd.DataFrame(index=data.index)
     results["SMA_50"] = talib.SMA(data.close, timeperiod=50)  # type: ignore
     results["SMA_200"] = talib.SMA(data.close, timeperiod=200)  # type: ignore
+    results["CLOSE"] = data.close
     return results
 
 
@@ -147,6 +148,8 @@ def compute_pandas_ta_sma(data: pd.DataFrame) -> pd.DataFrame:
     results = pd.DataFrame(index=data.index)
     results["SMA_50"] = ta.sma(data.close, length=50)
     results["SMA_200"] = ta.sma(data.close, length=200)
+    results["CLOSE"] = data.close
+
     return results
 
 
@@ -297,6 +300,25 @@ def compute_percentile_return_after_rsi_crossover(
     return float(np.percentile(values, 30))
 
 
+def find_last_true_run_start(series: pd.Series) -> Optional[date]:
+    if not series.iloc[-1]:
+        return None
+    arr = series.to_numpy()
+    change_points = np.flatnonzero(np.r_[True, arr[1:] != arr[:-1]])
+    run_starts = change_points
+    true_runs = run_starts[arr[run_starts]]
+    last_true_run_start = true_runs[-1]
+    return series.index[last_true_run_start].date()  # type: ignore
+
+
+def momentum(data: pd.DataFrame) -> Optional[date]:
+    date_1 = find_last_true_run_start(data.SMA_50 < data.CLOSE)
+    date_2 = find_last_true_run_start(data.SMA_200 < data.SMA_50)
+    if date_1 is None or date_2 is None:
+        return None
+    return max(date_1, date_2)
+
+
 class IndicatorFunction(BaseModel):
     expected_columns: list[str]
     functions: list[Callable[[pd.DataFrame], pd.DataFrame]]
@@ -354,7 +376,7 @@ CANDLESTOCK_PATTERNS = IndicatorFunction(
 )
 
 SMA = IndicatorFunction(
-    expected_columns=["SMA_50", "SMA_200"],
+    expected_columns=["SMA_50", "SMA_200", "CLOSE"],
     functions=[compute_sma, compute_pandas_ta_sma],
 )
 

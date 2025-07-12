@@ -318,8 +318,25 @@ MOMENTUM_STOCK_STRONG_FUNDAMENTAL = NamedFilterQuery(
         "growing_net_income",
     ],
     cash_flow=["positive_free_cash_flow"],
+    price_per_earning_ratio=[10, 400],
     properties=["operating_cash_flow_is_higher_than_net_income"],
-    price_per_earning_ratio=[10, 40],
+    last_price=[1, 70],
+    order_by_desc="momentum",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
+MOMENTUM_STOCK = NamedFilterQuery(
+    name="Momentum stock",
+    cash_flow=["positive_free_cash_flow"],
+    properties=["operating_cash_flow_is_higher_than_net_income"],
+    price_per_earning_ratio=[10, 400],
+    last_price=[1, 70],
+    order_by_desc="momentum",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
+MOMENTUM_STOCK_NO_FUNDAMENTAL_CHECKS = NamedFilterQuery(
+    name="Momentum stock no fundamental checks",
+    price_per_earning_ratio=[10, 500],
+    last_price=[1, 10000],
     order_by_desc="momentum",
     country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
 )
@@ -334,6 +351,8 @@ def predefined_filters() -> list[NamedFilterQuery]:
         RSI_CROSSOVER_40_GROWTH_STOCK,
         RSI_CROSSOVER_45_GROWTH_STOCK,
         MOMENTUM_STOCK_STRONG_FUNDAMENTAL,
+        MOMENTUM_STOCK,
+        MOMENTUM_STOCK_NO_FUNDAMENTAL_CHECKS,
     ]
 
 
