@@ -318,8 +318,8 @@ MOMENTUM_STOCK_STRONG_FUNDAMENTAL = NamedFilterQuery(
         "growing_net_income",
     ],
     cash_flow=["positive_free_cash_flow"],
-    price_per_earning_ratio=[10, 400],
     properties=["operating_cash_flow_is_higher_than_net_income"],
+    price_per_earning_ratio=[10, 400],
     last_price=[1, 70],
     order_by_desc="momentum",
     country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
@@ -340,6 +340,44 @@ MOMENTUM_STOCK_NO_FUNDAMENTAL_CHECKS = NamedFilterQuery(
     order_by_desc="momentum",
     country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
 )
+MOMENTUM_TIME_SPAN_1_MONTH = NamedFilterQuery(
+    name="Momentum 1 month",
+    price_per_earning_ratio=[10, 500],
+    last_price=[1, 10000],
+    momentum_time_span=[
+        datetime.date.today() - datetime.timedelta(days=90),
+        datetime.date.today() - datetime.timedelta(days=31),
+    ],
+    macd_12_26_9_bullish_crossover=[
+        datetime.date.today() - datetime.timedelta(days=10),
+        datetime.date.today(),
+    ],
+    order_by_desc="momentum",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
+MOMENTUM_TIME_SPAN_1_MONTH_STRONG_FUNDAMENTALS = NamedFilterQuery(
+    name="Momentum 1 month strong fundamentals",
+    income=[
+        "positive_operating_income",
+        "growing_operating_income",
+        "positive_net_income",
+        "growing_net_income",
+    ],
+    cash_flow=["positive_free_cash_flow"],
+    properties=["operating_cash_flow_is_higher_than_net_income"],
+    price_per_earning_ratio=[10, 500],
+    last_price=[1, 10000],
+    momentum_time_span=[
+        datetime.date.today() - datetime.timedelta(days=90),
+        datetime.date.today() - datetime.timedelta(days=31),
+    ],
+    macd_12_26_9_bullish_crossover=[
+        datetime.date.today() - datetime.timedelta(days=10),
+        datetime.date.today(),
+    ],
+    order_by_desc="momentum",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
 
 
 def predefined_filters() -> list[NamedFilterQuery]:
@@ -353,6 +391,8 @@ def predefined_filters() -> list[NamedFilterQuery]:
         MOMENTUM_STOCK_STRONG_FUNDAMENTAL,
         MOMENTUM_STOCK,
         MOMENTUM_STOCK_NO_FUNDAMENTAL_CHECKS,
+        MOMENTUM_TIME_SPAN_1_MONTH,
+        MOMENTUM_TIME_SPAN_1_MONTH_STRONG_FUNDAMENTALS,
     ]
 
 

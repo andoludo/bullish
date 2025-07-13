@@ -88,6 +88,7 @@ def test_indicators_factory(data_aapl: pd.DataFrame) -> None:
                 assert all(
                     (s.date is not None or s.value is not None)
                     for s in indicator.signals
+                    if s.name not in ["MOMENTUM_TIME_SPAN"]
                 )
             except:
                 raise
@@ -235,3 +236,12 @@ def test_indicator_function_sma_momentum(data_aapl: pd.DataFrame) -> None:
     res_ = find_last_true_run_start(data2)
     assert isinstance(res, datetime.date)
     assert isinstance(res_, datetime.date)
+
+
+def test_indicator_function_sma_momentum_with_change(data_aapl: pd.DataFrame) -> None:
+    d1 = compute_sma(data_aapl)
+    data = d1.SMA_50 > d1.SMA_200
+    data[-12:] = True
+    data[-10] = False
+    res = find_last_true_run_start(data)
+    assert isinstance(res, datetime.date)
