@@ -21,6 +21,8 @@ from bullish.analysis.functions import (
     PRICE,
     compute_percentile_return_after_rsi_crossover,
     momentum,
+    sma_50_above_sma_200,
+    price_above_sma50,
 )
 
 logger = logging.getLogger(__name__)
@@ -289,6 +291,20 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Overbought",
                     type=Optional[date],
                     function=lambda d: momentum(d),
+                ),
+                Signal(
+                    name="SMA_50_ABOVE_SMA_200",
+                    description="SMA 50 is above SMA 200",
+                    type_info="Overbought",
+                    type=Optional[date],
+                    function=lambda d: sma_50_above_sma_200(d),
+                ),
+                Signal(
+                    name="PRICE_ABOVE_SMA_50",
+                    description="Price is above SMA 50",
+                    type_info="Overbought",
+                    type=Optional[date],
+                    function=lambda d: price_above_sma50(d),
                 ),
             ],
         ),

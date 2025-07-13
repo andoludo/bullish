@@ -349,7 +349,7 @@ MOMENTUM_TIME_SPAN_1_MONTH = NamedFilterQuery(
         datetime.date.today() - datetime.timedelta(days=31),
     ],
     macd_12_26_9_bullish_crossover=[
-        datetime.date.today() - datetime.timedelta(days=10),
+        datetime.date.today() - datetime.timedelta(days=5),
         datetime.date.today(),
     ],
     order_by_desc="momentum",
@@ -372,10 +372,40 @@ MOMENTUM_TIME_SPAN_1_MONTH_STRONG_FUNDAMENTALS = NamedFilterQuery(
         datetime.date.today() - datetime.timedelta(days=31),
     ],
     macd_12_26_9_bullish_crossover=[
-        datetime.date.today() - datetime.timedelta(days=10),
+        datetime.date.today() - datetime.timedelta(days=5),
         datetime.date.today(),
     ],
     order_by_desc="momentum",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
+RSI_CROSSOVER_30 = NamedFilterQuery(
+    name="RSI cross-over 30",
+    price_per_earning_ratio=[10, 500],
+    rsi_bullish_crossover_30=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+    macd_12_26_9_bullish_crossover=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+    market_capitalization=[5e8, 1e12],
+    order_by_desc="market_capitalization",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
+RSI_CROSSOVER_40 = NamedFilterQuery(
+    name="RSI cross-over 40",
+    price_per_earning_ratio=[10, 500],
+    rsi_bullish_crossover_40=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+    macd_12_26_9_bullish_crossover=[
+        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today(),
+    ],
+    market_capitalization=[5e8, 1e12],
+    order_by_desc="market_capitalization",
     country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
 )
 
@@ -393,6 +423,8 @@ def predefined_filters() -> list[NamedFilterQuery]:
         MOMENTUM_STOCK_NO_FUNDAMENTAL_CHECKS,
         MOMENTUM_TIME_SPAN_1_MONTH,
         MOMENTUM_TIME_SPAN_1_MONTH_STRONG_FUNDAMENTALS,
+        RSI_CROSSOVER_30,
+        RSI_CROSSOVER_40,
     ]
 
 

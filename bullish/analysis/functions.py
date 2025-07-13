@@ -311,6 +311,16 @@ def find_last_true_run_start(series: pd.Series) -> Optional[date]:
     return series.index[last_true_run_start].date()  # type: ignore
 
 
+def sma_50_above_sma_200(data: pd.DataFrame) -> Optional[date]:
+    date_1 = find_last_true_run_start(data.SMA_50 > data.SMA_200)
+    return date_1
+
+
+def price_above_sma50(data: pd.DataFrame) -> Optional[date]:
+    date_1 = find_last_true_run_start(data.SMA_50 < data.CLOSE)
+    return date_1
+
+
 def momentum(data: pd.DataFrame) -> Optional[date]:
     date_1 = find_last_true_run_start(data.SMA_50 < data.CLOSE)
     date_2 = find_last_true_run_start(data.SMA_200 < data.SMA_50)
