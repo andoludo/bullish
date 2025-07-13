@@ -19,7 +19,6 @@ from bullish.analysis.functions import (
     SMA,
     ADOSC,
     PRICE,
-    compute_percentile_return_after_rsi_crossover,
     momentum,
     sma_50_above_sma_200,
     price_above_sma50,
@@ -207,13 +206,6 @@ def indicators_factory() -> List[Indicator]:
                     function=lambda d: d[
                         (d.RSI < 60) & (d.RSI > 40)
                     ].last_valid_index(),
-                ),
-                Signal(
-                    name="RETURN_AFTER_RSI_CROSSOVER_45_PERIOD_90",
-                    description="Percentile 30 return after RSI crossover 45 in the next 90 days",
-                    type_info="Long",
-                    type=Optional[float],
-                    function=lambda d: compute_percentile_return_after_rsi_crossover(d),
                 ),
             ],
         ),

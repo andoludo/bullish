@@ -1,4 +1,3 @@
-import datetime
 import logging
 from datetime import date
 from typing import Optional, Callable, cast
@@ -280,24 +279,6 @@ def compute_price(data: pd.DataFrame) -> pd.DataFrame:
     results["MONTHLY_GROWTH"] = data.close.resample("ME").transform(perc)  # type: ignore
     results["YEARLY_GROWTH"] = data.close.resample("YE").transform(perc)  # type: ignore
     return results
-
-
-def compute_percentile_return_after_rsi_crossover(
-    data: pd.DataFrame, rsi_threshold: int = 45, period: int = 90
-) -> float:
-    data_ = cross_value_series(data.RSI, rsi_threshold)
-    values = []
-    for crossing_date in data_[data_ == 1].index:
-        data_crossed = data[
-            (data.index >= crossing_date)
-            & (data.index <= crossing_date + datetime.timedelta(days=period))
-        ]
-        v = (
-            data_crossed.CLOSE.pct_change(periods=len(data_crossed.CLOSE) - 1).iloc[-1]
-            * 100
-        )
-        values.append(v)
-    return float(np.percentile(values, 30))
 
 
 def find_last_true_run_start(series: pd.Series) -> Optional[date]:

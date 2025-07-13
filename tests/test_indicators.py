@@ -219,13 +219,6 @@ def test_indicator_price(data_aapl: pd.DataFrame) -> None:
     assert set(d2.columns) == set(PRICE.expected_columns)
 
 
-def test_compute_mean_return_after_rsi_crossover(data_aapl: pd.DataFrame) -> None:
-
-    value = compute_percentile_return_after_rsi_crossover(RSI.call(data_aapl))
-    assert isinstance(value, float)
-    assert value > 0
-
-
 def test_indicator_function_sma_momentum(data_aapl: pd.DataFrame) -> None:
     d1 = compute_sma(data_aapl)
     data = d1.SMA_50 > d1.SMA_200
