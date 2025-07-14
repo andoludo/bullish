@@ -6,10 +6,13 @@ from typing import List, Optional
 import pandas as pd
 from bearish.interface.interface import BearishDbBase  # type: ignore
 from bearish.models.base import Ticker  # type: ignore
+from bearish.types import Sources  # type: ignore
 
 
 from bullish.analysis.analysis import Analysis, AnalysisView
+from bullish.analysis.constants import Industry, Sector, IndustryGroup, Country
 from bullish.analysis.filter import FilterQuery, FilteredResults
+from bullish.analysis.returns import IndustryReturns, Type
 from bullish.jobs.models import JobTracker, JobTrackerStatus, add_icons
 
 logger = logging.getLogger(__name__)
@@ -96,3 +99,29 @@ class BullishDbBase(BearishDbBase):  # type: ignore
 
     @abc.abstractmethod
     def read_dates(self, symbol: str) -> List[date]: ...
+
+    @abc.abstractmethod
+    def read_industry_symbols(
+        self, industries: List[Industry], country: Country, source: Sources = "Yfinance"
+    ) -> List[str]: ...
+
+    @abc.abstractmethod
+    def read_industry_group_symbols(
+        self,
+        industry_groups: List[IndustryGroup],
+        country: Country,
+        source: Sources = "Yfinance",
+    ) -> List[str]: ...
+
+    @abc.abstractmethod
+    def read_sector_symbols(
+        self, sectors: List[Sector], country: Country, source: Sources = "Yfinance"
+    ) -> List[str]: ...
+
+    @abc.abstractmethod
+    def write_returns(self, industry_returns: List[IndustryReturns]) -> None: ...
+
+    @abc.abstractmethod
+    def read_returns(
+        self, type: Type, industry: Industry, country: Country
+    ) -> List[IndustryReturns]: ...

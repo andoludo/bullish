@@ -9,13 +9,21 @@ from typing import TYPE_CHECKING, Any, List, Optional
 import pandas as pd
 from bearish.database.crud import BearishDb  # type: ignore
 from bearish.models.base import Ticker  # type: ignore
-from bearish.database.schemas import EarningsDateORM  # type: ignore
+from bearish.database.schemas import EarningsDateORM, EquityORM  # type: ignore
+from bearish.types import Sources  # type: ignore
 from pydantic import ConfigDict
 from sqlalchemy import Engine, create_engine, insert, delete, update
 from sqlmodel import Session, select
 
 from bullish.analysis.analysis import Analysis
-from bullish.database.schemas import AnalysisORM, JobTrackerORM, FilteredResultsORM
+from bullish.analysis.constants import Industry, IndustryGroup, Sector, Country
+from bullish.analysis.returns import IndustryReturns, Type
+from bullish.database.schemas import (
+    AnalysisORM,
+    JobTrackerORM,
+    FilteredResultsORM,
+    IndustryReturnsORM,
+)
 from bullish.database.scripts.upgrade import upgrade
 from bullish.exceptions import DatabaseFileNotFoundError
 from bullish.analysis.filter import FilteredResults
@@ -193,3 +201,63 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                     select(EarningsDateORM.date).where(EarningsDateORM.symbol == symbol)
                 )
             ]
+
+    def read_industry_symbols(
+        self, industries: List[Industry], country: Country, source: Sources = "Yfinance"
+    ) -> List[str]:
+        with Session(self._engine) as session:
+            stmt = select(EquityORM.symbol).where(
+                EquityORM.industry.in_(industries),
+                EquityORM.source == source,
+                EquityORM.country == country,
+            )
+            result = session.exec(stmt).all()
+            return list(result)
+
+    def read_industry_group_symbols(
+        self,
+        industry_groups: List[IndustryGroup],
+        country: Country,
+        source: Sources = "Yfinance",
+    ) -> List[str]:
+        with Session(self._engine) as session:
+            stmt = select(EquityORM.symbol).where(
+                EquityORM.industry_group.in_(industry_groups),
+                EquityORM.source == source,
+                EquityORM.country == country,
+            )
+            result = session.exec(stmt).all()
+            return list(result)
+
+    def read_sector_symbols(
+        self, sectors: List[Sector], country: Country, source: Sources = "Yfinance"
+    ) -> List[str]:
+        with Session(self._engine) as session:
+            stmt = select(EquityORM.symbol).where(
+                EquityORM.sector.in_(sectors),
+                EquityORM.source == source,
+                EquityORM.country == country,
+            )
+            result = session.exec(stmt).all()
+            return list(result)
+
+    def write_returns(self, industry_returns: List[IndustryReturns]) -> None:
+        with Session(self._engine) as session:
+            stmt = (
+                insert(IndustryReturnsORM)
+                .prefix_with("OR REPLACE")
+                .values([a.model_dump() for a in industry_returns])
+            )
+            session.exec(stmt)  # type: ignore
+            session.commit()
+
+    def read_returns(
+        self, type: Type, industry: Industry, country: Country
+    ) -> List[IndustryReturns]:
+        with Session(self._engine) as session:
+            stmt = select(IndustryReturnsORM).where(
+                IndustryReturnsORM.industry == industry,
+                IndustryReturnsORM.country == country,
+            )
+            result = session.exec(stmt).all()
+            return [IndustryReturns.model_validate(r) for r in result]

@@ -4,6 +4,7 @@ from sqlmodel import Field, SQLModel
 from sqlalchemy import Column, JSON
 from bullish.analysis.analysis import Analysis
 from bullish.analysis.filter import FilteredResults
+from bullish.analysis.returns import IndustryReturns
 from bullish.jobs.models import JobTracker
 from sqlalchemy import Index
 
@@ -44,3 +45,17 @@ class FilteredResultsORM(SQLModel, FilteredResults, table=True):
     name: str = Field(primary_key=True)
     symbols: list[str] = Field(sa_column=Column(JSON))
     filter_query: Dict[str, Any] = Field(sa_column=Column(JSON))  # type: ignore
+
+
+class IndustryReturnsORM(SQLModel, IndustryReturns, table=True):
+    __tablename__ = "industryreturns"
+    __table_args__ = {"extend_existing": True}  # noqa:RUF012
+    date: str = Field(primary_key=True)  # type: ignore
+    created_at: str = Field(default=None, nullable=True)  # type: ignore
+    simple_return: float | None = Field(default=None, nullable=True)  # type: ignore
+    log_return: float | None = Field(default=None, nullable=True)  # type: ignore
+    country: str = Field(primary_key=True)  # type: ignore
+    industry: str = Field(primary_key=True)  # type: ignore
+    industry_group: str | None = Field(default=None, nullable=True)  # type: ignore
+    sector: str | None = Field(default=None, nullable=True)  # type: ignore
+    type: str = Field(primary_key=True)  # type: ignore
