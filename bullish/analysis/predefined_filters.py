@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 DATE_THRESHOLD = [
-    datetime.date.today() - datetime.timedelta(days=5),
+    datetime.date.today() - datetime.timedelta(days=7),
     datetime.date.today(),
 ]
 
@@ -71,7 +71,7 @@ RSI_CROSSOVER_30_GROWTH_STOCK_STRONG_FUNDAMENTAL = NamedFilterQuery(
     ],
     cash_flow=["positive_free_cash_flow"],
     properties=["operating_cash_flow_is_higher_than_net_income"],
-    price_per_earning_ratio=[20, 40],
+    price_per_earning_ratio=[10, 100],
     rsi_bullish_crossover_30=DATE_THRESHOLD,
     market_capitalization=[5e8, 1e12],
     order_by_desc="market_capitalization",
@@ -87,7 +87,7 @@ RSI_CROSSOVER_40_GROWTH_STOCK_STRONG_FUNDAMENTAL = NamedFilterQuery(
     ],
     cash_flow=["positive_free_cash_flow"],
     properties=["operating_cash_flow_is_higher_than_net_income"],
-    price_per_earning_ratio=[20, 40],
+    price_per_earning_ratio=[10, 500],
     rsi_bullish_crossover_40=DATE_THRESHOLD,
     market_capitalization=[5e8, 1e12],
     order_by_desc="market_capitalization",
@@ -96,9 +96,7 @@ RSI_CROSSOVER_40_GROWTH_STOCK_STRONG_FUNDAMENTAL = NamedFilterQuery(
 
 RSI_CROSSOVER_30_GROWTH_STOCK = NamedFilterQuery(
     name="RSI cross-over 30 growth stock",
-    cash_flow=["positive_free_cash_flow"],
-    properties=["operating_cash_flow_is_higher_than_net_income"],
-    price_per_earning_ratio=[20, 40],
+    price_per_earning_ratio=[10, 500],
     rsi_bullish_crossover_30=DATE_THRESHOLD,
     market_capitalization=[5e8, 1e12],
     order_by_desc="market_capitalization",
@@ -106,9 +104,7 @@ RSI_CROSSOVER_30_GROWTH_STOCK = NamedFilterQuery(
 )
 RSI_CROSSOVER_40_GROWTH_STOCK = NamedFilterQuery(
     name="RSI cross-over 40 growth stock",
-    cash_flow=["positive_free_cash_flow"],
-    properties=["operating_cash_flow_is_higher_than_net_income"],
-    price_per_earning_ratio=[20, 40],
+    price_per_earning_ratio=[10, 500],
     rsi_bullish_crossover_40=DATE_THRESHOLD,
     market_capitalization=[5e8, 1e12],
     order_by_desc="market_capitalization",
@@ -116,27 +112,30 @@ RSI_CROSSOVER_40_GROWTH_STOCK = NamedFilterQuery(
 )
 
 
-MOMENTUM_GROWTH = NamedFilterQuery(
-    name="Momentum Growth",
+MOMENTUM_GROWTH_GOOD_FUNDAMENTALS = NamedFilterQuery(
+    name="Momentum Growth Good Fundamentals (RSI 30)",
+    cash_flow=["positive_free_cash_flow"],
+    properties=["operating_cash_flow_is_higher_than_net_income"],
     price_per_earning_ratio=[10, 500],
-    last_price=[1, 10000],
-    sma_50_above_sma_200=[
-        datetime.date.today() - datetime.timedelta(days=5000),
-        datetime.date.today() - datetime.timedelta(days=30),
-    ],
-    price_above_sma_50=[
-        datetime.date.today() - datetime.timedelta(days=5000),
-        datetime.date.today() - datetime.timedelta(days=30),
-    ],
-    macd_12_26_9_bullish_crossover=[
-        datetime.date.today() - datetime.timedelta(days=5),
+    rsi_bullish_crossover_30=[
+        datetime.date.today() - datetime.timedelta(days=7),
         datetime.date.today(),
     ],
+    macd_12_26_9_bullish_crossover=[
+        datetime.date.today() - datetime.timedelta(days=7),
+        datetime.date.today(),
+    ],
+    sma_50_above_sma_200=[
+        datetime.date.today() - datetime.timedelta(days=5000),
+        datetime.date.today() - datetime.timedelta(days=10),
+    ],
+    market_capitalization=[5e8, 1e12],
     order_by_desc="momentum",
     country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
 )
+
 MOMENTUM_GROWTH_STRONG_FUNDAMENTALS = NamedFilterQuery(
-    name="Momentum Growth Strong Fundamentals",
+    name="Momentum Growth Strong Fundamentals (RSI 30)",
     income=[
         "positive_operating_income",
         "growing_operating_income",
@@ -146,19 +145,19 @@ MOMENTUM_GROWTH_STRONG_FUNDAMENTALS = NamedFilterQuery(
     cash_flow=["positive_free_cash_flow"],
     properties=["operating_cash_flow_is_higher_than_net_income"],
     price_per_earning_ratio=[10, 500],
-    last_price=[1, 10000],
-    sma_50_above_sma_200=[
-        datetime.date.today() - datetime.timedelta(days=5000),
-        datetime.date.today() - datetime.timedelta(days=30),
-    ],
-    price_above_sma_50=[
-        datetime.date.today() - datetime.timedelta(days=5000),
-        datetime.date.today() - datetime.timedelta(days=30),
-    ],
-    macd_12_26_9_bullish_crossover=[
-        datetime.date.today() - datetime.timedelta(days=5),
+    rsi_bullish_crossover_30=[
+        datetime.date.today() - datetime.timedelta(days=7),
         datetime.date.today(),
     ],
+    macd_12_26_9_bullish_crossover=[
+        datetime.date.today() - datetime.timedelta(days=7),
+        datetime.date.today(),
+    ],
+    sma_50_above_sma_200=[
+        datetime.date.today() - datetime.timedelta(days=5000),
+        datetime.date.today() - datetime.timedelta(days=10),
+    ],
+    market_capitalization=[5e8, 1e12],
     order_by_desc="momentum",
     country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
 )
@@ -166,11 +165,11 @@ MOMENTUM_GROWTH_RSI_30 = NamedFilterQuery(
     name="Momentum Growth Screener (RSI 30)",
     price_per_earning_ratio=[10, 500],
     rsi_bullish_crossover_30=[
-        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today() - datetime.timedelta(days=7),
         datetime.date.today(),
     ],
     macd_12_26_9_bullish_crossover=[
-        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today() - datetime.timedelta(days=7),
         datetime.date.today(),
     ],
     sma_50_above_sma_200=[
@@ -185,11 +184,11 @@ MOMENTUM_GROWTH_RSI_40 = NamedFilterQuery(
     name="Momentum Growth Screener (RSI 40)",
     price_per_earning_ratio=[10, 500],
     rsi_bullish_crossover_40=[
-        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today() - datetime.timedelta(days=7),
         datetime.date.today(),
     ],
     macd_12_26_9_bullish_crossover=[
-        datetime.date.today() - datetime.timedelta(days=5),
+        datetime.date.today() - datetime.timedelta(days=7),
         datetime.date.today(),
     ],
     sma_50_above_sma_200=[
@@ -198,6 +197,18 @@ MOMENTUM_GROWTH_RSI_40 = NamedFilterQuery(
     ],
     market_capitalization=[5e8, 1e12],
     order_by_desc="momentum",
+    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+)
+
+GOLDEN_CROSS_LAST_SEVEN_DAYS = NamedFilterQuery(
+    name="Golden cross in the last five days",
+    price_per_earning_ratio=[10, 500],
+    last_price=[1, 10000],
+    golden_cross=[
+        datetime.date.today() - datetime.timedelta(days=7),
+        datetime.date.today(),
+    ],
+    order_by_desc="market_capitalization",
     country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
 )
 
@@ -210,10 +221,11 @@ def predefined_filters() -> list[NamedFilterQuery]:
         RSI_CROSSOVER_40_GROWTH_STOCK_STRONG_FUNDAMENTAL,
         RSI_CROSSOVER_30_GROWTH_STOCK,
         RSI_CROSSOVER_40_GROWTH_STOCK,
-        MOMENTUM_GROWTH,
+        MOMENTUM_GROWTH_GOOD_FUNDAMENTALS,
         MOMENTUM_GROWTH_STRONG_FUNDAMENTALS,
         MOMENTUM_GROWTH_RSI_30,
         MOMENTUM_GROWTH_RSI_40,
+        GOLDEN_CROSS_LAST_SEVEN_DAYS,
     ]
 
 

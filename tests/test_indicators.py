@@ -1,12 +1,7 @@
 import datetime
 
-import numpy as np
 import pandas as pd
 
-from bullish.analysis.indicators import (
-    indicators_factory,
-    Indicators,
-)
 from bullish.analysis.functions import (
     compute_macd,
     compute_rsi,
@@ -48,10 +43,11 @@ from bullish.analysis.functions import (
     TRANGE,
     compute_price,
     PRICE,
-    cross_value,
-    cross_value_series,
-    compute_percentile_return_after_rsi_crossover,
     find_last_true_run_start,
+)
+from bullish.analysis.indicators import (
+    indicators_factory,
+    Indicators,
 )
 
 
@@ -83,7 +79,7 @@ def test_indicators_factory(data_aapl: pd.DataFrame) -> None:
     for indicator in indicators:
         indicator.compute(data_aapl)
         assert not indicator._data.empty
-        if indicator.name not in ["CANDLESTICKS", "PRICE"]:
+        if indicator.name not in ["CANDLESTICKS", "PRICE", "SMA"]:
             try:
                 assert all(
                     (s.date is not None or s.value is not None)

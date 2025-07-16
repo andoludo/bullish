@@ -45,6 +45,8 @@ from pydantic import BaseModel, BeforeValidator, Field, create_model
 from bullish.analysis.indicators import Indicators, IndicatorModels
 from joblib import Parallel, delayed  # type: ignore
 
+from bullish.analysis.industry_views import compute_industry_view
+
 if TYPE_CHECKING:
     from bullish.database.crud import BullishDb
 
@@ -494,6 +496,7 @@ def compute_analysis(database_path: Path, ticker: Ticker) -> Analysis:
 
 
 def run_analysis(bullish_db: "BullishDb") -> None:
+    compute_industry_view(bullish_db)
     price_trackers = set(bullish_db._read_tracker(TrackerQuery(), PriceTracker))
     finance_trackers = set(bullish_db._read_tracker(TrackerQuery(), FinancialsTracker))
     tickers = list(price_trackers.intersection(finance_trackers))

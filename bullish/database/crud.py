@@ -3,7 +3,6 @@ import logging
 from datetime import date
 from functools import cached_property
 from pathlib import Path
-from sqlite3 import OperationalError
 from typing import TYPE_CHECKING, Any, List, Optional
 
 import pandas as pd
@@ -17,12 +16,13 @@ from sqlmodel import Session, select
 
 from bullish.analysis.analysis import Analysis
 from bullish.analysis.constants import Industry, IndustryGroup, Sector, Country
-from bullish.analysis.returns import IndustryReturns, Type
+from bullish.analysis.industry_views import Type, IndustryView
+
 from bullish.database.schemas import (
     AnalysisORM,
     JobTrackerORM,
     FilteredResultsORM,
-    IndustryReturnsORM,
+    IndustryViewORM,
 )
 from bullish.database.scripts.upgrade import upgrade
 from bullish.exceptions import DatabaseFileNotFoundError
@@ -53,7 +53,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
         database_url = f"sqlite:///{Path(self.database_path)}"
         try:
             upgrade(self.database_path)
-        except OperationalError as e:
+        except Exception as e:
             logger.warning(
                 f"Failed to upgrade the database at {self.database_path}. "
                 f"Reason: {e}"
@@ -241,10 +241,10 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             result = session.exec(stmt).all()
             return list(result)
 
-    def write_returns(self, industry_returns: List[IndustryReturns]) -> None:
+    def write_returns(self, industry_returns: List[IndustryView]) -> None:
         with Session(self._engine) as session:
             stmt = (
-                insert(IndustryReturnsORM)
+                insert(IndustryViewORM)
                 .prefix_with("OR REPLACE")
                 .values([a.model_dump() for a in industry_returns])
             )
@@ -253,11 +253,11 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
 
     def read_returns(
         self, type: Type, industry: Industry, country: Country
-    ) -> List[IndustryReturns]:
+    ) -> List[IndustryView]:
         with Session(self._engine) as session:
-            stmt = select(IndustryReturnsORM).where(
-                IndustryReturnsORM.industry == industry,
-                IndustryReturnsORM.country == country,
+            stmt = select(IndustryViewORM).where(
+                IndustryViewORM.industry == industry,
+                IndustryViewORM.country == country,
             )
             result = session.exec(stmt).all()
-            return [IndustryReturns.model_validate(r) for r in result]
+            return [IndustryView.model_validate(r) for r in result]

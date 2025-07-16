@@ -12,7 +12,7 @@ from bearish.types import Sources  # type: ignore
 from bullish.analysis.analysis import Analysis, AnalysisView
 from bullish.analysis.constants import Industry, Sector, IndustryGroup, Country
 from bullish.analysis.filter import FilterQuery, FilteredResults
-from bullish.analysis.returns import IndustryReturns, Type
+from bullish.analysis.industry_views import Type, IndustryView
 from bullish.jobs.models import JobTracker, JobTrackerStatus, add_icons
 
 logger = logging.getLogger(__name__)
@@ -119,9 +119,9 @@ class BullishDbBase(BearishDbBase):  # type: ignore
     ) -> List[str]: ...
 
     @abc.abstractmethod
-    def write_returns(self, industry_returns: List[IndustryReturns]) -> None: ...
+    def write_returns(self, industry_returns: List[IndustryView]) -> None: ...
 
     @abc.abstractmethod
     def read_returns(
         self, type: Type, industry: Industry, country: Country
-    ) -> List[IndustryReturns]: ...
+    ) -> List[IndustryView]: ...

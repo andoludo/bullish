@@ -12,6 +12,7 @@ from bearish.models.price.prices import Prices  # type: ignore
 from bearish.models.query.query import AssetQuery, Symbols  # type: ignore
 from streamlit_file_browser import st_file_browser  # type: ignore
 
+from bullish.analysis.industry_views import get_industry_comparison_data
 from bullish.analysis.predefined_filters import PredefinedFilters
 from bullish.database.crud import BullishDb
 from bullish.figures.figures import plot
@@ -83,12 +84,15 @@ def on_table_select() -> None:
         return
 
     symbol = st.session_state.data.iloc[row]["symbol"].to_numpy()[0]
+    country = st.session_state.data.iloc[row]["country"].to_numpy()[0]
+    industry = st.session_state.data.iloc[row]["industry"].to_numpy()[0]
     query = AssetQuery(symbols=Symbols(equities=[Ticker(symbol=symbol)]))
     prices = db.read_series(query, months=24)
     data = Prices(prices=prices).to_dataframe()
     dates = db.read_dates(symbol)
+    industry_data = get_industry_comparison_data(db, data, "Mean", industry, country)
 
-    fig = plot(data, symbol, dates=dates)
+    fig = plot(data, symbol, dates=dates, industry_data=industry_data)
 
     st.session_state.ticker_figure = fig
 
