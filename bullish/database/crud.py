@@ -16,6 +16,7 @@ from sqlmodel import Session, select
 
 from bullish.analysis.analysis import Analysis
 from bullish.analysis.constants import Industry, IndustryGroup, Sector, Country
+from bullish.analysis.indicators import SignalSeries
 from bullish.analysis.industry_views import Type, IndustryView
 
 from bullish.database.schemas import (
@@ -23,6 +24,7 @@ from bullish.database.schemas import (
     JobTrackerORM,
     FilteredResultsORM,
     IndustryViewORM,
+    SignalSeriesORM,
 )
 from bullish.database.scripts.upgrade import upgrade
 from bullish.exceptions import DatabaseFileNotFoundError
@@ -261,3 +263,24 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             )
             result = session.exec(stmt).all()
             return [IndustryView.model_validate(r) for r in result]
+
+    def write_signal_series(self, signal_series: List[SignalSeries]) -> None:
+        with Session(self._engine) as session:
+            stmt = (
+                insert(SignalSeriesORM)
+                .prefix_with("OR REPLACE")
+                .values([a.model_dump() for a in signal_series])
+            )
+            session.exec(stmt)  # type: ignore
+            session.commit()
+
+    def read_signal_series(
+        self, name: str, start_date: date, end_date: date
+    ) -> List[str]:
+        with Session(self._engine) as session:
+            stmt = select(SignalSeriesORM.symbol).where(
+                SignalSeriesORM.name == name,
+                SignalSeriesORM.date >= start_date,  # type: ignore
+                SignalSeriesORM.date <= end_date,  # type: ignore
+            )
+            return list(set(session.exec(stmt).all()))

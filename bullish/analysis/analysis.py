@@ -1,6 +1,6 @@
 import logging
 import time
-from itertools import batched
+from itertools import batched, chain
 from pathlib import Path
 from typing import (
     Annotated,
@@ -42,7 +42,7 @@ from bearish.models.query.query import AssetQuery, Symbols  # type: ignore
 from bearish.types import TickerOnlySources  # type: ignore
 from pydantic import BaseModel, BeforeValidator, Field, create_model
 
-from bullish.analysis.indicators import Indicators, IndicatorModels
+from bullish.analysis.indicators import Indicators, IndicatorModels, SignalSeries
 from joblib import Parallel, delayed  # type: ignore
 
 from bullish.analysis.industry_views import compute_industry_view
@@ -493,6 +493,35 @@ def compute_analysis(database_path: Path, ticker: Ticker) -> Analysis:
 
     bullish_db = BullishDb(database_path=database_path)
     return Analysis.from_ticker(bullish_db, ticker)
+
+
+def compute_signal_series(database_path: Path, ticker: Ticker) -> List[SignalSeries]:
+    from bullish.database.crud import BullishDb
+
+    bullish_db = BullishDb(database_path=database_path)
+    indicators = Indicators()
+    prices = Prices.from_ticker(bullish_db, ticker)
+    signal_series = indicators.compute_series(prices.to_dataframe(), ticker.symbol)
+    return signal_series
+
+
+def run_signal_series_analysis(bullish_db: "BullishDb") -> None:
+    price_trackers = set(bullish_db._read_tracker(TrackerQuery(), PriceTracker))
+    finance_trackers = set(bullish_db._read_tracker(TrackerQuery(), FinancialsTracker))
+    tickers = list(price_trackers.intersection(finance_trackers))
+    parallel = Parallel(n_jobs=-1)
+
+    for batch_ticker in batched(tickers, 100):
+        start = time.perf_counter()
+        many_signal_series = parallel(
+            delayed(compute_signal_series)(bullish_db.database_path, ticker)
+            for ticker in batch_ticker
+        )
+        bullish_db.write_signal_series(list(chain.from_iterable(many_signal_series)))
+        elapsed_time = time.perf_counter() - start
+        print(
+            f"Computed signal series for {len(batch_ticker)} tickers in {elapsed_time:.2f} seconds."
+        )
 
 
 def run_analysis(bullish_db: "BullishDb") -> None:

@@ -41,6 +41,13 @@ class ProcessingFunction(BaseModel):
     )
 
 
+class SignalSeries(BaseModel):
+    name: str
+    date: date
+    value: float
+    symbol: str
+
+
 class Signal(BaseModel):
     name: str
     type_info: SignalType
@@ -74,6 +81,9 @@ class Signal(BaseModel):
         else:
             self.value = self.processing.number(self.apply_function(data))
 
+    def compute_series(self, data: pd.DataFrame) -> pd.Series:
+        return self.apply_function(data)
+
 
 class Indicator(BaseModel):
     name: str
@@ -100,6 +110,33 @@ class Indicator(BaseModel):
                 logger.error(
                     f"Fail to compute signal {signal.name} for indicator {self.name}: {e}"
                 )
+
+    def compute_series(self, data: pd.DataFrame, symbol: str) -> pd.DataFrame:
+        series = []
+        results = self.function(data)
+        if not set(self.expected_columns).issubset(results.columns):
+            raise ValueError(
+                f"Expected columns {self.expected_columns}, but got {results.columns.tolist()}"
+            )
+        for signal in self.signals:
+            try:
+                series_ = signal.compute_series(results)
+                if signal.type == Optional[date]:
+                    series__ = pd.DataFrame(series_[series_ == 1].rename("value"))
+                else:
+                    series__ = pd.DataFrame(series_.rename("value"))
+
+                series__["name"] = signal.name
+                series__["date"] = series__.index.date  # type: ignore
+                series__["symbol"] = symbol
+                series__ = series__.reset_index(drop=True)
+                series.append(series__)
+            except Exception as e:  # noqa: PERF203
+                logger.error(
+                    f"Fail to compute signal {signal.name} for indicator {self.name}: {e}"
+                )
+        data = pd.concat(series).reset_index(drop=True)
+        return data
 
 
 def indicators_factory() -> List[Indicator]:
@@ -535,6 +572,14 @@ class Indicators(BaseModel):
             logger.info(
                 f"Computed {indicator.name} with {len(indicator.signals)} signals"
             )
+
+    def compute_series(self, data: pd.DataFrame, symbol: str) -> List[SignalSeries]:
+        data__ = pd.concat(
+            [indicator.compute_series(data, symbol) for indicator in self.indicators]
+        )
+        return [
+            SignalSeries.model_validate(s) for s in data__.to_dict(orient="records")
+        ]
 
     def compute(self, data: pd.DataFrame) -> Dict[str, Any]:
         self._compute(data)

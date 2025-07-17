@@ -12,6 +12,7 @@ from bearish.types import Sources  # type: ignore
 from bullish.analysis.analysis import Analysis, AnalysisView
 from bullish.analysis.constants import Industry, Sector, IndustryGroup, Country
 from bullish.analysis.filter import FilterQuery, FilteredResults
+from bullish.analysis.indicators import SignalSeries
 from bullish.analysis.industry_views import Type, IndustryView
 from bullish.jobs.models import JobTracker, JobTrackerStatus, add_icons
 
@@ -125,3 +126,11 @@ class BullishDbBase(BearishDbBase):  # type: ignore
     def read_returns(
         self, type: Type, industry: Industry, country: Country
     ) -> List[IndustryView]: ...
+
+    @abc.abstractmethod
+    def write_signal_series(self, signal_series: List[SignalSeries]) -> None: ...
+
+    @abc.abstractmethod
+    def read_signal_series(
+        self, name: str, start_date: date, end_date: date
+    ) -> List[str]: ...

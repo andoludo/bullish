@@ -4,6 +4,7 @@ from sqlmodel import Field, SQLModel
 from sqlalchemy import Column, JSON
 from bullish.analysis.analysis import Analysis
 from bullish.analysis.filter import FilteredResults
+from bullish.analysis.indicators import SignalSeries
 from bullish.analysis.industry_views import IndustryView
 
 from bullish.jobs.models import JobTracker
@@ -46,6 +47,14 @@ class FilteredResultsORM(SQLModel, FilteredResults, table=True):
     name: str = Field(primary_key=True)
     symbols: list[str] = Field(sa_column=Column(JSON))
     filter_query: Dict[str, Any] = Field(sa_column=Column(JSON))  # type: ignore
+
+
+class SignalSeriesORM(SQLModel, SignalSeries, table=True):
+    __tablename__ = "signalseries"
+    __table_args__ = {"extend_existing": True}  # noqa:RUF012
+    date: str = Field(primary_key=True)  # type: ignore
+    name: str = Field(primary_key=True)
+    symbol: str = Field(primary_key=True)
 
 
 class IndustryViewORM(SQLModel, IndustryView, table=True):

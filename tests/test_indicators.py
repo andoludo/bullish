@@ -50,6 +50,7 @@ from bullish.analysis.indicators import (
     indicators_factory,
     Indicators,
 )
+from bullish.database.crud import BullishDb
 
 
 def test_indicator(data_aapl: pd.DataFrame) -> None:
@@ -84,6 +85,22 @@ def test_indicator_price_computation(data_aapl: pd.DataFrame) -> None:
     assert all(
         s.value is not None for s in indicator.signals if s.type == Optional[float]
     )
+
+
+def test_indicator_series(bullish_db: BullishDb, data_aapl: pd.DataFrame) -> None:
+
+    indicators = Indicators(
+        indicators=[i for i in indicators_factory() if i.name == "SMA"]
+    )
+    signal_series = indicators.compute_series(data_aapl, "AAPL")
+    assert signal_series
+    bullish_db.write_signal_series(signal_series)
+    results = bullish_db.read_signal_series(
+        name="GOLDEN_CROSS",
+        start_date=datetime.date(2010, 1, 1),
+        end_date=datetime.date.today(),
+    )
+    assert len(results) == 1
 
 
 def test_indicator_roc_computation(data_aapl: pd.DataFrame) -> None:
