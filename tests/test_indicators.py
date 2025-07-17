@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 
 import pandas as pd
 
@@ -57,6 +58,42 @@ def test_indicator(data_aapl: pd.DataFrame) -> None:
     indicator.compute(data_aapl)
     assert not indicator._data.empty
     assert all(s.date is not None for s in indicator.signals)
+
+
+def test_indicator_macd(data_aapl: pd.DataFrame) -> None:
+    indicators = indicators_factory()
+    indicator = [i for i in indicators if i.name == "MACD_12_26_9"][0]
+    indicator.compute(data_aapl)
+    assert not indicator._data.empty
+    assert all(s.date is not None for s in indicator.signals)
+
+
+def test_indicator_sma(data_aapl: pd.DataFrame) -> None:
+    indicators = indicators_factory()
+    indicator = [i for i in indicators if i.name == "SMA"][0]
+    indicator.compute(data_aapl)
+    assert not indicator._data.empty
+    assert any(s.date is not None for s in indicator.signals)
+
+
+def test_indicator_price_computation(data_aapl: pd.DataFrame) -> None:
+    indicators = indicators_factory()
+    indicator = [i for i in indicators if i.name == "PRICE"][0]
+    indicator.compute(data_aapl)
+    assert not indicator._data.empty
+    assert all(
+        s.value is not None for s in indicator.signals if s.type == Optional[float]
+    )
+
+
+def test_indicator_roc_computation(data_aapl: pd.DataFrame) -> None:
+    indicators = indicators_factory()
+    indicator = [i for i in indicators if i.name == "ROC"][0]
+    indicator.compute(data_aapl)
+    assert not indicator._data.empty
+    assert all(
+        s.value is not None for s in indicator.signals if s.type == Optional[float]
+    )
 
 
 def test_compute(data_aapl: pd.DataFrame) -> None:

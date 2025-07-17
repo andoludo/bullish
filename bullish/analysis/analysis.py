@@ -130,7 +130,7 @@ class TechnicalAnalysis(*TechnicalAnalysisModels):  # type: ignore
             )
             return cls()
         try:
-            res = Indicators().to_dict(prices)
+            res = Indicators().compute(prices)
             return cls(last_price=prices.close.iloc[-1], **res)
         except Exception as e:
             logger.error(

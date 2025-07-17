@@ -15,10 +15,17 @@ except Exception:
     logger.warning("Talib is not installed, skipping analysis")
 
 
+def cross_simple(
+    series_a: pd.Series, series_b: pd.Series, above: bool = True
+) -> pd.Series:
+    crossing = ta.cross(series_a=series_a, series_b=series_b, above=above)
+    return crossing  # type: ignore
+
+
 def cross(
     series_a: pd.Series, series_b: pd.Series, above: bool = True
 ) -> Optional[date]:
-    crossing = ta.cross(series_a=series_a, series_b=series_b, above=above)
+    crossing = cross_simple(series_a=series_a, series_b=series_b, above=above)
     if not crossing[crossing == 1].index.empty:
         return crossing[crossing == 1].last_valid_index().date()  # type: ignore
     return None
@@ -31,10 +38,10 @@ def cross_value(series: pd.Series, number: int, above: bool = True) -> Optional[
 def cross_value_series(
     series_a: pd.Series, number: int, above: bool = True
 ) -> pd.Series:
-    crossing = ta.cross(
-        series_a=series_a, series_b=pd.Series(number, index=series_a.index), above=above
+    crossing = cross_simple(
+        series_a, pd.Series(number, index=series_a.index), above=above
     )
-    return crossing  # type: ignore
+    return crossing
 
 
 def compute_adx(data: pd.DataFrame) -> pd.DataFrame:
@@ -300,14 +307,6 @@ def sma_50_above_sma_200(data: pd.DataFrame) -> Optional[date]:
 def price_above_sma50(data: pd.DataFrame) -> Optional[date]:
     date_1 = find_last_true_run_start(data.SMA_50 < data.CLOSE)
     return date_1
-
-
-def momentum(data: pd.DataFrame) -> Optional[date]:
-    date_1 = find_last_true_run_start(data.SMA_50 < data.CLOSE)
-    date_2 = find_last_true_run_start(data.SMA_200 < data.SMA_50)
-    if date_1 is None or date_2 is None:
-        return None
-    return max(date_1, date_2)
 
 
 class IndicatorFunction(BaseModel):
