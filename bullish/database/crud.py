@@ -8,8 +8,10 @@ from typing import TYPE_CHECKING, Any, List, Optional
 import pandas as pd
 from bearish.database.crud import BearishDb  # type: ignore
 from bearish.models.base import Ticker  # type: ignore
-from bearish.database.schemas import EarningsDateORM, EquityORM  # type: ignore
+from bearish.database.schemas import EarningsDateORM, EquityORM, PriceORM  # type: ignore
 from bearish.types import Sources  # type: ignore
+from bearish.models.price.price import Price  # type: ignore
+from bearish.models.price.prices import Prices  # type: ignore
 from pydantic import ConfigDict
 from sqlalchemy import Engine, create_engine, insert, delete, update
 from sqlmodel import Session, select
@@ -284,3 +286,16 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                 SignalSeriesORM.date <= end_date,  # type: ignore
             )
             return list(set(session.exec(stmt).all()))
+
+    def read_symbol_series(self, symbol: str, start_date: date, end_date: Optional[date] = None) -> pd.DataFrame:
+
+        with Session(self._engine) as session:
+            query_ = select(PriceORM)
+            query_ = query_.where(PriceORM.symbol==symbol)
+            if end_date:
+                query_ = query_.where(PriceORM.date >= start_date, PriceORM.date <= end_date)
+            else:
+                query_ = query_.where(PriceORM.date >= start_date)
+            series = session.exec(query_).all()
+            prices = [Price.model_validate(serie) for serie in series]
+            return Prices(prices=prices).to_dataframe()

@@ -5,11 +5,12 @@ import pandas as pd
 import pytest
 from bearish.models.base import Ticker
 from bearish.models.price.prices import Prices
-from bullish.analysis.analysis import run_analysis
+from bullish.analysis.analysis import run_analysis, run_signal_series_analysis
 from bullish.database.crud import BullishDb
 
 DATABASE_PATH = Path(__file__).parent / "data" / "bear.db"
 DATABASE_PATH_VIEW = Path(__file__).parent / "data" / "filter_bear.db"
+DATABASE_PATH_WITH_SERIES = Path(__file__).parent / "data" / "filter_bear_series.db"
 
 
 def delete_tables(database_path: Path):
@@ -20,6 +21,9 @@ def delete_tables(database_path: Path):
         conn.execute("DROP TABLE IF EXISTS view;")
         conn.execute("DROP TABLE IF EXISTS filteredresults;")
         conn.execute("DROP TABLE IF EXISTS subject;")
+        conn.execute("DROP TABLE IF EXISTS signalseries;")
+        conn.execute("DROP TABLE IF EXISTS industryreturns;")
+        conn.execute("DROP TABLE IF EXISTS industryview;")
         conn.commit()
 
 
@@ -45,3 +49,7 @@ def data_aapl(bullish_db: BullishDb) -> pd.DataFrame:
     ticker = Ticker(symbol="AAPL")
     prices = Prices.from_ticker(bullish_db, ticker)
     return prices.to_dataframe()
+
+@pytest.fixture
+def bullish_db_with_signal_series(bullish_view: BullishDb) -> BullishDb:
+    return BullishDb(database_path=DATABASE_PATH_WITH_SERIES)

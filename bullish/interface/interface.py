@@ -134,3 +134,9 @@ class BullishDbBase(BearishDbBase):  # type: ignore
     def read_signal_series(
         self, name: str, start_date: date, end_date: date
     ) -> List[str]: ...
+
+    @abc.abstractmethod
+    def read_symbol_series(self, symbol: str, start_date: date, end_date: Optional[date] = None) -> pd.DataFrame:...
+
+
+

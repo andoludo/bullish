@@ -511,17 +511,23 @@ def run_signal_series_analysis(bullish_db: "BullishDb") -> None:
     tickers = list(price_trackers.intersection(finance_trackers))
     parallel = Parallel(n_jobs=-1)
 
-    for batch_ticker in batched(tickers, 100):
+    for batch_ticker in batched(tickers, 1):
         start = time.perf_counter()
         many_signal_series = parallel(
             delayed(compute_signal_series)(bullish_db.database_path, ticker)
             for ticker in batch_ticker
         )
-        bullish_db.write_signal_series(list(chain.from_iterable(many_signal_series)))
-        elapsed_time = time.perf_counter() - start
-        print(
-            f"Computed signal series for {len(batch_ticker)} tickers in {elapsed_time:.2f} seconds."
-        )
+        series = list(chain.from_iterable(many_signal_series))
+        try:
+            bullish_db.write_signal_series(series)
+            elapsed_time = time.perf_counter() - start
+            print(
+                f"Computed signal series for {len(batch_ticker)} tickers in {elapsed_time:.2f} seconds."
+            )
+        except Exception as e:
+            no_date = [s for s in series if s.date is None]
+            print(no_date)
+            logger.error(f"Failed to compute signal series for {batch_ticker}: {e}")
 
 
 def run_analysis(bullish_db: "BullishDb") -> None:

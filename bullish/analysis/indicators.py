@@ -58,6 +58,7 @@ class Signal(BaseModel):
     description: str
     date: Optional[date] = None
     value: Optional[float] = None
+    in_use_backtest: bool = False
 
     def is_date(self) -> bool:
         if self.type == Optional[date]:
@@ -113,18 +114,24 @@ class Indicator(BaseModel):
 
     def compute_series(self, data: pd.DataFrame, symbol: str) -> pd.DataFrame:
         series = []
-        results = self.function(data)
+        try:
+            results = self.function(data)
+        except Exception as e:
+            logger.error(f"Failed to compute indicator {self.name} for symbol {symbol}: {e}")
+            return pd.DataFrame()
         if not set(self.expected_columns).issubset(results.columns):
             raise ValueError(
                 f"Expected columns {self.expected_columns}, but got {results.columns.tolist()}"
             )
         for signal in self.signals:
+            if not signal.in_use_backtest:
+                continue
             try:
                 series_ = signal.compute_series(results)
                 if signal.type == Optional[date]:
                     series__ = pd.DataFrame(series_[series_ == 1].rename("value"))
                 else:
-                    series__ = pd.DataFrame(series_.rename("value"))
+                    series__ = pd.DataFrame(series_[series_ !=None].rename("value"))
 
                 series__["name"] = signal.name
                 series__["date"] = series__.index.date  # type: ignore
@@ -135,6 +142,8 @@ class Indicator(BaseModel):
                 logger.error(
                     f"Fail to compute signal {signal.name} for indicator {self.name}: {e}"
                 )
+        if not series:
+            return pd.DataFrame()
         data = pd.concat(series).reset_index(drop=True)
         return data
 
@@ -221,6 +230,7 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: cross_value_series(d.RSI, 30),
+                    in_use_backtest=True,
                 ),
                 Signal(
                     name="RSI_BULLISH_CROSSOVER_40",
@@ -322,6 +332,7 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Oversold",
                     type=Optional[date],
                     function=lambda d: cross_simple(d.SMA_50, d.SMA_200),
+                    in_use_backtest=True,
                 ),
                 Signal(
                     name="DEATH_CROSS",
@@ -561,6 +572,15 @@ def indicators_factory() -> List[Indicator]:
 
 class Indicators(BaseModel):
     indicators: List[Indicator] = Field(default_factory=indicators_factory)
+
+
+    def in_use_backtest(self) -> List[str]:
+        return [
+            signal.name.lower()
+            for indicator in self.indicators
+            for signal in indicator.signals
+            if signal.in_use_backtest
+        ]
 
     def _compute(self, data: pd.DataFrame) -> None:
         for indicator in self.indicators:
