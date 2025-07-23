@@ -1,7 +1,7 @@
 import logging
 import random
 from datetime import date, timedelta
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -22,21 +22,40 @@ COLOR = {
 }
 
 
-class BacktestQuery(BaseModel):
+class BacktestQueryBase(BaseModel):
     name: str
+    table: str
+
+
+class BacktestQueryDate(BacktestQueryBase):
+
     start: date
     end: date
 
 
+class BacktestQueryRange(BacktestQueryBase):
+
+    min: float
+    max: float
+
+
 class BacktestQueries(BaseModel):
-    queries: list[BacktestQuery]
+    queries: list[Union[BacktestQueryDate, BacktestQueryRange]]
 
     def to_query(self) -> str:
-        query_parts = [
-            f"SELECT symbol FROM signalseries WHERE name='{query.name}' "  # noqa: S608
-            f"AND date >='{query.start}' AND date <='{query.end}'"
-            for query in self.queries
-        ]
+        query_parts = []
+        for query in self.queries:
+            if isinstance(query, (BacktestQueryDate)):
+                query_parts.append(
+                    f"SELECT symbol FROM {query.table} WHERE name='{query.name}' "  # noqa: S608
+                    f"AND date >='{query.start}' AND date <='{query.end}'"
+                )
+            if isinstance(query, (BacktestQueryRange)):
+                query_parts.append(
+                    f"SELECT symbol FROM {query.table} WHERE "  # noqa: S608
+                    f"{query.name} >= {query.min} AND {query.name} <= {query.max}"
+                )
+
         if len(query_parts) == 1:
             return query_parts[0]
         else:

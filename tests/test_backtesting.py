@@ -65,7 +65,7 @@ def test_backtesting_query(bullish_db_with_signal_series: BullishDb):
             date.today() - timedelta(days=5000),
             date.today(),
         ],
-        market_capitalization=[5e8, 1e12],
+        market_capitalization=[5e9, 1e12],
         order_by_desc="momentum",
         country=[
             "Germany",

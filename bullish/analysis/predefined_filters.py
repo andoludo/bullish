@@ -1,7 +1,12 @@
 import datetime
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 
-from bullish.analysis.backtest import BacktestQuery, BacktestQueries
+from bullish.analysis.analysis import AnalysisView
+from bullish.analysis.backtest import (
+    BacktestQueryDate,
+    BacktestQueries,
+    BacktestQueryRange,
+)
 from bullish.analysis.filter import FilterQuery
 from pydantic import BaseModel, Field
 
@@ -29,19 +34,33 @@ class NamedFilterQuery(FilterQuery):
     def to_backtesting_query(
         self, backtest_start_date: datetime.date
     ) -> BacktestQueries:
-        queries = []
+        queries: List[Union[BacktestQueryRange, BacktestQueryDate]] = []
         in_use_backtests = Indicators().in_use_backtest()
         for in_use in in_use_backtests:
             value = self.to_dict().get(in_use)
             if value and self.model_fields[in_use].annotation == List[datetime.date]:
                 delta = value[1] - value[0]
                 queries.append(
-                    BacktestQuery(
+                    BacktestQueryDate(
                         name=in_use.upper(),
                         start=backtest_start_date - delta,
                         end=backtest_start_date,
+                        table="signalseries",
                     )
                 )
+        for field in self.to_dict():
+            if field in AnalysisView.model_fields:
+                value = self.to_dict().get(field)
+                if value and isinstance(value, list) and len(value) == 2:
+                    queries.append(
+                        BacktestQueryRange(
+                            name=field.lower(),
+                            min=value[0],
+                            max=value[1],
+                            table="analysis",
+                        )
+                    )
+
         return BacktestQueries(queries=queries)
 
     def get_backtesting_symbols(
