@@ -1,20 +1,14 @@
 import datetime
-import random
 from datetime import date, timedelta
-from pydantic import BaseModel
 
 import pandas as pd
 
 pd.options.plotting.backend = "plotly"
-from bullish.analysis.backtest import run_backtest, BackTestConfig, run_tests, BackTests
-from bullish.analysis.functions import compute_rsi, cross_value
+from bullish.analysis.backtest import run_backtest, BackTestConfig, run_tests
 import pandas_ta as ta  # type: ignore
-import vectorbt as vbt
 
 from bullish.analysis.predefined_filters import NamedFilterQuery
 from bullish.database.crud import BullishDb
-
-import plotly.graph_objects as go
 
 
 def test_backtesting(bullish_db_with_signal_series: BullishDb):
@@ -22,6 +16,7 @@ def test_backtesting(bullish_db_with_signal_series: BullishDb):
     config = BackTestConfig(start=date(2024, 3, 10))
     filtred_query = NamedFilterQuery(
         name="Momentum Growth Good Fundamentals (RSI 30)",
+        market_capitalization=[1e9, 1e12],
         rsi_bullish_crossover_30=[
             date.today() - datetime.timedelta(days=5),
             date.today(),
