@@ -50,6 +50,7 @@ def data_aapl(bullish_db: BullishDb) -> pd.DataFrame:
     prices = Prices.from_ticker(bullish_db, ticker)
     return prices.to_dataframe()
 
+
 @pytest.fixture
 def bullish_db_with_signal_series(bullish_view: BullishDb) -> BullishDb:
     return BullishDb(database_path=DATABASE_PATH_WITH_SERIES)

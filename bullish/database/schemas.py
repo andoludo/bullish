@@ -55,7 +55,7 @@ class SignalSeriesORM(SQLModel, SignalSeries, table=True):
     date: str = Field(primary_key=True)  # type: ignore
     name: str = Field(primary_key=True)
     symbol: str = Field(primary_key=True)
-    value: float | None = Field(default=None, nullable=True)
+    value: float | None = Field(default=None, nullable=True)  # type: ignore
 
 
 class IndustryViewORM(SQLModel, IndustryView, table=True):

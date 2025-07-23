@@ -322,7 +322,9 @@ class IndicatorFunction(BaseModel):
             except Exception as e:
                 logger.error(f"Fail to compute function {function.__name__}: {e}")
         if data_ is None:
-            raise ValueError(f"No data returned from indicator functions with expected columns {self.expected_columns}.")
+            raise ValueError(
+                f"No data returned from indicator functions with expected columns {self.expected_columns}."
+            )
         if not set(self.expected_columns).issubset(set(data_.columns)):
             raise ValueError(
                 f"Expected columns {self.expected_columns} not found in data columns {data_.columns.tolist()}"

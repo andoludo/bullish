@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from pydantic import BaseModel
 
 import pandas as pd
+
 pd.options.plotting.backend = "plotly"
 from bullish.analysis.backtest import run_backtest, BackTestConfig, run_tests, BackTests
 from bullish.analysis.functions import compute_rsi, cross_value
@@ -15,8 +16,8 @@ from bullish.database.crud import BullishDb
 
 import plotly.graph_objects as go
 
-def test_backtesting(bullish_db_with_signal_series:BullishDb):
 
+def test_backtesting(bullish_db_with_signal_series: BullishDb):
 
     config = BackTestConfig(start=date(2024, 3, 10))
     filtred_query = NamedFilterQuery(
@@ -31,8 +32,8 @@ def test_backtesting(bullish_db_with_signal_series:BullishDb):
     fig = back_tests.to_figure()
     assert fig
 
-def test_run_a_backtest(bullish_db_with_signal_series:BullishDb):
 
+def test_run_a_backtest(bullish_db_with_signal_series: BullishDb):
 
     config = BackTestConfig(start=date(2024, 3, 10))
     filtred_query = NamedFilterQuery(
@@ -45,7 +46,8 @@ def test_run_a_backtest(bullish_db_with_signal_series:BullishDb):
     test = run_backtest(bullish_db_with_signal_series, filtred_query, config)
     assert test
 
-def test_backtesting_query(bullish_db_with_signal_series:BullishDb):
+
+def test_backtesting_query(bullish_db_with_signal_series: BullishDb):
     filtred_query = NamedFilterQuery(
         name="Momentum Growth Good Fundamentals (RSI 30)",
         cash_flow=["positive_free_cash_flow"],
@@ -65,9 +67,17 @@ def test_backtesting_query(bullish_db_with_signal_series:BullishDb):
         ],
         market_capitalization=[5e8, 1e12],
         order_by_desc="momentum",
-        country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+        country=[
+            "Germany",
+            "United states",
+            "France",
+            "United kingdom",
+            "Canada",
+            "Japan",
+        ],
     )
     start_date = date(2024, 3, 11)
-    symbols = filtred_query.get_backtesting_symbols(bullish_db_with_signal_series,start_date)
+    symbols = filtred_query.get_backtesting_symbols(
+        bullish_db_with_signal_series, start_date
+    )
     assert symbols
-

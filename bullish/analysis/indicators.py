@@ -117,7 +117,9 @@ class Indicator(BaseModel):
         try:
             results = self.function(data)
         except Exception as e:
-            logger.error(f"Failed to compute indicator {self.name} for symbol {symbol}: {e}")
+            logger.error(
+                f"Failed to compute indicator {self.name} for symbol {symbol}: {e}"
+            )
             return pd.DataFrame()
         if not set(self.expected_columns).issubset(results.columns):
             raise ValueError(
@@ -131,14 +133,16 @@ class Indicator(BaseModel):
                 if signal.type == Optional[date]:
                     series__ = pd.DataFrame(series_[series_ == 1].rename("value"))
                 else:
-                    series__ = pd.DataFrame(series_[series_ !=None].rename("value"))
+                    series__ = pd.DataFrame(
+                        series_[series_ != None].rename("value")  # noqa: E711
+                    )
 
                 series__["name"] = signal.name
                 series__["date"] = series__.index.date  # type: ignore
                 series__["symbol"] = symbol
                 series__ = series__.reset_index(drop=True)
                 series.append(series__)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 logger.error(
                     f"Fail to compute signal {signal.name} for indicator {self.name}: {e}"
                 )
@@ -572,7 +576,6 @@ def indicators_factory() -> List[Indicator]:
 
 class Indicators(BaseModel):
     indicators: List[Indicator] = Field(default_factory=indicators_factory)
-
 
     def in_use_backtest(self) -> List[str]:
         return [

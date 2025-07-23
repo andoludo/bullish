@@ -25,20 +25,31 @@ class NamedFilterQuery(FilterQuery):
             exclude_defaults=True,
             exclude={"name"},
         )
-    def to_backtesting_query(self, backtest_start_date: datetime.date) -> BacktestQueries:
+
+    def to_backtesting_query(
+        self, backtest_start_date: datetime.date
+    ) -> BacktestQueries:
         queries = []
         in_use_backtests = Indicators().in_use_backtest()
         for in_use in in_use_backtests:
             value = self.to_dict().get(in_use)
             if value and self.model_fields[in_use].annotation == List[datetime.date]:
                 delta = value[1] - value[0]
-                queries.append(BacktestQuery(name=in_use.upper(), start=backtest_start_date- delta, end=backtest_start_date ))
+                queries.append(
+                    BacktestQuery(
+                        name=in_use.upper(),
+                        start=backtest_start_date - delta,
+                        end=backtest_start_date,
+                    )
+                )
         return BacktestQueries(queries=queries)
 
-    def get_backtesting_symbols(self,bullish_db: BullishDb, backtest_start_date: datetime.date)->List[str]:
+    def get_backtesting_symbols(
+        self, bullish_db: BullishDb, backtest_start_date: datetime.date
+    ) -> List[str]:
         queries = self.to_backtesting_query(backtest_start_date)
 
-        return bullish_db.read_query(queries.to_query())["symbol"].tolist()
+        return bullish_db.read_query(queries.to_query())["symbol"].tolist()  # type: ignore
 
 
 STRONG_FUNDAMENTALS = NamedFilterQuery(
