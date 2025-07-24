@@ -6,6 +6,7 @@ from bullish.analysis.backtest import (
     BacktestQueryDate,
     BacktestQueries,
     BacktestQueryRange,
+    BacktestQuerySelection,
 )
 from bullish.analysis.filter import FilterQuery
 from pydantic import BaseModel, Field
@@ -34,7 +35,9 @@ class NamedFilterQuery(FilterQuery):
     def to_backtesting_query(
         self, backtest_start_date: datetime.date
     ) -> BacktestQueries:
-        queries: List[Union[BacktestQueryRange, BacktestQueryDate]] = []
+        queries: List[
+            Union[BacktestQueryRange, BacktestQueryDate, BacktestQuerySelection]
+        ] = []
         in_use_backtests = Indicators().in_use_backtest()
         for in_use in in_use_backtests:
             value = self.to_dict().get(in_use)
@@ -51,12 +54,24 @@ class NamedFilterQuery(FilterQuery):
         for field in self.to_dict():
             if field in AnalysisView.model_fields:
                 value = self.to_dict().get(field)
-                if value and isinstance(value, list) and len(value) == 2:
+                if (
+                    value
+                    and self.model_fields[field].annotation == Optional[List[float]]  # type: ignore
+                    and len(value) == 2
+                ):
                     queries.append(
                         BacktestQueryRange(
                             name=field.lower(),
                             min=value[0],
                             max=value[1],
+                            table="analysis",
+                        )
+                    )
+                if value and self.model_fields[field].annotation == Optional[List[str]]:  # type: ignore
+                    queries.append(
+                        BacktestQuerySelection(
+                            name=field.lower(),
+                            selections=value,
                             table="analysis",
                         )
                     )

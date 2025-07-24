@@ -28,7 +28,7 @@ from bearish.models.financials.balance_sheet import (  # type: ignore
     BalanceSheet,
     QuarterlyBalanceSheet,
 )
-from bearish.models.financials.base import Financials  # type: ignore
+from bearish.models.financials.base import Financials, FinancialsWithDate  # type: ignore
 from bearish.models.financials.cash_flow import (  # type: ignore
     CashFlow,
     QuarterlyCashFlow,
@@ -404,6 +404,24 @@ class FundamentalAnalysis(YearlyFundamentalAnalysis, QuarterlyFundamentalAnalysi
             yearly_analysis.model_dump() | quarterly_analysis.model_dump()
         )
 
+    @classmethod
+    def compute_series(
+        cls, financials: FinancialsWithDate, ticker: Ticker
+    ) -> List[SignalSeries]:
+        fundamendal_analysis = FundamentalAnalysis.from_financials(financials, ticker)
+        fundamental_analysis_ = fundamendal_analysis.model_dump(
+            exclude_none=True, exclude_unset=True, exclude_defaults=True
+        )
+        fundamental_analysis_ = {
+            k: v for k, v in fundamental_analysis_.items() if v is True
+        }
+        return [
+            SignalSeries(
+                name=k.upper(), symbol=ticker.symbol, value=v, date=financials.date
+            )
+            for k, v in fundamental_analysis_.items()
+        ]
+
 
 class AnalysisView(BaseModel):
     sector: Annotated[
@@ -502,7 +520,9 @@ def compute_signal_series(database_path: Path, ticker: Ticker) -> List[SignalSer
     indicators = Indicators()
     prices = Prices.from_ticker(bullish_db, ticker)
     signal_series = indicators.compute_series(prices.to_dataframe(), ticker.symbol)
-    return signal_series
+    financials = Financials.from_ticker(bullish_db, ticker)
+    financial_series = FinancialsWithDate.compute_series(financials, ticker)
+    return signal_series + financial_series  # type: ignore
 
 
 def run_signal_series_analysis(bullish_db: "BullishDb") -> None:
@@ -512,7 +532,6 @@ def run_signal_series_analysis(bullish_db: "BullishDb") -> None:
     parallel = Parallel(n_jobs=-1)
 
     for batch_ticker in batched(tickers, 1):
-        start = time.perf_counter()
         many_signal_series = parallel(
             delayed(compute_signal_series)(bullish_db.database_path, ticker)
             for ticker in batch_ticker
@@ -520,13 +539,7 @@ def run_signal_series_analysis(bullish_db: "BullishDb") -> None:
         series = list(chain.from_iterable(many_signal_series))
         try:
             bullish_db.write_signal_series(series)
-            elapsed_time = time.perf_counter() - start
-            print(
-                f"Computed signal series for {len(batch_ticker)} tickers in {elapsed_time:.2f} seconds."
-            )
         except Exception as e:
-            no_date = [s for s in series if s.date is None]
-            print(no_date)
             logger.error(f"Failed to compute signal series for {batch_ticker}: {e}")
 
 

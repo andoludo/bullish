@@ -3,6 +3,8 @@ from datetime import date, timedelta
 
 import pandas as pd
 
+from bullish.analysis.analysis import FundamentalAnalysis
+
 pd.options.plotting.backend = "plotly"
 from bullish.analysis.backtest import run_backtest, BackTestConfig, run_tests
 import pandas_ta as ta  # type: ignore
@@ -69,6 +71,7 @@ def test_backtesting_query(bullish_db_with_signal_series: BullishDb):
             "United kingdom",
             "Canada",
             "Japan",
+            "Belgium",
         ],
     )
     start_date = date(2024, 3, 11)
@@ -76,3 +79,16 @@ def test_backtesting_query(bullish_db_with_signal_series: BullishDb):
         bullish_db_with_signal_series, start_date
     )
     assert symbols
+
+
+from bearish.models.base import (
+    Ticker,
+)
+from bearish.models.financials.base import Financials, FinancialsWithDate
+
+
+def test_financial_series(bullish_db_with_signal_series: BullishDb) -> None:
+    ticker = Ticker(symbol="ACKB.BR")
+    financials = Financials.from_ticker(bullish_db_with_signal_series, ticker)
+    series = FinancialsWithDate.compute_series(financials, ticker)
+    assert series

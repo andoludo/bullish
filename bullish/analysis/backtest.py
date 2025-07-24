@@ -1,7 +1,7 @@
 import logging
 import random
 from datetime import date, timedelta
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, List
 
 import numpy as np
 import pandas as pd
@@ -39,8 +39,16 @@ class BacktestQueryRange(BacktestQueryBase):
     max: float
 
 
+class BacktestQuerySelection(BacktestQueryBase):
+
+    selections: List[str]
+
+    def to_selections(self) -> str:
+        return ", ".join([f"'{s}'" for s in self.selections])
+
+
 class BacktestQueries(BaseModel):
-    queries: list[Union[BacktestQueryDate, BacktestQueryRange]]
+    queries: list[Union[BacktestQueryDate, BacktestQueryRange, BacktestQuerySelection]]
 
     def to_query(self) -> str:
         query_parts = []
@@ -54,6 +62,11 @@ class BacktestQueries(BaseModel):
                 query_parts.append(
                     f"SELECT symbol FROM {query.table} WHERE "  # noqa: S608
                     f"{query.name} >= {query.min} AND {query.name} <= {query.max}"
+                )
+            if isinstance(query, (BacktestQuerySelection)):
+                query_parts.append(
+                    f"SELECT symbol FROM {query.table} WHERE "  # noqa: S608
+                    f"{query.name} IN ({query.to_selections()})"
                 )
 
         if len(query_parts) == 1:
