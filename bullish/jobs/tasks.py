@@ -11,7 +11,7 @@ from pathlib import Path
 from huey.api import Task  # type: ignore
 
 from .models import JobTrackerStatus, JobTracker, JobType
-from ..analysis.analysis import run_analysis
+from ..analysis.analysis import run_analysis, run_signal_series_analysis
 from ..database.crud import BullishDb
 from bullish.analysis.filter import FilterUpdate
 
@@ -81,6 +81,17 @@ def analysis(
 ) -> None:
     bullish_db = BullishDb(database_path=database_path)
     run_analysis(bullish_db)
+
+
+@huey.task(context=True)  # type: ignore
+@job_tracker
+def backtest_signals(
+    database_path: Path,
+    job_type: JobType,
+    task: Optional[Task] = None,
+) -> None:
+    bullish_db = BullishDb(database_path=database_path)
+    run_signal_series_analysis(bullish_db)
 
 
 @huey.task(context=True)  # type: ignore

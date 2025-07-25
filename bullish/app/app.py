@@ -26,7 +26,7 @@ from bullish.analysis.filter import (
     GeneralFilter,
     TechnicalAnalysisFilters,
 )
-from bullish.jobs.tasks import update, news, analysis
+from bullish.jobs.tasks import update, news, analysis, backtest_signals
 from pydantic import BaseModel
 
 from bullish.utils.checks import (
@@ -211,6 +211,12 @@ def jobs() -> None:
         if st.button("Update analysis"):
             analysis(st.session_state.database_path, job_type="Update analysis")
             st.success("Data update job has been enqueued.")
+            st.rerun()
+    with st.expander("Compute backtest signals"):
+        if st.button("Compute backtest signals"):
+            backtest_signals(
+                st.session_state.database_path, job_type="backtest signals"
+            )
             st.rerun()
 
 
