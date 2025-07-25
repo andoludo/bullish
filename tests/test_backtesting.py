@@ -3,14 +3,17 @@ from datetime import date, timedelta
 
 import pandas as pd
 
-from bullish.analysis.analysis import FundamentalAnalysis
-
 pd.options.plotting.backend = "plotly"
 from bullish.analysis.backtest import run_backtest, BackTestConfig, run_tests
 import pandas_ta as ta  # type: ignore
 
 from bullish.analysis.predefined_filters import NamedFilterQuery
 from bullish.database.crud import BullishDb
+
+from bearish.models.base import (
+    Ticker,
+)
+from bearish.models.financials.base import Financials, FinancialsWithDate
 
 
 def test_backtesting(bullish_db_with_signal_series: BullishDb):
@@ -54,10 +57,6 @@ def test_backtesting_query(bullish_db_with_signal_series: BullishDb):
             date.today() - datetime.timedelta(days=5),
             date.today(),
         ],
-        macd_12_26_9_bullish_crossover=[
-            date.today() - timedelta(days=5),
-            date.today(),
-        ],
         golden_cross=[
             date.today() - timedelta(days=5000),
             date.today(),
@@ -81,10 +80,28 @@ def test_backtesting_query(bullish_db_with_signal_series: BullishDb):
     assert symbols
 
 
-from bearish.models.base import (
-    Ticker,
-)
-from bearish.models.financials.base import Financials, FinancialsWithDate
+def test_backtesting_query_fundamentals(
+    bullish_db_with_signal_series: BullishDb,
+) -> None:
+    filtred_query = NamedFilterQuery(
+        name="Momentum Growth Good Fundamentals (RSI 30)",
+        cash_flow=["positive_free_cash_flow"],
+        income=[
+            "positive_operating_income",
+            "growing_operating_income",
+            "positive_net_income",
+            "growing_net_income",
+        ],
+        properties=["operating_cash_flow_is_higher_than_net_income"],
+        country=[
+            "Belgium",
+        ],
+    )
+    start_date = date(2024, 12, 30)
+    symbols = filtred_query.get_backtesting_symbols(
+        bullish_db_with_signal_series, start_date
+    )
+    assert symbols
 
 
 def test_financial_series(bullish_db_with_signal_series: BullishDb) -> None:

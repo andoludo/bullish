@@ -92,7 +92,7 @@ class BackTestConfig(BaseModel):
         description="Extend the backtest by this many days if no symbols are found",
     )
     percentage: int = Field(default=12, description="Return percentage of the backtest")
-    iterations: int = Field(default=100, description="Number of iterations to run")
+    iterations: int = Field(default=200, description="Number of iterations to run")
 
 
 class Equity(BaseModel):

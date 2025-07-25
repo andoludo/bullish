@@ -194,6 +194,7 @@ def indicators_factory() -> List[Indicator]:
                     function=lambda d: cross_simple(
                         d.MACD_12_26_9, d.MACD_12_26_9_SIGNAL
                     ),
+                    in_use_backtest=True,
                 ),
                 Signal(
                     name="MACD_12_26_9_BEARISH_CROSSOVER",
@@ -242,6 +243,7 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: cross_value_series(d.RSI, 40),
+                    in_use_backtest=True,
                 ),
                 Signal(
                     name="RSI_BULLISH_CROSSOVER_45",
@@ -249,6 +251,7 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Long",
                     type=Optional[date],
                     function=lambda d: cross_value_series(d.RSI, 45),
+                    in_use_backtest=True,
                 ),
                 Signal(
                     name="RSI_BEARISH_CROSSOVER",
@@ -263,6 +266,7 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Oversold",
                     type=Optional[date],
                     function=lambda d: (d.RSI < 30) & (d.RSI > 0),
+                    in_use_backtest=True,
                 ),
                 Signal(
                     name="RSI_OVERBOUGHT",
@@ -351,6 +355,7 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Overbought",
                     type=Optional[date],
                     function=lambda d: d.SMA_50 > d.SMA_200,
+                    in_use_backtest=True,
                     processing=ProcessingFunction(date=find_last_true_run_start),
                 ),
                 Signal(
@@ -359,6 +364,7 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Overbought",
                     type=Optional[date],
                     function=lambda d: d.SMA_50 < d.CLOSE,
+                    in_use_backtest=True,
                     processing=ProcessingFunction(date=find_last_true_run_start),
                 ),
             ],

@@ -82,11 +82,14 @@ PROPERTIES_GROUP = list(
         {*INCOME_GROUP, *CASH_FLOW_GROUP, *EPS_GROUP}
     )
 )
-
-GROUP_MAPPING: Dict[str, List[str]] = {
+BOOLEAN_GROUP_MAPPING: Dict[str, List[str]] = {
     "income": INCOME_GROUP,
     "cash_flow": CASH_FLOW_GROUP,
     "eps": EPS_GROUP,
+    "properties": PROPERTIES_GROUP,
+}
+GROUP_MAPPING: Dict[str, List[str]] = {
+    **BOOLEAN_GROUP_MAPPING,
     "properties": PROPERTIES_GROUP,
     "country": list(get_args(Country)),
     "industry": list(get_args(Industry)),

@@ -53,6 +53,6 @@ def data_aapl(bullish_db: BullishDb) -> pd.DataFrame:
 
 @pytest.fixture
 def bullish_db_with_signal_series(bullish_view: BullishDb) -> BullishDb:
+
     bullish_db = BullishDb(database_path=DATABASE_PATH_WITH_SERIES)
-    run_signal_series_analysis(bullish_db)
     return bullish_db

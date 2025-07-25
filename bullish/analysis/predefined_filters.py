@@ -1,4 +1,5 @@
 import datetime
+from datetime import timedelta
 from typing import Dict, Any, Optional, List, Union
 
 from bullish.analysis.analysis import AnalysisView
@@ -8,7 +9,7 @@ from bullish.analysis.backtest import (
     BacktestQueryRange,
     BacktestQuerySelection,
 )
-from bullish.analysis.filter import FilterQuery
+from bullish.analysis.filter import FilterQuery, BOOLEAN_GROUP_MAPPING
 from pydantic import BaseModel, Field
 
 from bullish.analysis.indicators import Indicators
@@ -52,6 +53,21 @@ class NamedFilterQuery(FilterQuery):
                     )
                 )
         for field in self.to_dict():
+            if field in BOOLEAN_GROUP_MAPPING:
+                value = self.to_dict().get(field)
+                if value and self.model_fields[field].annotation == Optional[List[str]]:  # type: ignore
+                    queries.extend(
+                        [
+                            BacktestQueryDate(
+                                name=v.upper(),
+                                start=backtest_start_date - timedelta(days=252),
+                                end=backtest_start_date,
+                                table="signalseries",
+                            )
+                            for v in value
+                        ]
+                    )
+
             if field in AnalysisView.model_fields:
                 value = self.to_dict().get(field)
                 if (
