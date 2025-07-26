@@ -132,14 +132,14 @@ tests-mypy = ["mypy (>=1.11.1)", "pytest-mypy-plugins"]
 
 [[package]]
 name = "bearishpy"
-version = "0.22.0"
+version = "0.26.0"
 description = ""
 category = "main"
 optional = false
 python-versions = "<3.13,>=3.10"
 files = [
-    {file = "bearishpy-0.22.0-py3-none-any.whl", hash = "sha256:f5d5fa11de66af196eb0e5c75d4b86e1345103e4437882cab751c6840ce12a00"},
-    {file = "bearishpy-0.22.0.tar.gz", hash = "sha256:41fd276e41203cae3af5d2d5f5ec1a7174546c15b635bc3790653010ce09e9c8"},
+    {file = "bearishpy-0.26.0-py3-none-any.whl", hash = "sha256:ce3f3fdf4da11e712cd717b0e7351faf4509ec9c7e9c045e890c08151f96135b"},
+    {file = "bearishpy-0.26.0.tar.gz", hash = "sha256:5612bbe142537e5a93a473517dc155fa4a068ee9a62d1a0ca843e1eee435c888"},
 ]
 
 [package.dependencies]
@@ -156,7 +156,7 @@ typeguard = ">=4.1.5,<5.0.0"
 typer = ">=0.13.1,<0.14.0"
 unidecode = ">=1.3.8,<2.0.0"
 yahooquery = ">=2.4.1,<3.0.0"
-yfinance = ">=0.2.48,<0.3.0"
+yfinance = ">=0.2.65,<0.3.0"
 
 [[package]]
 name = "beautifulsoup4"
@@ -5878,4 +5878,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.12,<3.13"
-content-hash = "90b2934edbcba32ba82fde668e1198b0b5a7f1fe2946dedb88131cc63402ac0c"
+content-hash = "58910b16ca7e71c575a648b8f1ebe8578f6c4ad74ac3bbe0ece4c3afc30e0869"

@@ -197,7 +197,10 @@ def jobs() -> None:
             and st.session_state.data is not None
             and not st.session_state.data.empty
         ):
-            symbols = st.session_state.data["symbol"].unique().tolist()
+            if not update_query.all_symbols:
+                symbols = st.session_state.data["symbol"].unique().tolist()
+            else:
+                symbols = None
             update(
                 database_path=st.session_state.database_path,
                 job_type="Update data",
@@ -342,7 +345,7 @@ def main() -> None:
     if st.session_state.database_path is None:
         dialog_pick_database()
     bearish_db_ = bearish_db(st.session_state.database_path)
-    charts_tab, jobs_tab = st.tabs(["Charts", "Jobs"])
+    charts_tab, jobs_tab, backtests = st.tabs(["Charts", "Jobs", "Backtests"])
     if "data" not in st.session_state:
         st.session_state.data = load_analysis_data(bearish_db_)
 
@@ -393,6 +396,17 @@ def main() -> None:
             use_container_width=True,
             hide_index=True,
         )
+    # with backtests:
+    #     with st.container:
+    #         backtest_config = sp.pydantic_form(key="Backtest config", model=BackTestConfig)
+    #     with st.container:
+    #         predefined_filter_names = (
+    #             PredefinedFilters().get_predefined_filter_names()
+    #         )
+    #         option = st.selectbox(
+    #             "Select a predefined filter",
+    #             ["", *predefined_filter_names],
+    #         )
 
 
 if __name__ == "__main__":

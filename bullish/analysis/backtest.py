@@ -159,6 +159,8 @@ class BackTest(BaseModel):
 
 class BackTests(BaseModel):
     tests: list[BackTest] = Field(default_factory=list, description="List of backtests")
+    config: BackTestConfig
+    name: str
 
     @model_validator(mode="after")
     def _validate(self) -> "BackTests":
@@ -326,8 +328,10 @@ def run_tests(
     bullish_db: BullishDb, named_filter: "NamedFilterQuery", config: BackTestConfig
 ) -> BackTests:
     return BackTests(
+        config=config,
+        name=named_filter.name,
         tests=[
             run_backtest(bullish_db, named_filter, config)
             for _ in range(config.iterations)
-        ]
+        ],
     )

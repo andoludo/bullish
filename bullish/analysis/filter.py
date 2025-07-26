@@ -240,6 +240,7 @@ class FilterUpdate(BaseModel):
     data_age_in_days: int = 1
     update_financials: bool = False
     update_analysis_only: bool = False
+    all_symbols: bool = False
 
 
 class FilteredResults(BaseModel):

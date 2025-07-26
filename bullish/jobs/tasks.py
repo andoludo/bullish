@@ -54,11 +54,13 @@ def job_tracker(func: Callable[..., Any]) -> Callable[..., Any]:
 def update(
     database_path: Path,
     job_type: JobType,
-    symbols: List[str],
+    symbols: Optional[List[str]],
     update_query: FilterUpdate,
     task: Optional[Task] = None,
 ) -> None:
-    logger.debug(f"Running update task for {len(symbols)} tickers.")
+    logger.debug(
+        f"Running update task for {len(symbols) if symbols else 'ALL'} tickers."
+    )
     if not update_query.update_analysis_only:
         bearish = Bearish(path=database_path, auto_migration=False)
         bearish.update_prices(

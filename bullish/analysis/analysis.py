@@ -506,6 +506,16 @@ class Analysis(AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis)
         )
 
 
+def compute_financials_series(
+    financials_: Financials, ticker: Ticker
+) -> List[SignalSeries]:
+    financials_with_dates = FinancialsWithDate.from_financials(financials_)
+    series = []
+    for f in financials_with_dates:
+        series.extend(FundamentalAnalysis.compute_series(f, ticker))
+    return series
+
+
 def compute_analysis(database_path: Path, ticker: Ticker) -> Analysis:
     from bullish.database.crud import BullishDb
 
@@ -521,8 +531,8 @@ def compute_signal_series(database_path: Path, ticker: Ticker) -> List[SignalSer
     prices = Prices.from_ticker(bullish_db, ticker)
     signal_series = indicators.compute_series(prices.to_dataframe(), ticker.symbol)
     financials = Financials.from_ticker(bullish_db, ticker)
-    financial_series = FinancialsWithDate.compute_series(financials, ticker)
-    return signal_series + financial_series  # type: ignore
+    financial_series = compute_financials_series(financials, ticker)
+    return signal_series + financial_series
 
 
 def run_signal_series_analysis(bullish_db: "BullishDb") -> None:
