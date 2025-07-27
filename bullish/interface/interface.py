@@ -10,6 +10,7 @@ from bearish.types import Sources  # type: ignore
 
 
 from bullish.analysis.analysis import Analysis, AnalysisView
+from bullish.analysis.backtest import BacktestResult, BacktestResultQuery
 from bullish.analysis.constants import Industry, Sector, IndustryGroup, Country
 from bullish.analysis.filter import FilterQuery, FilteredResults
 from bullish.analysis.indicators import SignalSeries
@@ -139,3 +140,12 @@ class BullishDbBase(BearishDbBase):  # type: ignore
     def read_symbol_series(
         self, symbol: str, start_date: date, end_date: Optional[date] = None
     ) -> pd.DataFrame: ...
+    @abc.abstractmethod
+    def write_many_backtest_results(
+        self, backtest_results: List[BacktestResult]
+    ) -> None: ...
+
+    @abc.abstractmethod
+    def read_many_backtest_results(
+        self, query: Optional[BacktestResultQuery] = None
+    ) -> List[BacktestResult]: ...

@@ -1,17 +1,19 @@
+import json
 import logging
 import random
 from datetime import date, timedelta
-from typing import TYPE_CHECKING, Optional, Union, List
+from typing import TYPE_CHECKING, Optional, Union, List, Dict, Any
 
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field, model_validator
 
-from bullish.database.crud import BullishDb
+
 import plotly.graph_objects as go
 
 if TYPE_CHECKING:
     from bullish.analysis.predefined_filters import NamedFilterQuery
+    from bullish.database.crud import BullishDb
 
 logger = logging.getLogger(__name__)
 COLOR = {
@@ -81,11 +83,10 @@ class ReturnPercentage(BaseModel):
     )
 
 
-class BackTestConfig(BaseModel):
+class BaseBacktestResult(BaseModel):
     start: date
     end: date = Field(default=date.today())
     investment: float = Field(default=1000)
-    exit_strategy: ReturnPercentage = Field(default=ReturnPercentage)
     holding_period: int = Field(default=30 * 3)
     extend_days: int = Field(
         default=5,
@@ -93,6 +94,29 @@ class BackTestConfig(BaseModel):
     )
     percentage: int = Field(default=12, description="Return percentage of the backtest")
     iterations: int = Field(default=200, description="Number of iterations to run")
+
+
+class BacktestResultQuery(BaseBacktestResult):
+    name: str
+
+
+class BacktestResult(BacktestResultQuery):
+    data: Dict[str, Any]
+
+
+class BackTestConfig(BaseBacktestResult):
+    exit_strategy: ReturnPercentage = Field(default=ReturnPercentage)
+
+    def to_base_backtest_result(self) -> BaseBacktestResult:
+        return BaseBacktestResult(
+            start=self.start,
+            end=self.end,
+            investment=self.investment,
+            holding_period=self.holding_period,
+            extend_days=self.extend_days,
+            percentage=self.percentage,
+            iterations=self.iterations,
+        )
 
 
 class Equity(BaseModel):
@@ -186,6 +210,13 @@ class BackTests(BaseModel):
         lower = (mean - std).rename("lower")
         return pd.concat([mean, upper, lower, median], axis=1).sort_index()
 
+    def to_backtest_result(self) -> BacktestResult:
+
+        return BacktestResult.model_validate(
+            self.config.to_base_backtest_result().model_dump()
+            | {"data": json.loads(self.to_error().to_json()), "name": self.name}
+        )
+
     def to_figure(self) -> go.Figure:
 
         data_ = self.to_dataframe()
@@ -234,7 +265,7 @@ class BackTests(BaseModel):
 
 
 def run_backtest(  # noqa: C901, PLR0915
-    bullish_db: BullishDb, named_filter: "NamedFilterQuery", config: BackTestConfig
+    bullish_db: "BullishDb", named_filter: "NamedFilterQuery", config: BackTestConfig
 ) -> BackTest:
     equities = []
     start_date = config.start
@@ -325,7 +356,7 @@ def run_backtest(  # noqa: C901, PLR0915
 
 
 def run_tests(
-    bullish_db: BullishDb, named_filter: "NamedFilterQuery", config: BackTestConfig
+    bullish_db: "BullishDb", named_filter: "NamedFilterQuery", config: BackTestConfig
 ) -> BackTests:
     return BackTests(
         config=config,
@@ -335,3 +366,22 @@ def run_tests(
             for _ in range(config.iterations)
         ],
     )
+
+
+def run_many_tests(
+    bullish_db: "BullishDb",
+    named_filters: List["NamedFilterQuery"],
+    config: BackTestConfig,
+) -> None:
+    back_tests = []
+    for named_filter in named_filters:
+        try:
+            back_tests.append(
+                run_tests(bullish_db, named_filter, config).to_backtest_result()
+            )
+        except Exception as e:
+            logger.error(e)
+            continue
+
+    if back_tests:
+        bullish_db.write_many_backtest_results(back_tests)

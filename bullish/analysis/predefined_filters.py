@@ -178,7 +178,15 @@ RSI_CROSSOVER_30_GROWTH_STOCK = NamedFilterQuery(
     rsi_bullish_crossover_30=DATE_THRESHOLD,
     market_capitalization=[5e8, 1e12],
     order_by_desc="market_capitalization",
-    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "United kingdom",
+        "Canada",
+        "Japan",
+        "Belgium",
+    ],
 )
 RSI_CROSSOVER_40_GROWTH_STOCK = NamedFilterQuery(
     name="RSI cross-over 40 growth stock",
@@ -186,7 +194,15 @@ RSI_CROSSOVER_40_GROWTH_STOCK = NamedFilterQuery(
     rsi_bullish_crossover_40=DATE_THRESHOLD,
     market_capitalization=[5e8, 1e12],
     order_by_desc="market_capitalization",
-    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "United kingdom",
+        "Canada",
+        "Japan",
+        "Belgium",
+    ],
 )
 
 
@@ -209,7 +225,15 @@ MOMENTUM_GROWTH_GOOD_FUNDAMENTALS = NamedFilterQuery(
     ],
     market_capitalization=[5e8, 1e12],
     order_by_desc="momentum",
-    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "United kingdom",
+        "Canada",
+        "Japan",
+        "Belgium",
+    ],
 )
 
 MOMENTUM_GROWTH_STRONG_FUNDAMENTALS = NamedFilterQuery(
@@ -237,7 +261,15 @@ MOMENTUM_GROWTH_STRONG_FUNDAMENTALS = NamedFilterQuery(
     ],
     market_capitalization=[5e8, 1e12],
     order_by_desc="momentum",
-    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "United kingdom",
+        "Canada",
+        "Japan",
+        "Belgium",
+    ],
 )
 MOMENTUM_GROWTH_RSI_30 = NamedFilterQuery(
     name="Momentum Growth Screener (RSI 30)",
@@ -256,7 +288,15 @@ MOMENTUM_GROWTH_RSI_30 = NamedFilterQuery(
     ],
     market_capitalization=[5e8, 1e12],
     order_by_desc="momentum",
-    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "United kingdom",
+        "Canada",
+        "Japan",
+        "Belgium",
+    ],
 )
 MOMENTUM_GROWTH_RSI_40 = NamedFilterQuery(
     name="Momentum Growth Screener (RSI 40)",
@@ -275,7 +315,15 @@ MOMENTUM_GROWTH_RSI_40 = NamedFilterQuery(
     ],
     market_capitalization=[5e8, 1e12],
     order_by_desc="momentum",
-    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "United kingdom",
+        "Canada",
+        "Japan",
+        "Belgium",
+    ],
 )
 
 GOLDEN_CROSS_LAST_SEVEN_DAYS = NamedFilterQuery(
@@ -287,7 +335,15 @@ GOLDEN_CROSS_LAST_SEVEN_DAYS = NamedFilterQuery(
         datetime.date.today(),
     ],
     order_by_desc="market_capitalization",
-    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "United kingdom",
+        "Canada",
+        "Japan",
+        "Belgium",
+    ],
 )
 
 

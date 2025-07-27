@@ -3,6 +3,7 @@ from typing import Dict, Any
 from sqlmodel import Field, SQLModel
 from sqlalchemy import Column, JSON
 from bullish.analysis.analysis import Analysis
+from bullish.analysis.backtest import BacktestResult
 from bullish.analysis.filter import FilteredResults
 from bullish.analysis.indicators import SignalSeries
 from bullish.analysis.industry_views import IndustryView
@@ -71,3 +72,15 @@ class IndustryViewORM(SQLModel, IndustryView, table=True):
     industry_group: str | None = Field(default=None, nullable=True)  # type: ignore
     sector: str | None = Field(default=None, nullable=True)  # type: ignore
     type: str = Field(primary_key=True)  # type: ignore
+
+
+class BacktestResultORM(SQLModel, BacktestResult, table=True):
+    __tablename__ = "backtestresult"
+    __table_args__ = {"extend_existing": True}  # noqa:RUF012
+    name: str = Field(primary_key=True)
+    start: str = Field(primary_key=True)  # type: ignore
+    holding_period: int = Field(primary_key=True)
+    extend_days: int = Field(primary_key=True)
+    percentage: int = Field(primary_key=True)
+    iterations: int = Field(primary_key=True)
+    data: Dict[str, Any] = Field(sa_column=Column(JSON))

@@ -17,6 +17,7 @@ from sqlalchemy import Engine, create_engine, insert, delete, update
 from sqlmodel import Session, select
 
 from bullish.analysis.analysis import Analysis
+
 from bullish.analysis.constants import Industry, IndustryGroup, Sector, Country
 from bullish.analysis.indicators import SignalSeries
 from bullish.analysis.industry_views import Type, IndustryView
@@ -27,6 +28,7 @@ from bullish.database.schemas import (
     FilteredResultsORM,
     IndustryViewORM,
     SignalSeriesORM,
+    BacktestResultORM,
 )
 from bullish.database.scripts.upgrade import upgrade
 from bullish.exceptions import DatabaseFileNotFoundError
@@ -35,7 +37,7 @@ from bullish.interface.interface import BullishDbBase
 from bullish.jobs.models import JobTracker, JobTrackerStatus
 
 if TYPE_CHECKING:
-    pass
+    from bullish.analysis.backtest import BacktestResult, BacktestResultQuery
 
 logger = logging.getLogger(__name__)
 
@@ -303,3 +305,25 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             series = session.exec(query_).all()
             prices = [Price.model_validate(serie) for serie in series]
             return Prices(prices=prices).to_dataframe()  # type: ignore
+
+    def write_many_backtest_results(
+        self, backtest_results: List["BacktestResult"]
+    ) -> None:
+        with Session(self._engine) as session:
+            stmt = (
+                insert(BacktestResultORM)
+                .prefix_with("OR REPLACE")
+                .values([a.model_dump() for a in backtest_results])
+            )
+            session.exec(stmt)  # type: ignore
+            session.commit()
+
+    def read_many_backtest_results(
+        self, query: Optional["BacktestResultQuery"] = None
+    ) -> List["BacktestResult"]:
+        from bullish.analysis.backtest import BacktestResult
+
+        with Session(self._engine) as session:
+            stmt = select(BacktestResultORM)
+            results = session.exec(stmt).all()
+            return [BacktestResult.model_validate(r) for r in results]
