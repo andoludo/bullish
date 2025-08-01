@@ -326,4 +326,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
         with Session(self._engine) as session:
             stmt = select(BacktestResultORM)
             results = session.exec(stmt).all()
-            return [BacktestResult.model_validate(r) for r in results]
+            if results:
+                return [BacktestResult.model_validate(r) for r in results]
+            else:
+                return []

@@ -13,6 +13,7 @@ from huey.api import Task  # type: ignore
 from .models import JobTrackerStatus, JobTracker, JobType
 from ..analysis.analysis import run_analysis, run_signal_series_analysis
 from ..analysis.backtest import run_many_tests, BackTestConfig
+from ..analysis.industry_views import compute_industry_view
 from ..analysis.predefined_filters import predefined_filters
 from ..database.crud import BullishDb
 from bullish.analysis.filter import FilterUpdate
@@ -85,6 +86,7 @@ def analysis(
 ) -> None:
     bullish_db = BullishDb(database_path=database_path)
     run_analysis(bullish_db)
+    compute_industry_view(bullish_db)
 
 
 @huey.task(context=True)  # type: ignore
