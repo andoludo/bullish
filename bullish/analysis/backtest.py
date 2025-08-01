@@ -84,7 +84,7 @@ class ReturnPercentage(BaseModel):
 
 
 class BaseBacktestResult(BaseModel):
-    start: date
+    start: date = Field(default=date.today() - timedelta(days=252))
     end: date = Field(default=date.today())
     investment: float = Field(default=1000)
     holding_period: int = Field(default=30 * 3)
@@ -102,6 +102,41 @@ class BacktestResultQuery(BaseBacktestResult):
 
 class BacktestResult(BacktestResultQuery):
     data: Dict[str, Any]
+
+    def to_dataframe(self) -> pd.DataFrame:
+        return pd.read_json(json.dumps(self.data)).sort_index()
+
+
+class BacktestResults(BaseModel):
+    results: List[BacktestResult]
+
+    def figure(self, type: str = "mean") -> go.Figure:
+        fig = go.Figure()
+        for result in self.results:
+            data = result.to_dataframe()[type]
+            fig.add_trace(
+                go.Scatter(
+                    x=data.index,
+                    y=data,
+                    mode="lines",
+                    name=f"{result.name} ({type})",
+                    line={"width": 1},
+                    hovertemplate=(
+                        "Date: %{x}<br>"
+                        + "Price: %{y:.2f}<br>"
+                        + f"Percentage: {result.percentage}<br>"
+                        + f"Iterations: {result.iterations}<br>"
+                        + f"Investment: {result.investment}<extra></extra>"
+                    ),
+                )
+            )
+        fig.update_layout(
+            height=800,
+            showlegend=True,
+            margin={"t": 60, "b": 40},
+        )
+
+        return fig
 
 
 class BackTestConfig(BaseBacktestResult):
@@ -379,7 +414,7 @@ def run_many_tests(
             back_tests.append(
                 run_tests(bullish_db, named_filter, config).to_backtest_result()
             )
-        except Exception as e:
+        except Exception as e:  # noqa: PERF203
             logger.error(e)
             continue
 

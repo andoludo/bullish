@@ -12,6 +12,7 @@ from bearish.models.price.prices import Prices  # type: ignore
 from bearish.models.query.query import AssetQuery, Symbols  # type: ignore
 from streamlit_file_browser import st_file_browser  # type: ignore
 
+from bullish.analysis.backtest import BacktestResults
 from bullish.analysis.industry_views import get_industry_comparison_data
 from bullish.analysis.predefined_filters import PredefinedFilters
 from bullish.database.crud import BullishDb
@@ -197,10 +198,7 @@ def jobs() -> None:
             and st.session_state.data is not None
             and not st.session_state.data.empty
         ):
-            if not update_query.all_symbols:
-                symbols = st.session_state.data["symbol"].unique().tolist()
-            else:
-                symbols = None
+            symbols = st.session_state.data["symbol"].unique().tolist()
             update(
                 database_path=st.session_state.database_path,
                 job_type="Update data",
@@ -396,17 +394,12 @@ def main() -> None:
             use_container_width=True,
             hide_index=True,
         )
-    # with backtests:
-    #     with st.container:
-    #         backtest_config = sp.pydantic_form(key="Backtest config", model=BackTestConfig)
-    #     with st.container:
-    #         predefined_filter_names = (
-    #             PredefinedFilters().get_predefined_filter_names()
-    #         )
-    #         option = st.selectbox(
-    #             "Select a predefined filter",
-    #             ["", *predefined_filter_names],
-    #         )
+    with backtests:
+        results = bearish_db_.read_many_backtest_results()
+        backtest_results = BacktestResults(results=results)
+        with st.container():
+            figure = backtest_results.figure()
+            st.plotly_chart(figure)
 
 
 if __name__ == "__main__":

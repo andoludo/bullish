@@ -12,6 +12,8 @@ from huey.api import Task  # type: ignore
 
 from .models import JobTrackerStatus, JobTracker, JobType
 from ..analysis.analysis import run_analysis, run_signal_series_analysis
+from ..analysis.backtest import run_many_tests, BackTestConfig
+from ..analysis.predefined_filters import predefined_filters
 from ..database.crud import BullishDb
 from bullish.analysis.filter import FilterUpdate
 
@@ -94,6 +96,7 @@ def backtest_signals(
 ) -> None:
     bullish_db = BullishDb(database_path=database_path)
     run_signal_series_analysis(bullish_db)
+    run_many_tests(bullish_db, predefined_filters(), BackTestConfig())
 
 
 @huey.task(context=True)  # type: ignore
