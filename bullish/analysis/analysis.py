@@ -114,6 +114,13 @@ class TechnicalAnalysisBase(BaseModel):
             default=None,
         ),
     ]
+    max_year_loss: Annotated[
+        Optional[float],
+        BeforeValidator(to_float),
+        Field(
+            default=None,
+        ),
+    ]
 
 
 TechnicalAnalysisModels = [*IndicatorModels, TechnicalAnalysisBase]
@@ -131,7 +138,10 @@ class TechnicalAnalysis(*TechnicalAnalysisModels):  # type: ignore
             return cls()
         try:
             res = Indicators().compute(prices)
-            return cls(last_price=prices.close.iloc[-1], **res)
+            last_price = prices.close.iloc[-1]
+            max_price = prices.close.iloc[-253 * 2 :].max()
+            max_year_loss = (max_price - last_price) / max_price
+            return cls(last_price=last_price, max_year_loss=max_year_loss, **res)
         except Exception as e:
             logger.error(
                 f"Failing to calculate technical analysis for {ticker.symbol}: {e}",
@@ -461,6 +471,13 @@ class AnalysisView(BaseModel):
     ]
     price_per_earning_ratio: Optional[float] = None
     last_price: Annotated[
+        Optional[float],
+        BeforeValidator(to_float),
+        Field(
+            default=None,
+        ),
+    ]
+    max_year_loss: Annotated[
         Optional[float],
         BeforeValidator(to_float),
         Field(
