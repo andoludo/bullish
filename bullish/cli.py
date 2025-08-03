@@ -47,7 +47,8 @@ def serve(
                     "-m",
                     "huey.bin.huey_consumer",
                     "bullish.jobs.tasks.huey",
-                ]
+                ],
+                env=os.environ.copy(),
             )
         )
         children.append(
@@ -63,7 +64,8 @@ def serve(
                     "--server.port",
                     str(port),
                     os.devnull,
-                ]
+                ],
+                env=os.environ.copy(),
             )
         )
         while True:
