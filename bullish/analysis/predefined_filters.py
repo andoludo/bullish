@@ -176,7 +176,7 @@ RSI_CROSSOVER_30_GROWTH_STOCK = NamedFilterQuery(
     name="RSI cross-over 30 growth stock",
     price_per_earning_ratio=[10, 500],
     rsi_bullish_crossover_30=DATE_THRESHOLD,
-    market_capitalization=[5e8, 1e12],
+    market_capitalization=[1e10, 1e13],
     order_by_desc="market_capitalization",
     country=[
         "Germany",
@@ -188,11 +188,25 @@ RSI_CROSSOVER_30_GROWTH_STOCK = NamedFilterQuery(
         "Belgium",
     ],
 )
+
+MEDIAN_YEARLY_GROWTH = NamedFilterQuery(
+    name="Median yearly growth",
+    market_capitalization=[1e6, 1e13],
+    median_yearly_growth=[40, 1000],
+    last_price=[1, 100],
+    order_by_asc="last_price",
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "Belgium",
+    ],
+)
 RSI_CROSSOVER_40_GROWTH_STOCK = NamedFilterQuery(
     name="RSI cross-over 40 growth stock",
     price_per_earning_ratio=[10, 500],
     rsi_bullish_crossover_40=DATE_THRESHOLD,
-    market_capitalization=[5e8, 1e12],
+    market_capitalization=[1e10, 1e13],
     order_by_desc="market_capitalization",
     country=[
         "Germany",
@@ -360,6 +374,7 @@ def predefined_filters() -> list[NamedFilterQuery]:
         MOMENTUM_GROWTH_RSI_30,
         MOMENTUM_GROWTH_RSI_40,
         GOLDEN_CROSS_LAST_SEVEN_DAYS,
+        MEDIAN_YEARLY_GROWTH,
     ]
 
 

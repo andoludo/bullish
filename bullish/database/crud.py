@@ -261,10 +261,11 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
         self, type: Type, industry: Industry, country: Country
     ) -> List[IndustryView]:
         with Session(self._engine) as session:
-            stmt = select(IndustryViewORM).where(
-                IndustryViewORM.industry == industry,
-                IndustryViewORM.country == country,
-            )
+            stmt = select(IndustryViewORM)
+            if industry:
+                stmt = stmt.where(IndustryViewORM.industry == industry)
+            if country:
+                stmt = stmt.where(IndustryViewORM.country == country)
             result = session.exec(stmt).all()
             return [IndustryView.model_validate(r) for r in result]
 

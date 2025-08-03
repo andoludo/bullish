@@ -37,7 +37,7 @@ def plot(
             f"MACD ({symbol} [{name}])",
             f"ADX ({symbol} [{name}])",
             f"OBV ({symbol} [{name}])",
-            f"ATR ({symbol} [{name}])",
+            f"Industry ({symbol} [{name}])",
         ),
     )
     # Row 1: Candlestick + SMAs
@@ -123,33 +123,20 @@ def plot(
         row=6,
         col=1,
     )
-    if (
-        industry_data is not None
-        and not industry_data.empty
-        and "symbol" in industry_data.columns
-        and "industry" in industry_data.columns
-    ):
-        fig.add_trace(
-            go.Scatter(
-                x=industry_data.index,
-                y=industry_data.symbol,
-                name="Symbol",
-                mode="lines",
-            ),
-            row=7,
-            col=1,
-        )
-        fig.add_trace(
-            go.Scatter(
-                x=industry_data.index,
-                y=industry_data.industry,
-                name="Industry",
-                mode="lines",
-                opacity=0.5,
-            ),
-            row=7,
-            col=1,
-        )
+    if industry_data is not None and not industry_data.empty:
+        for c in industry_data.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=industry_data.index,
+                    y=industry_data[c],
+                    name=c,
+                    mode="lines",
+                    opacity=0.5 if c != "symbol" else 1.0,
+                ),
+                row=7,
+                col=1,
+            )
+
     if dates is not None and dates:
         for date in dates:
             if (

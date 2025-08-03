@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import (
     Optional,
     Any,
@@ -17,11 +18,18 @@ from bearish.models.price.prices import Prices  # type: ignore
 from bearish.models.query.query import AssetQuery, Symbols  # type: ignore
 from pydantic import BaseModel, BeforeValidator, Field, model_validator
 
-from bullish.analysis.constants import Industry, IndustryGroup, Sector, Country
+from bullish.analysis.constants import (
+    Industry,
+    IndustryGroup,
+    Sector,
+    Country,
+    SubCountry,
+)
 
 if TYPE_CHECKING:
     from bullish.database.crud import BullishDb
 
+logger = logging.getLogger(__name__)
 Type = Literal["Mean"]
 
 FUNCTIONS = {"Mean": np.mean}
@@ -47,12 +55,23 @@ def get_industry_comparison_data(
     country: Country,
 ) -> pd.DataFrame:
     try:
+
         views = bullish_db.read_returns(type, industry, country)
         industry_data = IndustryViews.from_views(views).to_dataframe()
         normalized_symbol = compute_normalized_close(symbol_data.close).rename("symbol")
-        normalized_industry = industry_data.normalized_close.rename("industry")
-        return pd.concat([normalized_symbol, normalized_industry], axis=1)
-    except Exception:
+        normalized_industry = industry_data.normalized_close.rename(industry)
+        data = [normalized_symbol, normalized_industry]
+        for country in get_args(SubCountry):
+            views = bullish_db.read_returns(type, industry, country)
+            if views:
+                industry_data = IndustryViews.from_views(views).to_dataframe()
+                normalized_industry = industry_data.normalized_close.rename(
+                    f"{industry}-{country}"
+                )
+                data.append(normalized_industry)
+        return pd.concat(data, axis=1)
+    except Exception as e:
+        logger.error(e)
         return pd.DataFrame()
 
 
