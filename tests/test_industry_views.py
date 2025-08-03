@@ -27,4 +27,4 @@ def test_compute_industry_view(bullish_view: BullishDb) -> None:
     ).dropna()
     assert not merged_data.empty
     assert "symbol" in merged_data.columns
-    assert "industry" in merged_data.columns
+    assert "Biotechnology" in merged_data.columns
