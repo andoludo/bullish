@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Any
 
 import typer
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = typer.Typer(add_completion=False)
 STREAMLIT_FILE = Path(__file__).parent.joinpath("app", "app.py")
