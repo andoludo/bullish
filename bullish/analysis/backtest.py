@@ -2,6 +2,7 @@ import json
 import logging
 import random
 from datetime import date, timedelta
+from io import StringIO
 from typing import TYPE_CHECKING, Optional, Union, List, Dict, Any
 
 import numpy as np
@@ -104,7 +105,7 @@ class BacktestResult(BacktestResultQuery):
     data: Dict[str, Any]
 
     def to_dataframe(self) -> pd.DataFrame:
-        return pd.read_json(json.dumps(self.data)).sort_index()
+        return pd.read_json(StringIO(json.dumps(self.data))).sort_index()
 
 
 class BacktestResults(BaseModel):

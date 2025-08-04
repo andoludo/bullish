@@ -4883,14 +4883,14 @@ files = [
 
 [[package]]
 name = "tickermood"
-version = "0.9.0"
+version = "0.11.0"
 description = ""
 category = "main"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "tickermood-0.9.0-py3-none-any.whl", hash = "sha256:5a088bcb785db28e72de9380edec680f6f34f9bdd299462e2edff1d99fa1c2f0"},
-    {file = "tickermood-0.9.0.tar.gz", hash = "sha256:414e10a1c3317424dfd65495f5ca182b697af4e1e2172d38a7d9554048b40ad3"},
+    {file = "tickermood-0.11.0-py3-none-any.whl", hash = "sha256:4cfb8ed3e590b7eb201f1323f1a4e08de78886d0f65141418ed919299bad2cf3"},
+    {file = "tickermood-0.11.0.tar.gz", hash = "sha256:98e3a9c75a0a668e114a8f536dc767e1bbb284c49d12e4d6318d11101cc3b195"},
 ]
 
 [package.dependencies]
@@ -5878,4 +5878,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.12,<3.13"
-content-hash = "26aaa7d3a4573d38558ba41b61580838d910b37c3ef0a9357dfbc49414f25a40"
+content-hash = "27b6174c48173d82b08a9324eb470d59461d89a8948adc22736440e425015212"

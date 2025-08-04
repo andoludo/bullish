@@ -54,6 +54,8 @@ def serve(
                     "-m",
                     "huey.bin.huey_consumer",
                     "bullish.jobs.tasks.huey",
+                    "--workers",
+                    "2",
                 ],
                 env=os.environ.copy(),
             )
