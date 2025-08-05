@@ -20,6 +20,7 @@ from bullish.analysis.functions import (
     cross_simple,
     cross_value_series,
     find_last_true_run_start,
+    VOLUME,
 )
 
 logger = logging.getLogger(__name__)
@@ -390,6 +391,27 @@ def indicators_factory() -> List[Indicator]:
                     function=lambda d: 0.6 * d["20_DAY_HIGH"] > d.LAST_PRICE,
                 ),
                 Signal(
+                    name="WEEKLY_GROWTH",
+                    description="weekly growth",
+                    type_info="Oversold",
+                    type=Optional[float],
+                    function=lambda d: d.WEEKLY_GROWTH,
+                ),
+                Signal(
+                    name="MONTHLY_GROWTH",
+                    description="Median monthly growth",
+                    type_info="Oversold",
+                    type=Optional[float],
+                    function=lambda d: d.MONTHLY_GROWTH,
+                ),
+                Signal(
+                    name="YEARLY_GROWTH",
+                    description="Median yearly growth",
+                    type_info="Oversold",
+                    type=Optional[float],
+                    function=lambda d: d.YEARLY_GROWTH,
+                ),
+                Signal(
                     name="MEDIAN_WEEKLY_GROWTH",
                     description="Median weekly growth",
                     type_info="Oversold",
@@ -418,6 +440,42 @@ def indicators_factory() -> List[Indicator]:
                     processing=ProcessingFunction(
                         number=lambda v: np.median(v.unique())
                     ),
+                ),
+                Signal(
+                    name="LOWER_THAN_20_DAY_HIGH",
+                    description="Current price is lower than the 20-day high",
+                    type_info="Oversold",
+                    type=Optional[date],
+                    function=lambda d: 0.6 * d["20_DAY_HIGH"] > d.LAST_PRICE,
+                ),
+            ],
+        ),
+        Indicator(
+            name="VOLUME",
+            description="Volume based indicators",
+            expected_columns=VOLUME.expected_columns,
+            function=VOLUME.call,
+            signals=[
+                Signal(
+                    name="AVERAGE_VOLUME_10",
+                    type_info="Value",
+                    description="Average volume over the last 10 days",
+                    type=Optional[float],
+                    function=lambda d: d.AVERAGE_VOLUME_10,
+                ),
+                Signal(
+                    name="AVERAGE_VOLUME_30",
+                    type_info="Value",
+                    description="Average volume over the last 30 days",
+                    type=Optional[float],
+                    function=lambda d: d.AVERAGE_VOLUME_30,
+                ),
+                Signal(
+                    name="VOLUME_ABOVE_AVERAGE",
+                    type_info="Value",
+                    description="Volume above average volume over the last 30 days",
+                    type=Optional[date],
+                    function=lambda d: d.AVERAGE_VOLUME_30 < d.VOLUME,
                 ),
             ],
         ),

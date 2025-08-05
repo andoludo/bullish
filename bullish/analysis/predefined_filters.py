@@ -360,6 +360,82 @@ GOLDEN_CROSS_LAST_SEVEN_DAYS = NamedFilterQuery(
     ],
 )
 
+# NEW FILTERS
+SMALL_CAP_WITH_DEBT_TO_EQUITY_CHECK = NamedFilterQuery(
+    name="Small Cap with Debt to Equity Check",
+    last_price=[1, 20],
+    market_capitalization=[5e7, 5e8],
+    average_volume_30=[50000, 5e9],
+    properties=["positive_debt_to_equity"],
+    order_by_desc="market_capitalization",
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "United kingdom",
+        "Canada",
+        "Japan",
+        "Belgium",
+    ],
+)
+
+SMALL_CAP = NamedFilterQuery(
+    name="Small Cap",
+    last_price=[1, 20],
+    market_capitalization=[5e7, 5e8],
+    average_volume_30=[50000, 5e9],
+    order_by_desc="market_capitalization",
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "United kingdom",
+        "Canada",
+        "Japan",
+        "Belgium",
+    ],
+)
+
+TOP_PERFORMERS = NamedFilterQuery(
+    name="Top Performers",
+    sma_50_above_sma_200=[
+        datetime.date.today() - datetime.timedelta(days=5000),
+        datetime.date.today() - datetime.timedelta(days=10),
+    ],
+    price_above_sma_50=[
+        datetime.date.today() - datetime.timedelta(days=5000),
+        datetime.date.today() - datetime.timedelta(days=10),
+    ],
+    volume_above_average=DATE_THRESHOLD,
+    weekly_growth=[1, 100],
+    monthly_growth=[8, 100],
+    order_by_desc="market_capitalization",
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "United kingdom",
+        "Canada",
+        "Japan",
+        "Belgium",
+    ],
+)
+
+LARGE_CAPS = NamedFilterQuery(
+    name="Large caps",
+    order_by_desc="market_capitalization",
+    limit="50",
+    country=[
+        "Germany",
+        "United states",
+        "France",
+        "United kingdom",
+        "Canada",
+        "Japan",
+        "Belgium",
+    ],
+)
+
 
 def predefined_filters() -> list[NamedFilterQuery]:
     return [
@@ -375,6 +451,10 @@ def predefined_filters() -> list[NamedFilterQuery]:
         MOMENTUM_GROWTH_RSI_40,
         GOLDEN_CROSS_LAST_SEVEN_DAYS,
         MEDIAN_YEARLY_GROWTH,
+        SMALL_CAP,
+        SMALL_CAP_WITH_DEBT_TO_EQUITY_CHECK,
+        TOP_PERFORMERS,
+        LARGE_CAPS,
     ]
 
 

@@ -35,7 +35,7 @@ class BullishDbBase(BearishDbBase):  # type: ignore
         query_ = query.to_query()
         fields = ",".join(list(AnalysisView.model_fields))
         query_str: str = f""" 
-        SELECT {fields} FROM analysis WHERE {query_} LIMIT 1000
+        SELECT {fields} FROM analysis WHERE {query_}
         """  # noqa: S608
         return self._read_filter_query(query_str)
 

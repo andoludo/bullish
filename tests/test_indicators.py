@@ -45,6 +45,7 @@ from bullish.analysis.functions import (
     compute_price,
     PRICE,
     find_last_true_run_start,
+    VOLUME,
 )
 from bullish.analysis.indicators import (
     indicators_factory,
@@ -288,3 +289,8 @@ def test_indicator_function_sma_momentum_with_change(data_aapl: pd.DataFrame) ->
     data[-10] = False
     res = find_last_true_run_start(data)
     assert isinstance(res, datetime.date)
+
+
+def test_indicator_volume(data_aapl: pd.DataFrame) -> None:
+    d3 = VOLUME.call(data_aapl)
+    assert not d3.empty

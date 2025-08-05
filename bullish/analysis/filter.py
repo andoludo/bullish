@@ -172,6 +172,7 @@ class GeneralFilter(BaseModel):
     industry_group: Optional[List[str]] = None
     sector: Optional[List[str]] = None
     symbol: Optional[List[str]] = None
+    limit: Optional[str] = None
     market_capitalization: Optional[List[float]] = Field(default=[5e8, 1e12])
     price_per_earning_ratio: Optional[List[float]] = Field(default=[0.0, 1000.0])
 
@@ -186,11 +187,12 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
             ).items()
         )
 
-    def to_query(self) -> str:
+    def to_query(self) -> str:  # noqa: C901
         parameters = self.model_dump(exclude_defaults=True, exclude_unset=True)
         query = []
         order_by_desc = ""
         order_by_asc = ""
+        limit = None
         for parameter, value in parameters.items():
             if not value:
                 continue
@@ -207,6 +209,8 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
                 order_by_desc = f"ORDER BY {value} DESC"
             elif isinstance(value, str) and bool(value) and parameter == "order_by_asc":
                 order_by_asc = f"ORDER BY {value} ASC"
+            elif isinstance(value, str) and bool(value) and parameter == "limit":
+                limit = f" LIMIT {int(value)}"
             elif (
                 isinstance(value, list)
                 and len(value) == SIZE_RANGE
@@ -229,7 +233,12 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
             else:
                 raise NotImplementedError
         query_ = " AND ".join(query)
-        return f"{query_} {order_by_desc.strip()} {order_by_asc.strip()}".strip()
+        query__ = f"{query_} {order_by_desc.strip()} {order_by_asc.strip()}".strip()
+        if limit is not None:
+            query__ += limit
+        else:
+            query__ += " LIMIT 1000"
+        return query__
 
 
 class FilterQueryStored(FilterQuery): ...

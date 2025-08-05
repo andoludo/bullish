@@ -87,10 +87,10 @@ def _compute_growth(series: pd.Series) -> bool:
     return all(series.pct_change(fill_method=None).dropna() > 0)
 
 
-def _all_positive(series: pd.Series) -> bool:
+def _all_positive(series: pd.Series, threshold: int = 0) -> bool:
     if series.empty:
         return False
-    return all(series.dropna() > 0)
+    return all(series.dropna() > threshold)
 
 
 def _get_last(data: pd.Series) -> Optional[float]:
@@ -274,7 +274,7 @@ class BaseFundamentalAnalysis(BaseModel):
             debt_to_equity = (
                 balance_sheet.total_liabilities / balance_sheet.total_shareholder_equity
             ).dropna()
-            positive_debt_to_equity = _all_positive(debt_to_equity)
+            positive_debt_to_equity = _all_positive(debt_to_equity, threshold=1)
 
             # Add relevant balance sheet data to financials
             financial["total_shareholder_equity"] = balance_sheet[

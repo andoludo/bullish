@@ -146,14 +146,20 @@ def build_filter(model: Type[BaseModel], data: Dict[str, Any]) -> Dict[str, Any]
         if data.get(field) and data[field] != info.default:
             default = data[field]
         if info.annotation == Optional[List[str]]:  # type: ignore
+            mapping = groups_mapping().get(field)
+            if not mapping:
+                continue
             data[field] = st.multiselect(
                 name,
-                groups_mapping()[field],
+                mapping,
                 default=default,
                 key=hash((model.__name__, field)),
             )
         elif info.annotation == Optional[str]:  # type: ignore
-            options = ["", *groups_mapping()[field]]
+            mapping = groups_mapping().get(field)
+            if not mapping:
+                continue
+            options = ["", *mapping]
             data[field] = st.selectbox(
                 name,
                 options,

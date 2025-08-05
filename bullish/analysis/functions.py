@@ -288,6 +288,14 @@ def compute_price(data: pd.DataFrame) -> pd.DataFrame:
     return results
 
 
+def compute_volume(data: pd.DataFrame) -> pd.DataFrame:
+    results = pd.DataFrame(index=data.index)
+    results["AVERAGE_VOLUME_10"] = data.volume.rolling(window=10).mean()
+    results["AVERAGE_VOLUME_30"] = data.volume.rolling(window=30).mean()
+    results["VOLUME"] = data.volume
+    return results
+
+
 def find_last_true_run_start(series: pd.Series) -> Optional[date]:
     if not series.iloc[-1]:
         return None
@@ -396,6 +404,10 @@ NATR = IndicatorFunction(
 TRANGE = IndicatorFunction(
     expected_columns=["TRANGE"],
     functions=[compute_trange, compute_pandas_ta_trange],
+)
+VOLUME = IndicatorFunction(
+    expected_columns=["AVERAGE_VOLUME_10", "AVERAGE_VOLUME_30", "VOLUME"],
+    functions=[compute_volume],
 )
 PRICE = IndicatorFunction(
     expected_columns=[
