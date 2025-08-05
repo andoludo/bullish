@@ -308,23 +308,20 @@ Sector = Literal[
     "Financial Services",
     "Conglomerates",
 ]
-
-SubCountry = Literal["United kingdom", "United states", "Germany", "Belgium", "France"]
+Europe = Literal["Germany", "Belgium", "France"]
+Us = Literal["United states"]
+WesternCountries = Literal["United kingdom", Europe, Us]
 Country = Literal[
+    WesternCountries,
     "Australia",
     "China",
     "Japan",
-    "United kingdom",
-    "United states",
     "Poland",
     "Switzerland",
     "Canada",
     "Greece",
     "Spain",
-    "Germany",
     "Indonesia",
-    "Belgium",
-    "France",
     "Netherlands",
     "British virgin islands",
     "Italy",

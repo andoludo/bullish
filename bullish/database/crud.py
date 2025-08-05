@@ -331,3 +331,13 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                 return [BacktestResult.model_validate(r) for r in results]
             else:
                 return []
+
+    def read_next_earnings_date(self, symbol: str) -> Optional[date]:
+        with Session(self._engine) as session:
+            stmt = select(EarningsDateORM.date).where(
+                EarningsDateORM.symbol == symbol, EarningsDateORM.date > date.today()
+            )
+            result = session.exec(stmt).first()
+            if result:
+                return result.date()  # type: ignore
+            return None

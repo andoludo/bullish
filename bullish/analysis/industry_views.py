@@ -23,7 +23,7 @@ from bullish.analysis.constants import (
     IndustryGroup,
     Sector,
     Country,
-    SubCountry,
+    WesternCountries,
 )
 
 if TYPE_CHECKING:
@@ -61,7 +61,7 @@ def get_industry_comparison_data(
         normalized_symbol = compute_normalized_close(symbol_data.close).rename("symbol")
         normalized_industry = industry_data.normalized_close.rename(industry)
         data = [normalized_symbol, normalized_industry]
-        for country in get_args(SubCountry):
+        for country in get_args(WesternCountries):
             views = bullish_db.read_returns(type, industry, country)
             if views:
                 industry_data = IndustryViews.from_views(views).to_dataframe()

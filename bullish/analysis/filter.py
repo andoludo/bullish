@@ -173,6 +173,9 @@ class GeneralFilter(BaseModel):
     sector: Optional[List[str]] = None
     symbol: Optional[List[str]] = None
     limit: Optional[str] = None
+    next_earnings_date: List[date] = Field(
+        default=[date.today(), date.today() + datetime.timedelta(days=30 * 12)],
+    )
     market_capitalization: Optional[List[float]] = Field(default=[5e8, 1e12])
     price_per_earning_ratio: Optional[List[float]] = Field(default=[0.0, 1000.0])
 
@@ -212,9 +215,17 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
             elif isinstance(value, str) and bool(value) and parameter == "limit":
                 limit = f" LIMIT {int(value)}"
             elif (
-                isinstance(value, list)
-                and len(value) == SIZE_RANGE
-                and all(isinstance(item, (int, float)) for item in value)
+                (
+                    isinstance(value, list)
+                    and len(value) == SIZE_RANGE
+                    and all(isinstance(item, date) for item in value)
+                )
+                and parameter == "next_earnings_date"
+                or (
+                    isinstance(value, list)
+                    and len(value) == SIZE_RANGE
+                    and all(isinstance(item, (int, float)) for item in value)
+                )
             ):
                 query.append(f"{parameter} BETWEEN {value[0]} AND {value[1]}")
             elif (

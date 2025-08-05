@@ -149,3 +149,6 @@ class BullishDbBase(BearishDbBase):  # type: ignore
     def read_many_backtest_results(
         self, query: Optional[BacktestResultQuery] = None
     ) -> List[BacktestResult]: ...
+
+    @abc.abstractmethod
+    def read_next_earnings_date(self, symbol: str) -> Optional[date]: ...

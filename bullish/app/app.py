@@ -189,7 +189,7 @@ def build_filter(model: Type[BaseModel], data: Dict[str, Any]) -> Dict[str, Any]
             except Exception as e:
                 logger.error(
                     f"Error building filter for {model.__name__}.{field} "
-                    f"with the parameters {(info.annotation, name, ge, le, tuple(default))}: {e}"
+                    f"with the parameters {(info.annotation, name, ge, le)}: {e}"
                 )
                 raise e
     return data

@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import date
 from itertools import batched, chain
 from pathlib import Path
 from typing import (
@@ -15,7 +16,6 @@ from typing import (
 )
 
 import pandas as pd
-from bearish.interface.interface import BearishDbBase  # type: ignore
 from bearish.models.assets.equity import BaseEquity  # type: ignore
 from bearish.models.base import (  # type: ignore
     DataSourceBase,
@@ -433,6 +433,10 @@ class FundamentalAnalysis(YearlyFundamentalAnalysis, QuarterlyFundamentalAnalysi
         ]
 
 
+class AnalysisEarningsDate(BaseModel):
+    next_earnings_date: Optional[date] = None
+
+
 class AnalysisView(BaseModel):
     sector: Annotated[
         Optional[str],
@@ -484,15 +488,15 @@ class AnalysisView(BaseModel):
             default=None,
         ),
     ]
-    median_yearly_growth: Optional[float] = None
-    median_weekly_growth: Optional[float] = None
-    median_monthly_growth: Optional[float] = None
+    yearly_growth: Optional[float] = None
+    weekly_growth: Optional[float] = None
+    monthly_growth: Optional[float] = None
 
 
-class Analysis(AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis):  # type: ignore
+class Analysis(AnalysisEarningsDate, AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis):  # type: ignore
 
     @classmethod
-    def from_ticker(cls, bearish_db: BearishDbBase, ticker: Ticker) -> "Analysis":
+    def from_ticker(cls, bearish_db: "BullishDb", ticker: Ticker) -> "Analysis":
         asset = bearish_db.read_assets(
             AssetQuery(
                 symbols=Symbols(equities=[ticker]),
@@ -504,11 +508,13 @@ class Analysis(AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis)
         fundamental_analysis = FundamentalAnalysis.from_financials(financials, ticker)
         prices = Prices.from_ticker(bearish_db, ticker)
         technical_analysis = TechnicalAnalysis.from_data(prices.to_dataframe(), ticker)
+        next_earnings_date = bearish_db.read_next_earnings_date(ticker.symbol)
         return cls.model_validate(
             equity.model_dump()
             | fundamental_analysis.model_dump()
             | technical_analysis.model_dump()
             | {
+                "next_earnings_date": next_earnings_date,
                 "price_per_earning_ratio": (
                     (
                         technical_analysis.last_price
@@ -518,7 +524,7 @@ class Analysis(AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis)
                     and fundamental_analysis.earning_per_share != 0
                     and fundamental_analysis.earning_per_share is not None
                     else None
-                )
+                ),
             }
         )
 
