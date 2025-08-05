@@ -175,7 +175,7 @@ NEXT_EARNINGS_DATE = NamedFilterQuery(
     order_by_desc="market_capitalization",
     next_earnings_date=[
         datetime.date.today(),
-        datetime.date.today() + timedelta(days=20),
+        datetime.date.today() + timedelta(days=10),
     ],
 ).variants()
 

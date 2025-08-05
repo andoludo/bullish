@@ -190,7 +190,7 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
             ).items()
         )
 
-    def to_query(self) -> str:  # noqa: C901
+    def to_query(self) -> str:
         parameters = self.model_dump(exclude_defaults=True, exclude_unset=True)
         query = []
         order_by_desc = ""
@@ -224,14 +224,8 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
                 or (
                     isinstance(value, list)
                     and len(value) == SIZE_RANGE
-                    and all(isinstance(item, (int, float)) for item in value)
+                    and all(isinstance(item, date) for item in value)
                 )
-            ):
-                query.append(f"{parameter} BETWEEN {value[0]} AND {value[1]}")
-            elif (
-                isinstance(value, list)
-                and len(value) == SIZE_RANGE
-                and all(isinstance(item, date) for item in value)
             ):
                 query.append(f"{parameter} BETWEEN '{value[0]}' AND '{value[1]}'")
             elif (
