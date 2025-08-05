@@ -108,7 +108,9 @@ class NamedFilterQuery(FilterQuery):
             | {"name": f"{self.name} ({suffix})", "country": countries}
         )
 
-    def update_rsi(self, suffix: str, rsi_parameter_name: str) -> "NamedFilterQuery":
+    def update_indicator_filter(
+        self, suffix: str, rsi_parameter_name: str
+    ) -> "NamedFilterQuery":
         return NamedFilterQuery.model_validate(
             self.model_dump()
             | {"name": f"{self.name} ({suffix})", rsi_parameter_name: DATE_THRESHOLD}
@@ -118,24 +120,24 @@ class NamedFilterQuery(FilterQuery):
         return [
             self.country_variant("Europe", list(get_args(Europe))),
             self.country_variant("Us", list(get_args(Us))),
-            self.country_variant("Europe", list(get_args(Europe))).update_rsi(
-                "RSI 30", "rsi_bullish_crossover_30"
-            ),
-            self.country_variant("Europe", list(get_args(Europe))).update_rsi(
-                "RSI 40", "rsi_bullish_crossover_40"
-            ),
-            self.country_variant("Europe", list(get_args(Europe))).update_rsi(
-                "RSI Neutral", "rsi_neutral"
-            ),
-            self.country_variant("Us", list(get_args(Us))).update_rsi(
-                "RSI 30", "rsi_bullish_crossover_30"
-            ),
-            self.country_variant("Us", list(get_args(Us))).update_rsi(
-                "RSI 40", "rsi_bullish_crossover_40"
-            ),
-            self.country_variant("Us", list(get_args(Us))).update_rsi(
-                "RSI Neutral", "rsi_neutral"
-            ),
+            self.country_variant("Europe", list(get_args(Europe)))
+            .update_indicator_filter("RSI 30", "rsi_bullish_crossover_30")
+            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
+            self.country_variant("Europe", list(get_args(Europe)))
+            .update_indicator_filter("RSI 40", "rsi_bullish_crossover_40")
+            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
+            self.country_variant("Europe", list(get_args(Europe)))
+            .update_indicator_filter("RSI Neutral", "rsi_neutral")
+            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
+            self.country_variant("Us", list(get_args(Us)))
+            .update_indicator_filter("RSI 30", "rsi_bullish_crossover_30")
+            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
+            self.country_variant("Us", list(get_args(Us)))
+            .update_indicator_filter("RSI 40", "rsi_bullish_crossover_40")
+            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
+            self.country_variant("Us", list(get_args(Us)))
+            .update_indicator_filter("RSI Neutral", "rsi_neutral")
+            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
         ]
 
 
@@ -150,6 +152,18 @@ SMALL_CAP = NamedFilterQuery(
 
 TOP_PERFORMERS = NamedFilterQuery(
     name="Top Performers",
+    volume_above_average=DATE_THRESHOLD,
+    sma_50_above_sma_200=[
+        datetime.date.today() - datetime.timedelta(days=5000),
+        datetime.date.today() - datetime.timedelta(days=10),
+    ],
+    weekly_growth=[1, 100],
+    monthly_growth=[8, 100],
+    order_by_desc="market_capitalization",
+).variants()
+
+TOP_PERFORMERS_YEARLY = NamedFilterQuery(
+    name="Top Performers Yearly",
     sma_50_above_sma_200=[
         datetime.date.today() - datetime.timedelta(days=5000),
         datetime.date.today() - datetime.timedelta(days=10),
@@ -161,6 +175,7 @@ TOP_PERFORMERS = NamedFilterQuery(
     volume_above_average=DATE_THRESHOLD,
     weekly_growth=[1, 100],
     monthly_growth=[8, 100],
+    yearly_growth=[30, 100],
     order_by_desc="market_capitalization",
 ).variants()
 
@@ -184,6 +199,7 @@ def predefined_filters() -> list[NamedFilterQuery]:
     return [
         *SMALL_CAP,
         *TOP_PERFORMERS,
+        *TOP_PERFORMERS_YEARLY,
         *LARGE_CAPS,
         *NEXT_EARNINGS_DATE,
     ]

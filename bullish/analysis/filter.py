@@ -222,9 +222,16 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
                 )
                 and parameter == "next_earnings_date"
                 or (
-                    isinstance(value, list)
-                    and len(value) == SIZE_RANGE
-                    and all(isinstance(item, (int, float)) for item in value)
+                    (
+                        isinstance(value, list)
+                        and len(value) == SIZE_RANGE
+                        and all(isinstance(item, date) for item in value)
+                    )
+                    or (
+                        isinstance(value, list)
+                        and len(value) == SIZE_RANGE
+                        and all(isinstance(item, (int, float)) for item in value)
+                    )
                 )
             ):
                 query.append(f"{parameter} BETWEEN '{value[0]}' AND '{value[1]}'")
