@@ -190,7 +190,7 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
             ).items()
         )
 
-    def to_query(self) -> str:
+    def to_query(self) -> str:  # noqa: C901
         parameters = self.model_dump(exclude_defaults=True, exclude_unset=True)
         query = []
         order_by_desc = ""
@@ -215,6 +215,12 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
             elif isinstance(value, str) and bool(value) and parameter == "limit":
                 limit = f" LIMIT {int(value)}"
             elif (
+                isinstance(value, list)
+                and len(value) == SIZE_RANGE
+                and all(isinstance(item, (int, float)) for item in value)
+            ):
+                query.append(f"{parameter} BETWEEN {value[0]} AND {value[1]}")
+            elif (
                 (
                     isinstance(value, list)
                     and len(value) == SIZE_RANGE
@@ -222,16 +228,9 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
                 )
                 and parameter == "next_earnings_date"
                 or (
-                    (
-                        isinstance(value, list)
-                        and len(value) == SIZE_RANGE
-                        and all(isinstance(item, date) for item in value)
-                    )
-                    or (
-                        isinstance(value, list)
-                        and len(value) == SIZE_RANGE
-                        and all(isinstance(item, (int, float)) for item in value)
-                    )
+                    isinstance(value, list)
+                    and len(value) == SIZE_RANGE
+                    and all(isinstance(item, date) for item in value)
                 )
             ):
                 query.append(f"{parameter} BETWEEN '{value[0]}' AND '{value[1]}'")
