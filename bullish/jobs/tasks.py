@@ -111,4 +111,4 @@ def news(
     task: Optional[Task] = None,
 ) -> None:
     database_config = DatabaseConfig(database_path=database_path, no_migration=True)
-    get_news(symbols, database_config, headless=headless, model_name="gpt-4o-mini")
+    get_news(symbols, database_config, headless=headless, model_name="qwen3:4b")
