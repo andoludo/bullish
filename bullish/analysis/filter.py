@@ -224,7 +224,7 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
                 or (
                     isinstance(value, list)
                     and len(value) == SIZE_RANGE
-                    and all(isinstance(item, date) for item in value)
+                    and all(isinstance(item, (int, float)) for item in value)
                 )
             ):
                 query.append(f"{parameter} BETWEEN '{value[0]}' AND '{value[1]}'")
@@ -236,7 +236,7 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
                 general_filters = [f"'{v}'" for v in value]
                 query.append(f"{parameter} IN ({', '.join(general_filters)})")
             else:
-                raise NotImplementedError
+                raise NotImplementedError(f"with value {value}")
         query_ = " AND ".join(query)
         query__ = f"{query_} {order_by_desc.strip()} {order_by_asc.strip()}".strip()
         if limit is not None:
