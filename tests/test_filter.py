@@ -42,7 +42,7 @@ def test_order_by(bullish_view: BullishDb):
     view_query = FilterQuery.model_validate(data)
     assert (
         view_query.to_query()
-        == "positive_net_income=1 AND positive_free_cash_flow=1 AND growing_operating_cash_flow=1 AND last_price BETWEEN 1.0 AND 1000.0 ORDER BY market_capitalization DESC"
+        == "positive_net_income=1 AND positive_free_cash_flow=1 AND growing_operating_cash_flow=1 AND last_price BETWEEN 1.0 AND 1000.0 ORDER BY market_capitalization DESC LIMIT 1000"
     )
     data = bullish_view.read_filter_query(view_query)
     assert np.all(np.diff(data.market_capitalization.values) < 0)
