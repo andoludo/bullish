@@ -282,9 +282,9 @@ def compute_price(data: pd.DataFrame) -> pd.DataFrame:
     results["20_DAY_HIGH"] = data.close.rolling(window=20).max()
     results["20_DAY_LOW"] = data.close.rolling(window=20).min()
     results["LAST_PRICE"] = data.close
-    results["WEEKLY_GROWTH"] = data.close.resample("W").transform(perc)  # type: ignore
-    results["MONTHLY_GROWTH"] = data.close.resample("ME").transform(perc)  # type: ignore
-    results["YEARLY_GROWTH"] = data.close.resample("YE").transform(perc)  # type: ignore
+    results["WEEKLY_GROWTH"] = data.close.resample("W").transform(perc).ffill()  # type: ignore
+    results["MONTHLY_GROWTH"] = data.close.resample("ME").transform(perc).ffill()  # type: ignore
+    results["YEARLY_GROWTH"] = data.close.resample("YE").transform(perc).ffill()  # type: ignore
     return results
 
 
