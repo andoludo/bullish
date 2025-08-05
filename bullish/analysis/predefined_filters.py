@@ -108,10 +108,34 @@ class NamedFilterQuery(FilterQuery):
             | {"name": f"{self.name} ({suffix})", "country": countries}
         )
 
+    def update_rsi(self, suffix: str, rsi_parameter_name: str) -> "NamedFilterQuery":
+        return NamedFilterQuery.model_validate(
+            self.model_dump()
+            | {"name": f"{self.name} ({suffix})", rsi_parameter_name: DATE_THRESHOLD}
+        )
+
     def variants(self) -> List["NamedFilterQuery"]:
         return [
             self.country_variant("Europe", list(get_args(Europe))),
             self.country_variant("Us", list(get_args(Us))),
+            self.country_variant("Europe", list(get_args(Europe))).update_rsi(
+                "RSI 30", "rsi_bullish_crossover_30"
+            ),
+            self.country_variant("Europe", list(get_args(Europe))).update_rsi(
+                "RSI 40", "rsi_bullish_crossover_40"
+            ),
+            self.country_variant("Europe", list(get_args(Europe))).update_rsi(
+                "RSI Neutral", "rsi_neutral"
+            ),
+            self.country_variant("Us", list(get_args(Us))).update_rsi(
+                "RSI 30", "rsi_bullish_crossover_30"
+            ),
+            self.country_variant("Us", list(get_args(Us))).update_rsi(
+                "RSI 40", "rsi_bullish_crossover_40"
+            ),
+            self.country_variant("Us", list(get_args(Us))).update_rsi(
+                "RSI Neutral", "rsi_neutral"
+            ),
         ]
 
 
@@ -151,24 +175,8 @@ NEXT_EARNINGS_DATE = NamedFilterQuery(
     order_by_desc="market_capitalization",
     next_earnings_date=[
         datetime.date.today(),
-        datetime.date.today() + timedelta(days=10),
+        datetime.date.today() + timedelta(days=20),
     ],
-).variants()
-
-RSI_CROSSOVER_40 = NamedFilterQuery(
-    name="RSI cross-over 40",
-    rsi_bullish_crossover_40=DATE_THRESHOLD,
-    market_capitalization=[5e8, 1e13],
-    order_by_desc="market_capitalization",
-    country=["Germany", "United states", "France", "United kingdom", "Canada", "Japan"],
-).variants()
-
-RSI_CROSSOVER_30 = NamedFilterQuery(
-    name="RSI cross-over 30",
-    price_per_earning_ratio=[10, 500],
-    rsi_bullish_crossover_30=DATE_THRESHOLD,
-    market_capitalization=[5e8, 1e13],
-    order_by_desc="market_capitalization",
 ).variants()
 
 
@@ -178,8 +186,6 @@ def predefined_filters() -> list[NamedFilterQuery]:
         *TOP_PERFORMERS,
         *LARGE_CAPS,
         *NEXT_EARNINGS_DATE,
-        *RSI_CROSSOVER_40,
-        *RSI_CROSSOVER_30,
     ]
 
 
