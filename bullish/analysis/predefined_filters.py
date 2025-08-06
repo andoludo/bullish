@@ -190,8 +190,13 @@ NEXT_EARNINGS_DATE = NamedFilterQuery(
     order_by_desc="market_capitalization",
     next_earnings_date=[
         datetime.date.today(),
-        datetime.date.today() + timedelta(days=10),
+        datetime.date.today() + timedelta(days=20),
     ],
+).variants()
+SOLD_POSITIONS = NamedFilterQuery(
+    name="Sold Positions",
+    order_by_desc="market_capitalization",
+    symbol=["R3NK.DE", "VKTX", "RHM.DE", "IQV", "DAL"],
 ).variants()
 
 
@@ -202,6 +207,7 @@ def predefined_filters() -> list[NamedFilterQuery]:
         *TOP_PERFORMERS_YEARLY,
         *LARGE_CAPS,
         *NEXT_EARNINGS_DATE,
+        *SOLD_POSITIONS,
     ]
 
 
