@@ -155,7 +155,7 @@ TOP_PERFORMERS = NamedFilterQuery(
     volume_above_average=DATE_THRESHOLD,
     sma_50_above_sma_200=[
         datetime.date.today() - datetime.timedelta(days=5000),
-        datetime.date.today() - datetime.timedelta(days=10),
+        datetime.date.today(),
     ],
     weekly_growth=[1, 100],
     monthly_growth=[8, 100],
@@ -166,11 +166,11 @@ TOP_PERFORMERS_YEARLY = NamedFilterQuery(
     name="Top Performers Yearly",
     sma_50_above_sma_200=[
         datetime.date.today() - datetime.timedelta(days=5000),
-        datetime.date.today() - datetime.timedelta(days=10),
+        datetime.date.today(),
     ],
     price_above_sma_50=[
         datetime.date.today() - datetime.timedelta(days=5000),
-        datetime.date.today() - datetime.timedelta(days=10),
+        datetime.date.today(),
     ],
     volume_above_average=DATE_THRESHOLD,
     weekly_growth=[1, 100],
