@@ -91,11 +91,13 @@ def on_table_select() -> None:
     prices = db.read_series(query, months=24)
     data = Prices(prices=prices).to_dataframe()
     dates = db.read_dates(symbol)
+    subject = db.read_subject(symbol)
     industry_data = get_industry_comparison_data(db, data, "Mean", industry, country)
 
     fig = plot(data, symbol, dates=dates, industry_data=industry_data)
 
     st.session_state.ticker_figure = fig
+    st.session_state.ticker_news = subject
 
 
 @st.dialog("🔑  Provide database file to continue")
@@ -278,6 +280,7 @@ def filter() -> None:
                 st.session_state.database_path
             ).read_filter_query(query)
             st.session_state.ticker_figure = None
+            st.session_state.ticker_news = None
             st.session_state.filter_query = {}
             st.session_state.query = query
             st.rerun()
@@ -297,8 +300,87 @@ def dialog_plot_figure() -> None:
         unsafe_allow_html=True,
     )
     st.html("<span class='big-dialog'></span>")
+    if st.session_state.ticker_news:
+        st.markdown(
+            f"""
+            <div class="news-hover" >
+              📰 <span class="label">News</span>
+              <div class="tooltip">
+                <h2>Date: {st.session_state.ticker_news.news_date.date()}</h2>
+                <h2>Price targets</h2>
+                <p>High price target: {st.session_state.ticker_news.high_price_target}</p>
+                <p>Low price target: {st.session_state.ticker_news.low_price_target}</p>
+                <h2>Recommendation: {st.session_state.ticker_news.recommendation}</h2>
+                <h2>Consensus: {st.session_state.ticker_news.consensus}</h2>
+                <h2>Explanation & reasons</h2>
+                <p>{st.session_state.ticker_news.explanation}</p>
+                <p>{st.session_state.ticker_news.reason}</p>
+                <h2>News summaries</h2>
+                {st.session_state.ticker_news.to_news()}
+              </div>
+            </div>    
+            <style>
+              /* Hover target (fixed top-left) */
+              .news-hover {{
+                position: absolute;
+                left: 1rem;
+                display: inline-flex;
+                align-items: center;
+                gap: .4rem;
+                font-size: 1.7rem;       /* big label */
+                font-weight: 600;
+                color: #333;
+                cursor: pointer;
+                user-select: none;
+                z-index: 1100;
+              }}    
+              /* Tooltip bubble */
+              .news-hover .tooltip {{
+                position: absolute;
+                top: 110%;               /* below the label */
+                left: 0;
+                width: 840px;
+                max-height: 620px;
+                overflow-y: auto;
+                background: #222;
+                color: #fff;
+                padding: 1.2rem;
+                border-radius: 10px;
+                font-size: .95rem;
+                line-height: 1.45;
+                box-shadow: 0 8px 20px rgba(0,0,0,.4);
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity .25s ease;
+              }}
+              .news-hover .tooltip hr {{
+                border: none;
+                border-top: 1px solid #444;
+                margin: 1rem 0;
+              }}    
+              /* Show tooltip on hover or keyboard focus */
+              .news-hover:hover .tooltip,
+              .news-hover:focus-within .tooltip {{
+                opacity: 1;
+                visibility: visible;
+              }}
+              /* Little arrow under the bubble */
+              .news-hover .tooltip::after {{
+                content: "";
+                position: absolute;
+                top: -10px;
+                left: 20px;
+                border: 10px solid transparent;
+                border-top-color: #222;
+              }}
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
     st.plotly_chart(st.session_state.ticker_figure, use_container_width=True)
     st.session_state.ticker_figure = None
+    st.session_state.ticker_news = None
 
 
 @st.dialog("⭐ Save filtered results")

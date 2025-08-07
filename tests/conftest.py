@@ -7,6 +7,7 @@ from bearish.models.base import Ticker
 from bearish.models.price.prices import Prices
 from bullish.analysis.analysis import run_analysis, run_signal_series_analysis
 from bullish.database.crud import BullishDb
+from tickermood.database.scripts.upgrade import upgrade
 
 DATABASE_PATH = Path(__file__).parent / "data" / "bear.db"
 DATABASE_PATH_VIEW = Path(__file__).parent / "data" / "filter_bear.db"
@@ -31,11 +32,13 @@ def delete_tables(database_path: Path):
 @pytest.fixture
 def bullish_db() -> BullishDb:
     delete_tables(DATABASE_PATH)
+    upgrade(database_url=f"sqlite:///{DATABASE_PATH}", no_migration=True)
     return BullishDb(database_path=DATABASE_PATH)
 
 
 @pytest.fixture
 def bullish_db_with_analysis(bullish_db: BullishDb) -> BullishDb:
+    upgrade(database_url=f"sqlite:///{bullish_db.database_path}", no_migration=True)
     run_analysis(bullish_db)
     return bullish_db
 

@@ -1,6 +1,7 @@
+import json
 import logging
 import time
-from datetime import date
+from datetime import date, datetime
 from itertools import batched, chain
 from pathlib import Path
 from typing import (
@@ -13,6 +14,7 @@ from typing import (
     get_args,
     TYPE_CHECKING,
     ClassVar,
+    Dict,
 )
 
 import pandas as pd
@@ -488,12 +490,49 @@ class AnalysisView(BaseModel):
             default=None,
         ),
     ]
+    consensus: Optional[str] = None
+    recommendation: Optional[str] = None
     yearly_growth: Optional[float] = None
     weekly_growth: Optional[float] = None
     monthly_growth: Optional[float] = None
 
 
-class Analysis(AnalysisEarningsDate, AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis):  # type: ignore
+def json_loads(value: Any) -> Any:
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except Exception as e:
+            logger.debug(e)
+            return None
+    return value
+
+
+class SubjectAnalysis(BaseModel):
+    high_price_target: Optional[float] = None
+    low_price_target: Optional[float] = None
+    consensus: Optional[str] = None
+    reason: Optional[str] = None
+    recommendation: Optional[str] = None
+    explanation: Optional[str] = None
+    news_date: Optional[datetime] = None
+    news_summary: Annotated[
+        Optional[List[Dict[str, Any]]], BeforeValidator(json_loads)
+    ] = None
+    summary: Annotated[Optional[Dict[str, Any]], BeforeValidator(json_loads)] = None
+
+    def to_news(self) -> Optional[str]:
+        if not self.news_summary:
+            return None
+        return "".join(
+            [
+                f"<p>{t.get('content')}</p>"
+                for t in self.news_summary
+                if t.get("content")
+            ]
+        )
+
+
+class Analysis(SubjectAnalysis, AnalysisEarningsDate, AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis):  # type: ignore
 
     @classmethod
     def from_ticker(cls, bearish_db: "BullishDb", ticker: Ticker) -> "Analysis":
@@ -503,16 +542,20 @@ class Analysis(AnalysisEarningsDate, AnalysisView, BaseEquity, TechnicalAnalysis
                 excluded_sources=get_args(TickerOnlySources),
             )
         )
+
         equity = asset.get_one_equity()
         financials = Financials.from_ticker(bearish_db, ticker)
         fundamental_analysis = FundamentalAnalysis.from_financials(financials, ticker)
         prices = Prices.from_ticker(bearish_db, ticker)
         technical_analysis = TechnicalAnalysis.from_data(prices.to_dataframe(), ticker)
         next_earnings_date = bearish_db.read_next_earnings_date(ticker.symbol)
+        subject = bearish_db.read_subject(ticker.symbol)
+
         return cls.model_validate(
             equity.model_dump()
             | fundamental_analysis.model_dump()
             | technical_analysis.model_dump()
+            | (subject.model_dump() if subject else {})
             | {
                 "next_earnings_date": next_earnings_date,
                 "price_per_earning_ratio": (

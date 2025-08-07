@@ -9,7 +9,7 @@ from bearish.models.base import Ticker  # type: ignore
 from bearish.types import Sources  # type: ignore
 
 
-from bullish.analysis.analysis import Analysis, AnalysisView
+from bullish.analysis.analysis import Analysis, AnalysisView, SubjectAnalysis
 from bullish.analysis.backtest import BacktestResult, BacktestResultQuery
 from bullish.analysis.constants import Industry, Sector, IndustryGroup, Country
 from bullish.analysis.filter import FilterQuery, FilteredResults
@@ -152,3 +152,6 @@ class BullishDbBase(BearishDbBase):  # type: ignore
 
     @abc.abstractmethod
     def read_next_earnings_date(self, symbol: str) -> Optional[date]: ...
+
+    @abc.abstractmethod
+    def read_subject(self, symbol: str) -> Optional[SubjectAnalysis]: ...

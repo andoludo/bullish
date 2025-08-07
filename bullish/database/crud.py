@@ -7,21 +7,21 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 import pandas as pd
 from bearish.database.crud import BearishDb  # type: ignore
-from bearish.models.base import Ticker  # type: ignore
 from bearish.database.schemas import EarningsDateORM, EquityORM, PriceORM  # type: ignore
-from bearish.types import Sources  # type: ignore
+from bearish.models.base import Ticker  # type: ignore
 from bearish.models.price.price import Price  # type: ignore
 from bearish.models.price.prices import Prices  # type: ignore
+from bearish.types import Sources  # type: ignore
 from pydantic import ConfigDict
 from sqlalchemy import Engine, create_engine, insert, delete, update
+from sqlalchemy import text
 from sqlmodel import Session, select
 
-from bullish.analysis.analysis import Analysis
-
+from bullish.analysis.analysis import Analysis, SubjectAnalysis
 from bullish.analysis.constants import Industry, IndustryGroup, Sector, Country
+from bullish.analysis.filter import FilteredResults
 from bullish.analysis.indicators import SignalSeries
 from bullish.analysis.industry_views import Type, IndustryView
-
 from bullish.database.schemas import (
     AnalysisORM,
     JobTrackerORM,
@@ -32,7 +32,6 @@ from bullish.database.schemas import (
 )
 from bullish.database.scripts.upgrade import upgrade
 from bullish.exceptions import DatabaseFileNotFoundError
-from bullish.analysis.filter import FilteredResults
 from bullish.interface.interface import BullishDbBase
 from bullish.jobs.models import JobTracker, JobTrackerStatus
 
@@ -340,4 +339,23 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             result = session.exec(stmt).first()
             if result:
                 return result.date()  # type: ignore
+            return None
+
+    def read_subject(self, symbol: str) -> Optional[SubjectAnalysis]:
+        sql = text(
+            """
+            SELECT *
+            FROM   subject
+            WHERE  symbol = :symbol
+            ORDER  BY date DESC
+            LIMIT  1
+        """
+        )
+
+        with Session(self._engine) as session:
+            row = session.execute(sql, {"symbol": symbol}).mappings().one_or_none()
+            if row:
+                row_dict = dict(row)
+                row_dict = row_dict | {"news_date": row_dict["date"]}
+                return SubjectAnalysis.model_validate(row_dict)
             return None

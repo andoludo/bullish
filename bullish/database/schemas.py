@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 from sqlmodel import Field, SQLModel
 from sqlalchemy import Column, JSON
@@ -25,6 +25,10 @@ dynamic_indexes = tuple(
 class AnalysisORM(BaseTable, Analysis, table=True):
     __tablename__ = "analysis"
     __table_args__ = {"extend_existing": True}  # noqa:RUF012
+    news_summary: Optional[List[Dict[str, Any]]] = Field(
+        default=None, sa_column=Column(JSON)
+    )
+    summary: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
 
 
 AnalysisORM.__table_args__ = tuple(  # type: ignore # noqa: RUF005
