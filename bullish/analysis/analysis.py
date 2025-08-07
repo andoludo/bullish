@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import time
 from datetime import date, datetime
 from itertools import batched, chain
@@ -507,6 +508,11 @@ def json_loads(value: Any) -> Any:
     return value
 
 
+def scrub(text: str) -> str:
+    strip_markup = re.compile(r"[\\`*_{}\[\]()>#+\-.!|~:$;\"\'<>&]").sub
+    return strip_markup("", text)
+
+
 class SubjectAnalysis(BaseModel):
     high_price_target: Optional[float] = None
     low_price_target: Optional[float] = None
@@ -525,7 +531,7 @@ class SubjectAnalysis(BaseModel):
             return None
         return "".join(
             [
-                f"<p>{t.get('content')}</p>"
+                f"<p>{scrub(t.get('content').replace("\n",""))}</p>"  # type: ignore
                 for t in self.news_summary
                 if t.get("content")
             ]
