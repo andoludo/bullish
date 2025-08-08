@@ -61,9 +61,7 @@ def update(
     update_query: FilterUpdate,
     task: Optional[Task] = None,
 ) -> None:
-    logger.debug(
-        f"Running update task for {len(symbols) if symbols else 'ALL'} tickers."
-    )
+
     if not update_query.update_analysis_only:
         bearish = Bearish(path=database_path, auto_migration=False)
         bearish.update_prices(
@@ -71,7 +69,7 @@ def update(
             delay=update_query.data_age_in_days,
         )
         if update_query.update_financials:
-            bearish.update_financials(symbols)
+            bearish.update_financials()
     bullish_db = BullishDb(database_path=database_path)
     run_analysis(bullish_db)
     compute_industry_view(bullish_db)
