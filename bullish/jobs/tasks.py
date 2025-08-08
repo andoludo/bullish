@@ -111,5 +111,7 @@ def news(
     headless: bool = True,
     task: Optional[Task] = None,
 ) -> None:
+    bullish_db = BullishDb(database_path=database_path)
     database_config = DatabaseConfig(database_path=database_path, no_migration=True)
     get_news(symbols, database_config, headless=headless, model_name="qwen3:4b")
+    run_analysis(bullish_db)
