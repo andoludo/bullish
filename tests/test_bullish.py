@@ -94,11 +94,7 @@ def test_filtered_results(bullish_db: BullishDb) -> None:
     assert results
 
 
-@pytest.mark.skip
 def test_ticker_mood_instantiation(bullish_db: BullishDb) -> None:
-    from tickermood.database.crud import TickerMoodDb
-
-    TickerMoodDb(database_path=bullish_db.database_path, no_migration=True)
     insp = inspect(bullish_db._engine)
     assert insp.has_table("subject")
 

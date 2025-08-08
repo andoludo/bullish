@@ -6,13 +6,13 @@ from typing import Optional, List, Type, Dict, Any
 
 import pandas as pd
 import streamlit as st
+
 import streamlit_pydantic as sp
 from bearish.models.base import Ticker  # type: ignore
 from bearish.models.price.prices import Prices  # type: ignore
 from bearish.models.query.query import AssetQuery, Symbols  # type: ignore
 from streamlit_file_browser import st_file_browser  # type: ignore
 
-from bullish.analysis.backtest import BacktestResults
 from bullish.analysis.industry_views import get_industry_comparison_data
 from bullish.analysis.predefined_filters import PredefinedFilters
 from bullish.database.crud import BullishDb
@@ -27,7 +27,7 @@ from bullish.analysis.filter import (
     GeneralFilter,
     TechnicalAnalysisFilters,
 )
-from bullish.jobs.tasks import update, news, analysis, backtest_signals
+from bullish.jobs.tasks import update, news, analysis
 from pydantic import BaseModel
 
 from bullish.utils.checks import (
@@ -39,7 +39,7 @@ from bullish.utils.checks import (
 CACHE_SHELVE = "user_cache"
 DB_KEY = "db_path"
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Bullish", page_icon="💰", layout="wide")
 logger = logging.getLogger(__name__)
 
 
@@ -100,7 +100,7 @@ def on_table_select() -> None:
     st.session_state.ticker_news = subject
 
 
-@st.dialog("🔑  Provide database file to continue")
+@st.dialog("🔑  Select database file to continue")
 def dialog_pick_database() -> None:
     current_working_directory = Path.cwd()
     event = st_file_browser(
@@ -215,17 +215,6 @@ def jobs() -> None:
             )  # enqueue & get result-handle
 
             st.success("Data update job has been enqueued.")
-            st.rerun()
-    with st.expander("Update analysis"):
-        if st.button("Update analysis"):
-            analysis(st.session_state.database_path, job_type="Update analysis")
-            st.success("Data update job has been enqueued.")
-            st.rerun()
-    with st.expander("Compute backtest signals"):
-        if st.button("Compute backtest signals"):
-            backtest_signals(
-                st.session_state.database_path, job_type="backtest signals"
-            )
             st.rerun()
 
 
@@ -431,7 +420,7 @@ def main() -> None:
     if st.session_state.database_path is None:
         dialog_pick_database()
     bearish_db_ = bearish_db(st.session_state.database_path)
-    charts_tab, jobs_tab, backtests = st.tabs(["Charts", "Jobs", "Backtests"])
+    charts_tab, jobs_tab = st.tabs(["Charts", "Jobs"])
     if "data" not in st.session_state:
         st.session_state.data = load_analysis_data(bearish_db_)
 
@@ -482,12 +471,6 @@ def main() -> None:
             use_container_width=True,
             hide_index=True,
         )
-    with backtests:
-        results = bearish_db_.read_many_backtest_results()
-        backtest_results = BacktestResults(results=results)
-        with st.container():
-            figure = backtest_results.figure()
-            st.plotly_chart(figure)
 
 
 if __name__ == "__main__":

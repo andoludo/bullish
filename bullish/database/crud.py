@@ -13,7 +13,7 @@ from bearish.models.price.price import Price  # type: ignore
 from bearish.models.price.prices import Prices  # type: ignore
 from bearish.types import Sources  # type: ignore
 from pydantic import ConfigDict
-from sqlalchemy import Engine, create_engine, insert, delete, update
+from sqlalchemy import Engine, create_engine, insert, delete, update, inspect
 from sqlalchemy import text
 from sqlmodel import Session, select
 
@@ -34,6 +34,7 @@ from bullish.database.scripts.upgrade import upgrade
 from bullish.exceptions import DatabaseFileNotFoundError
 from bullish.interface.interface import BullishDbBase
 from bullish.jobs.models import JobTracker, JobTrackerStatus
+from tickermood.database.scripts.upgrade import upgrade as tickermood_upgrade  # type: ignore
 
 if TYPE_CHECKING:
     from bullish.analysis.backtest import BacktestResult, BacktestResultQuery
@@ -65,6 +66,12 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                 "Skipping upgrade. "
             )
         engine = create_engine(database_url)
+        inspector = inspect(engine)
+        if "subject" not in inspector.get_table_names():
+            logger.info(
+                "Running tickermood upgrade to create the subject table in the database."
+            )
+            tickermood_upgrade(database_url=database_url, no_migration=True)
         return engine
 
     def model_post_init(self, __context: Any) -> None:

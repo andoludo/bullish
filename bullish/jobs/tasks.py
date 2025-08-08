@@ -75,6 +75,7 @@ def update(
             bearish.update_financials(symbols)
     bullish_db = BullishDb(database_path=database_path)
     run_analysis(bullish_db)
+    compute_industry_view(bullish_db)
 
 
 @huey.task(context=True)  # type: ignore

@@ -32,13 +32,11 @@ def delete_tables(database_path: Path):
 @pytest.fixture
 def bullish_db() -> BullishDb:
     delete_tables(DATABASE_PATH)
-    upgrade(database_url=f"sqlite:///{DATABASE_PATH}", no_migration=True)
     return BullishDb(database_path=DATABASE_PATH)
 
 
 @pytest.fixture
 def bullish_db_with_analysis(bullish_db: BullishDb) -> BullishDb:
-    upgrade(database_url=f"sqlite:///{bullish_db.database_path}", no_migration=True)
     run_analysis(bullish_db)
     return bullish_db
 
