@@ -67,7 +67,6 @@ def update(
     if not update_query.update_analysis_only:
         bearish = Bearish(path=database_path, auto_migration=False)
         bearish.update_prices(
-            symbols,
             series_length=update_query.window_size,
             delay=update_query.data_age_in_days,
         )
