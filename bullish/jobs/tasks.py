@@ -1,5 +1,6 @@
 import functools
 import logging
+import random
 from typing import Optional, Any, Callable, List
 
 from bearish.main import Bearish  # type: ignore
@@ -14,7 +15,7 @@ from .models import JobTrackerStatus, JobTracker, JobType
 from ..analysis.analysis import run_analysis, run_signal_series_analysis
 from ..analysis.backtest import run_many_tests, BackTestConfig
 from ..analysis.industry_views import compute_industry_view
-from ..analysis.predefined_filters import predefined_filters, NEXT_EARNINGS_DATE
+from ..analysis.predefined_filters import predefined_filters
 from ..database.crud import BullishDb
 from bullish.analysis.filter import FilterUpdate
 from ..utils.checks import DataBaseSingleTon
@@ -91,9 +92,10 @@ def cron_update(
     task: Optional[Task] = None,
 ) -> None:
     database = DataBaseSingleTon()
-    job_tracker(_base_update)(
-        database.path, "Update data", [], FilterUpdate(), task=task
-    )
+    if database.valid():
+        job_tracker(_base_update)(
+            database.path, "Update data", [], FilterUpdate(), task=task
+        )
 
 
 @huey.task(context=True)  # type: ignore
@@ -155,14 +157,16 @@ def news(
 def cron_news(
     task: Optional[Task] = None,
 ) -> None:
-    earnings_date = NEXT_EARNINGS_DATE[1]
+    filter = random.choice(predefined_filters())  # noqa: S311
     database = DataBaseSingleTon()
-    bullish_db = BullishDb(database_path=database.path)
-    data = bullish_db.read_filter_query(earnings_date)
-    job_tracker(base_news)(
-        database_path=database.path,
-        job_type="Fetching news",
-        symbols=data["symbol"].unique().tolist(),
-        headless=False,
-        task=task,
-    )
+    if database.valid():
+        bullish_db = BullishDb(database_path=database.path)
+        data = bullish_db.read_filter_query(filter)
+        if not data.empty and "symbol" in data.columns:
+            job_tracker(base_news)(
+                database_path=database.path,
+                job_type="Fetching news",
+                symbols=data["symbol"].unique().tolist(),
+                headless=False,
+                task=task,
+            )

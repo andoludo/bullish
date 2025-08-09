@@ -77,3 +77,6 @@ class DataBaseSingleTon:
     def __init__(self, path: Optional[Path] = None) -> None:
         if not hasattr(self, "path"):  # Only set once
             self.path = path
+
+    def valid(self) -> bool:
+        return hasattr(self, "path")
