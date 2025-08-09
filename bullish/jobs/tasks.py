@@ -14,7 +14,7 @@ from .models import JobTrackerStatus, JobTracker, JobType
 from ..analysis.analysis import run_analysis, run_signal_series_analysis
 from ..analysis.backtest import run_many_tests, BackTestConfig
 from ..analysis.industry_views import compute_industry_view
-from ..analysis.predefined_filters import predefined_filters
+from ..analysis.predefined_filters import predefined_filters, NEXT_EARNINGS_DATE
 from ..database.crud import BullishDb
 from bullish.analysis.filter import FilterUpdate
 from ..utils.checks import DataBaseSingleTon
@@ -87,9 +87,13 @@ def update(
 
 
 @huey.periodic_task(crontab(minute="0", hour="1"), context=True)  # type: ignore
-def cron_update() -> None:
+def cron_update(
+    task: Optional[Task] = None,
+) -> None:
     database = DataBaseSingleTon()
-    job_tracker(_base_update)(database.path, "Update data", [], FilterUpdate())
+    job_tracker(_base_update)(
+        database.path, "Update data", [], FilterUpdate(), task=task
+    )
 
 
 @huey.task(context=True)  # type: ignore
@@ -116,9 +120,7 @@ def backtest_signals(
     run_many_tests(bullish_db, predefined_filters(), BackTestConfig())
 
 
-@huey.task(context=True)  # type: ignore
-@job_tracker
-def news(
+def base_news(
     database_path: Path,
     job_type: JobType,
     symbols: List[str],
@@ -129,3 +131,38 @@ def news(
     database_config = DatabaseConfig(database_path=database_path, no_migration=True)
     get_news(symbols, database_config, headless=headless, model_name="qwen3:4b")
     run_analysis(bullish_db)
+
+
+@huey.task(context=True)  # type: ignore
+@job_tracker
+def news(
+    database_path: Path,
+    job_type: JobType,
+    symbols: List[str],
+    headless: bool = True,
+    task: Optional[Task] = None,
+) -> None:
+    base_news(
+        database_path=database_path,
+        job_type=job_type,
+        symbols=symbols,
+        headless=headless,
+        task=task,
+    )
+
+
+@huey.periodic_task(crontab(minute="0", hour="3"), context=True)  # type: ignore
+def cron_news(
+    task: Optional[Task] = None,
+) -> None:
+    earnings_date = NEXT_EARNINGS_DATE[1]
+    database = DataBaseSingleTon()
+    bullish_db = BullishDb(database_path=database.path)
+    data = bullish_db.read_filter_query(earnings_date)
+    job_tracker(base_news)(
+        database_path=database.path,
+        job_type="Fetching news",
+        symbols=data["symbol"].unique().tolist(),
+        headless=False,
+        task=task,
+    )
