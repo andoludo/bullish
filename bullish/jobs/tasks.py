@@ -8,7 +8,7 @@ from tickermood.types import DatabaseConfig  # type: ignore
 
 from .app import huey
 from pathlib import Path
-from huey.api import Task  # type: ignore
+from huey.api import Task, crontab  # type: ignore
 
 from .models import JobTrackerStatus, JobTracker, JobType
 from ..analysis.analysis import run_analysis, run_signal_series_analysis
@@ -17,6 +17,7 @@ from ..analysis.industry_views import compute_industry_view
 from ..analysis.predefined_filters import predefined_filters
 from ..database.crud import BullishDb
 from bullish.analysis.filter import FilterUpdate
+from ..utils.checks import DataBaseSingleTon
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +53,7 @@ def job_tracker(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-@huey.task(context=True)  # type: ignore
-@job_tracker
-def update(
+def _base_update(
     database_path: Path,
     job_type: JobType,
     symbols: Optional[List[str]],
@@ -73,6 +72,24 @@ def update(
     bullish_db = BullishDb(database_path=database_path)
     run_analysis(bullish_db)
     compute_industry_view(bullish_db)
+
+
+@huey.task(context=True)  # type: ignore
+@job_tracker
+def update(
+    database_path: Path,
+    job_type: JobType,
+    symbols: Optional[List[str]],
+    update_query: FilterUpdate,
+    task: Optional[Task] = None,
+) -> None:
+    _base_update(database_path, job_type, symbols, update_query, task)
+
+
+@huey.periodic_task(crontab(minute="0", hour="1"), context=True)  # type: ignore
+def cron_update() -> None:
+    database = DataBaseSingleTon()
+    job_tracker(_base_update)(database.path, "Update data", [], FilterUpdate())
 
 
 @huey.task(context=True)  # type: ignore
