@@ -164,6 +164,13 @@ SMALL_CAP = NamedFilterQuery(
     market_capitalization=[5e7, 5e8],
     properties=["positive_debt_to_equity"],
     average_volume_30=[50000, 5e9],
+    volume_above_average=DATE_THRESHOLD,
+    sma_50_above_sma_200=[
+        datetime.date.today() - datetime.timedelta(days=5000),
+        datetime.date.today(),
+    ],
+    weekly_growth=[1, 100],
+    monthly_growth=[8, 100],
     order_by_desc="market_capitalization",
 ).variants()
 
