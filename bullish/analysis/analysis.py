@@ -496,6 +496,7 @@ class AnalysisView(BaseModel):
     yearly_growth: Optional[float] = None
     weekly_growth: Optional[float] = None
     monthly_growth: Optional[float] = None
+    upside: Optional[float] = None
 
 
 def json_loads(value: Any) -> Any:
@@ -529,7 +530,9 @@ class SubjectAnalysis(BaseModel):
 
     def compute_upside(self, last_price: float) -> None:
         if self.high_price_target is not None:
-            self.upside = (float(self.high_price_target) - float(last_price))/float(last_price)
+            self.upside = (float(self.high_price_target) - float(last_price)) / float(
+                last_price
+            )
 
     def to_news(self) -> Optional[str]:
         if not self.news_summary:
@@ -561,7 +564,8 @@ class Analysis(SubjectAnalysis, AnalysisEarningsDate, AnalysisView, BaseEquity, 
         technical_analysis = TechnicalAnalysis.from_data(prices.to_dataframe(), ticker)
         next_earnings_date = bearish_db.read_next_earnings_date(ticker.symbol)
         subject = bearish_db.read_subject(ticker.symbol)
-        subject.compute_upside(technical_analysis.last_price)
+        if subject:
+            subject.compute_upside(technical_analysis.last_price)
 
         return cls.model_validate(
             equity.model_dump()
