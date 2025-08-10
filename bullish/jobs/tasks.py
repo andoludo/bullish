@@ -1,8 +1,8 @@
 import functools
 import logging
-import random
 from typing import Optional, Any, Callable, List
 
+import pandas as pd
 from bearish.main import Bearish  # type: ignore
 from tickermood.main import get_news  # type: ignore
 from tickermood.types import DatabaseConfig  # type: ignore
@@ -15,7 +15,7 @@ from .models import JobTrackerStatus, JobTracker, JobType
 from ..analysis.analysis import run_analysis, run_signal_series_analysis
 from ..analysis.backtest import run_many_tests, BackTestConfig
 from ..analysis.industry_views import compute_industry_view
-from ..analysis.predefined_filters import predefined_filters
+from ..analysis.predefined_filters import predefined_filters, load_custom_filters
 from ..database.crud import BullishDb
 from bullish.analysis.filter import FilterUpdate
 from ..utils.checks import DataBaseSingleTon
@@ -157,11 +157,11 @@ def news(
 def cron_news(
     task: Optional[Task] = None,
 ) -> None:
-    filter = random.choice(predefined_filters())  # noqa: S311
+    filters = load_custom_filters()
     database = DataBaseSingleTon()
-    if database.valid():
+    if database.valid() and filters:
         bullish_db = BullishDb(database_path=database.path)
-        data = bullish_db.read_filter_query(filter)
+        data = pd.concat([bullish_db.read_filter_query(f) for f in filters])
         if not data.empty and "symbol" in data.columns:
             job_tracker(base_news)(
                 database_path=database.path,
