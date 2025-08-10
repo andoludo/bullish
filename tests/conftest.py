@@ -58,3 +58,8 @@ def bullish_db_with_signal_series(bullish_view: BullishDb) -> BullishDb:
 
     bullish_db = BullishDb(database_path=DATABASE_PATH_WITH_SERIES)
     return bullish_db
+
+
+@pytest.fixture
+def custom_filter_path() -> Path:
+    return Path(__file__).parent / "data" / "custom_filter.json"

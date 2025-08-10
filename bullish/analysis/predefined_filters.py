@@ -1,5 +1,8 @@
 import datetime
+import json
+import os
 from datetime import timedelta
+from pathlib import Path
 from typing import Dict, Any, Optional, List, Union, get_args
 
 from bullish.analysis.analysis import AnalysisView
@@ -141,6 +144,20 @@ class NamedFilterQuery(FilterQuery):
         ]
 
 
+def load_custom_filters() -> List[NamedFilterQuery]:
+    if "CUSTOM_FILTERS_PATH" in os.environ:
+        custom_filters_path = os.environ["CUSTOM_FILTERS_PATH"]
+        return read_custom_filters(Path(custom_filters_path))
+    return []
+
+
+def read_custom_filters(custom_filters_path: Path) -> List[NamedFilterQuery]:
+    if custom_filters_path.exists():
+        filters = json.loads(custom_filters_path.read_text())
+        return [NamedFilterQuery.model_validate(filter) for filter in filters]
+    return []
+
+
 SMALL_CAP = NamedFilterQuery(
     name="Small Cap",
     last_price=[1, 20],
@@ -193,11 +210,6 @@ NEXT_EARNINGS_DATE = NamedFilterQuery(
         datetime.date.today() + timedelta(days=20),
     ],
 ).variants()
-SOLD_POSITIONS = NamedFilterQuery(
-    name="Sold Positions",
-    order_by_desc="market_capitalization",
-    symbol=["R3NK.DE", "VKTX", "RHM.DE", "IQV", "DAL"],
-).variants()
 
 
 def predefined_filters() -> list[NamedFilterQuery]:
@@ -207,7 +219,7 @@ def predefined_filters() -> list[NamedFilterQuery]:
         *TOP_PERFORMERS_YEARLY,
         *LARGE_CAPS,
         *NEXT_EARNINGS_DATE,
-        *SOLD_POSITIONS,
+        *load_custom_filters(),
     ]
 
 

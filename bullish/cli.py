@@ -19,10 +19,13 @@ STREAMLIT_FILE = Path(__file__).parent.joinpath("app", "app.py")
 
 
 @app.command()
-def serve(
+def serve(  # noqa: C901
     host: str = typer.Option("0.0.0.0", help="Streamlit host"),  # noqa: S104
     port: int = typer.Option(8501, help="Streamlit port"),
     env_vars: Path = typer.Option(  # noqa: B008
+        None, help="Environment variables file"
+    ),
+    custom_filters: Path = typer.Option(  # noqa: B008
         None, help="Environment variables file"
     ),
 ) -> None:
@@ -30,6 +33,10 @@ def serve(
         env_vars_path = Path(env_vars)
         if env_vars_path.exists():
             load_dotenv(dotenv_path=env_vars_path)
+    if custom_filters:
+        custom_filters_path = Path(custom_filters)
+        if custom_filters_path.exists():
+            os.environ["CUSTOM_FILTERS_PATH"] = str(custom_filters_path)
     children: list[subprocess.Popen] = []  # type: ignore
 
     def _shutdown(*_: Any) -> None:

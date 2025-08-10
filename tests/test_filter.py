@@ -1,5 +1,7 @@
 import datetime
+import json
 from datetime import date
+from pathlib import Path
 
 import numpy as np
 
@@ -10,6 +12,7 @@ from bullish.analysis.filter import (
     EPS_GROUP,
     PROPERTIES_GROUP,
 )
+from bullish.analysis.predefined_filters import NamedFilterQuery, read_custom_filters
 from bullish.database.crud import BullishDb
 
 
@@ -46,3 +49,9 @@ def test_order_by(bullish_view: BullishDb):
     )
     data = bullish_view.read_filter_query(view_query)
     assert np.all(np.diff(data.market_capitalization.values) < 0)
+
+
+def test_load_custom_predefined_filters(custom_filter_path: Path) -> None:
+    custom_filters = read_custom_filters(custom_filter_path)
+    assert custom_filters
+    assert isinstance(custom_filters, list)
