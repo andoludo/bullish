@@ -4,7 +4,9 @@ from typing import Literal, get_args
 import pandas as pd
 from pydantic import BaseModel, Field
 
-JobType = Literal["Update data", "Update analysis", "Fetching news", "backtest signals"]
+JobType = Literal[
+    "Update data", "Update analysis", "Fetching news", "backtest signals", "Initialize"
+]
 JobStatus = Literal["Completed", "Failed", "Running", "Started"]
 StatusIcon = ["✅ Completed", "❌ Failed", "🔄 Running", "🚀 Started"]
 

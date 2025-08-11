@@ -27,14 +27,13 @@ from bullish.analysis.filter import (
     GeneralFilter,
     TechnicalAnalysisFilters,
 )
-from bullish.jobs.tasks import update, news, analysis
+from bullish.jobs.tasks import update, news, analysis, initialize
 from pydantic import BaseModel
 
 from bullish.utils.checks import (
     compatible_bearish_database,
     compatible_bullish_database,
     empty_analysis_table,
-    DataBaseSingleTon,
 )
 
 CACHE_SHELVE = "user_cache"
@@ -421,7 +420,10 @@ def main() -> None:
     if st.session_state.database_path is None:
         dialog_pick_database()
     bearish_db_ = bearish_db(st.session_state.database_path)
-    DataBaseSingleTon(path=st.session_state.database_path)
+    initialize(
+        database_path=st.session_state.database_path,
+        job_type="Initialize",
+    )
     charts_tab, jobs_tab = st.tabs(["Charts", "Jobs"])
     if "data" not in st.session_state:
         st.session_state.data = load_analysis_data(bearish_db_)

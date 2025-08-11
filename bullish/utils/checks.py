@@ -2,9 +2,10 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from sqlite3 import Connection
-from typing import List, Generator, Optional, Any
+from typing import Generator, List
 
 from bearish.database.schemas import *  # type: ignore # noqa: F403
+
 from bullish.database.schemas import *  # noqa: F403
 
 
@@ -64,19 +65,3 @@ def compatible_bearish_database(database_path: Path) -> bool:
 
 def compatible_bullish_database(database_path: Path) -> bool:
     return _compatible_table(database_path, "bullish.database.schemas")
-
-
-class DataBaseSingleTon:
-    _instance = None
-
-    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def __init__(self, path: Optional[Path] = None) -> None:
-        if not hasattr(self, "path"):  # Only set once
-            self.path = path
-
-    def valid(self) -> bool:
-        return hasattr(self, "path")

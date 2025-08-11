@@ -18,9 +18,24 @@ from ..analysis.industry_views import compute_industry_view
 from ..analysis.predefined_filters import predefined_filters, load_custom_filters
 from ..database.crud import BullishDb
 from bullish.analysis.filter import FilterUpdate
-from ..utils.checks import DataBaseSingleTon
 
 logger = logging.getLogger(__name__)
+
+
+class DataBaseSingleTon:
+    _instance = None
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, path: Optional[Path] = None) -> None:
+        if not hasattr(self, "path"):  # Only set once
+            self.path = path
+
+    def valid(self) -> bool:
+        return hasattr(self, "path") and self.path is not None
 
 
 def job_tracker(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -73,6 +88,18 @@ def _base_update(
     bullish_db = BullishDb(database_path=database_path)
     run_analysis(bullish_db)
     compute_industry_view(bullish_db)
+
+
+@huey.task(context=True)  # type: ignore
+@job_tracker
+def initialize(
+    database_path: Path,
+    job_type: JobType,
+    task: Optional[Task] = None,
+) -> None:
+    database = DataBaseSingleTon(path=database_path)
+    if not database.valid():
+        raise ValueError("Database path is not valid.")
 
 
 @huey.task(context=True)  # type: ignore
