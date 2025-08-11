@@ -414,11 +414,12 @@ def main() -> None:
 
     if st.session_state.database_path is None:
         dialog_pick_database()
+        initialize(
+            database_path=st.session_state.database_path,
+            job_type="Initialize",
+        )
     bearish_db_ = bearish_db(st.session_state.database_path)
-    initialize(
-        database_path=st.session_state.database_path,
-        job_type="Initialize",
-    )
+
     charts_tab, jobs_tab = st.tabs(["Charts", "Jobs"])
     if "data" not in st.session_state:
         st.session_state.data = load_analysis_data(bearish_db_)
