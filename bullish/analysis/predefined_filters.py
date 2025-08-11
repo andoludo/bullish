@@ -294,6 +294,16 @@ NEXT_EARNINGS_DATE = NamedFilterQuery(
         datetime.date.today() + timedelta(days=20),
     ],
 ).variants()
+SEMICONDUCTORS = NamedFilterQuery(
+    name="Semiconductors",
+    order_by_desc="market_capitalization",
+    industry=["Semiconductors"],
+).variants()
+SOFTWARE = NamedFilterQuery(
+    name="Software - Application",
+    order_by_desc="market_capitalization",
+    industry=["Software - Application"],
+).variants()
 
 
 def predefined_filters() -> list[NamedFilterQuery]:
@@ -302,6 +312,8 @@ def predefined_filters() -> list[NamedFilterQuery]:
         *LARGE_CAPS,
         *NEXT_EARNINGS_DATE,
         *MID_CAPS,
+        *SEMICONDUCTORS,
+        *SOFTWARE,
         *load_custom_filters(),
     ]
 
