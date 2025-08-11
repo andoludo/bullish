@@ -530,8 +530,10 @@ class SubjectAnalysis(BaseModel):
 
     def compute_upside(self, last_price: float) -> None:
         if self.high_price_target is not None:
-            self.upside = (float(self.high_price_target) - float(last_price)) / float(
-                last_price
+            self.upside = (
+                (float(self.high_price_target) - float(last_price))
+                * 100
+                / float(last_price)
             )
 
     def to_news(self) -> Optional[str]:
