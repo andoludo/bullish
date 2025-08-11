@@ -234,33 +234,28 @@ def load() -> None:
 
 @st.dialog("🔍  Filter", width="large")
 def filter() -> None:
+    with st.container(), st.expander("Predefined filters"):
+        predefined_filter_names = PredefinedFilters().get_predefined_filter_names()
+        option = st.selectbox(
+            "Select a predefined filter",
+            ["", *predefined_filter_names],
+        )
+        if option:
+            data_ = PredefinedFilters().get_predefined_filter(option)
+            st.session_state.filter_query.update(data_)
     with st.container():
-        column_1, column_2 = st.columns(2)
-        with column_1:
-            # TODO: order here matters
-            with st.expander("Predefined filters"):
-                predefined_filter_names = (
-                    PredefinedFilters().get_predefined_filter_names()
-                )
-                option = st.selectbox(
-                    "Select a predefined filter",
-                    ["", *predefined_filter_names],
-                )
-                if option:
-                    data_ = PredefinedFilters().get_predefined_filter(option)
-                    st.session_state.filter_query.update(data_)
-            with st.expander("Technical Analysis"):
-                for filter in TechnicalAnalysisFilters:
-                    with st.expander(filter._description):  # type: ignore
-                        build_filter(filter, st.session_state.filter_query)
 
-        with column_2:
-            with st.expander("Fundamental Analysis"):
-                for filter in FundamentalAnalysisFilters:
-                    with st.expander(filter._description):  # type: ignore
-                        build_filter(filter, st.session_state.filter_query)
-            with st.expander("General filter"):
-                build_filter(GeneralFilter, st.session_state.filter_query)
+        with st.expander("Technical Analysis"):
+            for filter in TechnicalAnalysisFilters:
+                with st.expander(filter._description):  # type: ignore
+                    build_filter(filter, st.session_state.filter_query)
+
+        with st.expander("Fundamental Analysis"):
+            for filter in FundamentalAnalysisFilters:
+                with st.expander(filter._description):  # type: ignore
+                    build_filter(filter, st.session_state.filter_query)
+        with st.expander("General filter"):
+            build_filter(GeneralFilter, st.session_state.filter_query)
 
     if st.button("🔍 Apply"):
         query = FilterQuery.model_validate(st.session_state.filter_query)
