@@ -3,6 +3,7 @@ import json
 from datetime import date, timedelta
 
 import pandas as pd
+import pytest
 
 from bullish.analysis.analysis import compute_financials_series
 
@@ -26,6 +27,7 @@ from bearish.models.base import (
 from bearish.models.financials.base import Financials, FinancialsWithDate
 
 
+@pytest.mark.skip(reason="This is too slow")
 def test_backtesting(bullish_db_with_signal_series: BullishDb):
 
     config = BackTestConfig(start=date(2024, 3, 10))

@@ -28,7 +28,7 @@ See the [TA-Lib installation guide](https://ta-lib.org/) for instructions.
 
 ## Installation
 ```bash
-pip install bullish
+pip install bullishpy
 ```
 
 ---
