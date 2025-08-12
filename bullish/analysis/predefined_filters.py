@@ -12,7 +12,12 @@ from bullish.analysis.backtest import (
     BacktestQueryRange,
     BacktestQuerySelection,
 )
-from bullish.analysis.constants import Europe, Us
+from bullish.analysis.constants import (
+    Europe,
+    Us,
+    HighGrowthIndustry,
+    DefensiveIndustries,
+)
 from bullish.analysis.filter import FilterQuery, BOOLEAN_GROUP_MAPPING
 from pydantic import BaseModel, Field
 
@@ -20,7 +25,7 @@ from bullish.analysis.indicators import Indicators
 from bullish.database.crud import BullishDb
 
 DATE_THRESHOLD = [
-    datetime.date.today() - datetime.timedelta(days=7),
+    datetime.date.today() - datetime.timedelta(days=2),
     datetime.date.today(),
 ]
 
@@ -204,6 +209,14 @@ class NamedFilterQuery(FilterQuery):
         }
         return self._custom_variant("Long-term profitability", properties)
 
+    def high_growth(self) -> "NamedFilterQuery":
+        properties = {"industry": list(get_args(HighGrowthIndustry))}
+        return self._custom_variant("Growth", properties)
+
+    def defensive(self) -> "NamedFilterQuery":
+        properties = {"industry": list(get_args(DefensiveIndustries))}
+        return self._custom_variant("Defensive", properties)
+
     def variants(self) -> List["NamedFilterQuery"]:
         variants_ = [
             self.country_variant("Europe", list(get_args(Europe))),
@@ -237,10 +250,14 @@ class NamedFilterQuery(FilterQuery):
         variants_long_term_profitability = [
             v.long_term_profitability() for v in variants_
         ]
+        variants_growth = [v.high_growth() for v in variants_]
+        variants_defensive = [v.defensive() for v in variants_]
         return [
             *variants_,
             *variants_short_term_profitability,
             *variants_long_term_profitability,
+            *variants_growth,
+            *variants_defensive,
         ]
 
 
@@ -264,24 +281,17 @@ SMALL_CAP = NamedFilterQuery(
     market_capitalization=[5e7, 5e8],
     properties=["positive_debt_to_equity"],
     average_volume_30=[50000, 5e9],
-    volume_above_average=DATE_THRESHOLD,
-    sma_50_above_sma_200=[
-        datetime.date.today() - datetime.timedelta(days=5000),
-        datetime.date.today(),
-    ],
-    weekly_growth=[1, 100],
-    monthly_growth=[8, 100],
     order_by_desc="market_capitalization",
 ).variants()
 
 LARGE_CAPS = NamedFilterQuery(
-    name="Large caps",
+    name="Large Cap",
     order_by_desc="market_capitalization",
     market_capitalization=[1e10, 1e14],
 ).variants()
 
 MID_CAPS = NamedFilterQuery(
-    name="Mid-caps",
+    name="Mid Cap",
     order_by_desc="market_capitalization",
     market_capitalization=[5e8, 1e10],
 ).variants()
@@ -294,27 +304,15 @@ NEXT_EARNINGS_DATE = NamedFilterQuery(
         datetime.date.today() + timedelta(days=20),
     ],
 ).variants()
-SEMICONDUCTORS = NamedFilterQuery(
-    name="Semiconductors",
-    order_by_desc="market_capitalization",
-    industry=["Semiconductors"],
-).variants()
-SOFTWARE = NamedFilterQuery(
-    name="Software - Application",
-    order_by_desc="market_capitalization",
-    industry=["Software - Application"],
-).variants()
 
 
 def predefined_filters() -> list[NamedFilterQuery]:
     return [
+        *load_custom_filters(),
         *SMALL_CAP,
+        *MID_CAPS,
         *LARGE_CAPS,
         *NEXT_EARNINGS_DATE,
-        *MID_CAPS,
-        *SEMICONDUCTORS,
-        *SOFTWARE,
-        *load_custom_filters(),
     ]
 
 
