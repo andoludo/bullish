@@ -4883,14 +4883,14 @@ files = [
 
 [[package]]
 name = "tickermood"
-version = "0.14.0"
+version = "0.19.0"
 description = ""
 category = "main"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "tickermood-0.14.0-py3-none-any.whl", hash = "sha256:aee0b419ad1596b8f3c0847419a4852d6d78a489119e8e3cc7c9b399ae822b6c"},
-    {file = "tickermood-0.14.0.tar.gz", hash = "sha256:3c3d89cc303b82a3990bd56a2f25cbed23428ad8725757a1d1cb21b67dc5245e"},
+    {file = "tickermood-0.19.0-py3-none-any.whl", hash = "sha256:ec87e61b4acc38e32b80e259ac7e2c21e04bce2b8c5227a530bbbe34c400df9e"},
+    {file = "tickermood-0.19.0.tar.gz", hash = "sha256:ddb19a97cef529066b719402e405fe3a7c4511d4b26862776bca02e2b124e591"},
 ]
 
 [package.dependencies]
@@ -4912,6 +4912,7 @@ python-dotenv = ">=1.0.1,<2.0.0"
 selenium = ">=4.32.0,<5.0.0"
 sqlmodel = ">=0.0.22,<0.0.23"
 typer = ">=0.13.1,<0.14.0"
+undetected-chromedriver = ">=3.5.5,<4.0.0"
 webdriver-manager = ">=4.0.2,<5.0.0"
 yfinance = ">=0.2.63,<0.3.0"
 
@@ -5263,6 +5264,22 @@ all = ["uncertainties[arrays,doc,test]"]
 arrays = ["numpy"]
 doc = ["python-docs-theme", "sphinx", "sphinx-copybutton"]
 test = ["pytest", "pytest_codspeed", "pytest_cov", "scipy"]
+
+[[package]]
+name = "undetected-chromedriver"
+version = "3.5.5"
+description = "('Selenium.webdriver.Chrome replacement with compatiblity for Brave, and other Chromium based browsers.', 'Not triggered by CloudFlare/Imperva/hCaptcha and such.', 'NOTE: results may vary due to many factors. No guarantees are given, except for ongoing efforts in understanding detection algorithms.')"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "undetected-chromedriver-3.5.5.tar.gz", hash = "sha256:9f945e1435005247abe17de316bcfda85b284a4177fd5f25167c78ced33b65ec"},
+]
+
+[package.dependencies]
+requests = "*"
+selenium = ">=4.9.0"
+websockets = "*"
 
 [[package]]
 name = "unidecode"
@@ -5878,4 +5895,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.12,<3.13"
-content-hash = "3662de1f3b28e702b6850fa60fa9cd294e44f1430f41de8c02ea5891b848dddc"
+content-hash = "d84649d399dd1c11037d68dace5f10088fce7ab894e6e4b3bab36d998e7e1e0c"
