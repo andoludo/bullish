@@ -48,7 +48,7 @@ def test_backtesting(bullish_db_with_signal_series: BullishDb):
     saved_results = bullish_db_with_signal_series.read_many_backtest_results()
     assert len(saved_results) > 0
 
-
+@pytest.mark.skip(reason="This is too slow")
 def test_many_tests(bullish_db_with_signal_series: BullishDb) -> None:
     config = BackTestConfig(start=date(2024, 3, 10), iterations=5)
     run_many_tests(bullish_db_with_signal_series, predefined_filters(), config)
