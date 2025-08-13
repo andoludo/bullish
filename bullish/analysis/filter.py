@@ -191,7 +191,9 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
         )
 
     def to_query(self) -> str:  # noqa: C901
-        parameters = self.model_dump(exclude_defaults=True, exclude_unset=True)
+        parameters = self.model_dump(
+            exclude_defaults=True, exclude_unset=True, exclude={"name"}
+        )
         query = []
         order_by_desc = ""
         order_by_asc = ""

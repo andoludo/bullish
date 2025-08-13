@@ -4,6 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 from bullish.analysis.filter import (
     FilterQuery,
@@ -55,3 +56,11 @@ def test_load_custom_predefined_filters(custom_filter_path: Path) -> None:
     custom_filters = read_custom_filters(custom_filter_path)
     assert custom_filters
     assert isinstance(custom_filters, list)
+
+
+def test_cron_news_filter(custom_filter_path: Path, bullish_view: BullishDb):
+    custom_filters = read_custom_filters(custom_filter_path)
+    bullish_db = BullishDb(database_path=bullish_view.database_path)
+    data = pd.concat([bullish_db.read_filter_query(f) for f in custom_filters])
+    assert not data.empty
+    assert len(data) == 3
