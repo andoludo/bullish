@@ -125,6 +125,21 @@ def cron_update(
         )
 
 
+@huey.periodic_task(crontab(day_of_week=0, hour=9, minute=0), context=True)  # type: ignore
+def cron_financial_update(
+    task: Optional[Task] = None,
+) -> None:
+    database = DataBaseSingleTon()
+    if database.valid():
+        job_tracker(_base_update)(
+            database.path,
+            "Update data",
+            [],
+            FilterUpdate(update_financials=True),
+            task=task,
+        )
+
+
 @huey.task(context=True)  # type: ignore
 @job_tracker
 def analysis(
