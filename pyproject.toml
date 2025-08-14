@@ -8,7 +8,7 @@ packages = [{ include = "bullish" }]
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
 bearishpy = "^0.26.0"
-tickermood = "^0.27.0"
+tickermood = "^0.28.0"
 streamlit = "^1.45.1"
 streamlit-pydantic = "^v0.6.1-rc.3"
 streamlit-file-browser = "^3.2.22"
