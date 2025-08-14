@@ -266,7 +266,7 @@ def indicators_factory() -> List[Indicator]:
                     description="RSI Oversold Signal",
                     type_info="Oversold",
                     type=Optional[date],
-                    function=lambda d: (d.RSI < 30) & (d.RSI > 0),
+                    function=lambda d: (d.RSI <= 30) & (d.RSI > 0),
                     in_use_backtest=True,
                 ),
                 Signal(
@@ -281,7 +281,7 @@ def indicators_factory() -> List[Indicator]:
                     description="RSI Neutral Signal",
                     type_info="Overbought",
                     type=Optional[date],
-                    function=lambda d: (d.RSI < 60) & (d.RSI > 40),
+                    function=lambda d: (d.RSI < 60) & (d.RSI > 30),
                 ),
             ],
         ),

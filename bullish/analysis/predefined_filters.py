@@ -3,7 +3,7 @@ import json
 import os
 from datetime import timedelta
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Union, get_args
+from typing import Dict, Any, Optional, List, Union, get_args, Tuple
 
 from bullish.analysis.analysis import AnalysisView
 from bullish.analysis.backtest import (
@@ -28,6 +28,10 @@ DATE_THRESHOLD = [
     datetime.date.today() - datetime.timedelta(days=2),
     datetime.date.today(),
 ]
+
+
+def _get_variants(variants: List[str]) -> List[Tuple[str, ...]]:
+    return [tuple(variants[:i]) for i in range(1, len(variants) + 1)]
 
 
 class NamedFilterQuery(FilterQuery):
@@ -157,57 +161,29 @@ class NamedFilterQuery(FilterQuery):
         }
         return self._custom_variant("Poor Performers", properties)
 
-    def short_term_profitability(self) -> "NamedFilterQuery":
+    def fundamentals(self) -> "NamedFilterQuery":
         properties = {
             "income": [
                 "positive_operating_income",
                 "positive_net_income",
-                "quarterly_positive_operating_income",
-                "quarterly_positive_net_income",
+                "growing_net_income",
+                "growing_operating_income",
             ],
-            "cash_flow": [
-                "positive_free_cash_flow",
-                "quarterly_positive_free_cash_flow",
-            ],
+            "cash_flow": ["positive_free_cash_flow", "growing_operating_cash_flow"],
             "eps": [
+                "growing_basic_eps",
+                "growing_diluted_eps",
                 "positive_basic_eps",
                 "positive_diluted_eps",
-                "quarterly_positive_basic_eps",
-                "quarterly_positive_diluted_eps",
             ],
             "properties": [
                 "positive_return_on_assets",
                 "positive_return_on_equity",
                 "positive_debt_to_equity",
                 "operating_cash_flow_is_higher_than_net_income",
-                "quarterly_positive_return_on_assets",
-                "quarterly_positive_return_on_equity",
-                "quarterly_positive_debt_to_equity",
-                "quarterly_operating_cash_flow_is_higher_than_net_income",
             ],
         }
-        return self._custom_variant("Short-term profitability", properties)
-
-    def long_term_profitability(self) -> "NamedFilterQuery":
-        properties = {
-            "income": [
-                "growing_net_income",
-                "growing_operating_income",
-                "quarterly_growing_net_income",
-                "quarterly_growing_operating_income",
-            ],
-            "cash_flow": [
-                "growing_operating_cash_flow",
-                "quarterly_growing_operating_cash_flow",
-            ],
-            "eps": [
-                "growing_basic_eps",
-                "growing_diluted_eps",
-                "quarterly_growing_basic_eps",
-                "quarterly_growing_diluted_eps",
-            ],
-        }
-        return self._custom_variant("Long-term profitability", properties)
+        return self._custom_variant("Fundamentals", properties)
 
     def high_growth(self) -> "NamedFilterQuery":
         properties = {"industry": list(get_args(HighGrowthIndustry))}
@@ -217,48 +193,57 @@ class NamedFilterQuery(FilterQuery):
         properties = {"industry": list(get_args(DefensiveIndustries))}
         return self._custom_variant("Defensive", properties)
 
-    def variants(self) -> List["NamedFilterQuery"]:
-        variants_ = [
-            self.country_variant("Europe", list(get_args(Europe))),
-            self.country_variant("Us", list(get_args(Us))),
-            self.country_variant("Europe", list(get_args(Europe))).top_performers(),
-            self.country_variant("Us", list(get_args(Us))).top_performers(),
-            self.country_variant("Europe", list(get_args(Europe))).poor_performers(),
-            self.country_variant("Us", list(get_args(Us))).poor_performers(),
-            self.country_variant("Europe", list(get_args(Europe)))
-            .update_indicator_filter("RSI 30", "rsi_bullish_crossover_30")
-            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
-            self.country_variant("Europe", list(get_args(Europe)))
-            .update_indicator_filter("RSI 40", "rsi_bullish_crossover_40")
-            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
-            self.country_variant("Europe", list(get_args(Europe)))
-            .update_indicator_filter("RSI Neutral", "rsi_neutral")
-            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
-            self.country_variant("Us", list(get_args(Us)))
-            .update_indicator_filter("RSI 30", "rsi_bullish_crossover_30")
-            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
-            self.country_variant("Us", list(get_args(Us)))
-            .update_indicator_filter("RSI 40", "rsi_bullish_crossover_40")
-            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
-            self.country_variant("Us", list(get_args(Us)))
-            .update_indicator_filter("RSI Neutral", "rsi_neutral")
-            .update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover"),
-        ]
-        variants_short_term_profitability = [
-            v.short_term_profitability() for v in variants_
-        ]
-        variants_long_term_profitability = [
-            v.long_term_profitability() for v in variants_
-        ]
-        variants_growth = [v.high_growth() for v in variants_]
-        variants_defensive = [v.defensive() for v in variants_]
-        return [
-            *variants_,
-            *variants_short_term_profitability,
-            *variants_long_term_profitability,
-            *variants_growth,
-            *variants_defensive,
-        ]
+    def cheap(self) -> "NamedFilterQuery":
+        properties = {"last_price": [1, 30]}
+        return self._custom_variant("Cheap", properties)
+
+    def europe(self) -> "NamedFilterQuery":
+        return self.country_variant("Europe", list(get_args(Europe)))
+
+    def us(self) -> "NamedFilterQuery":
+        return self.country_variant("Us", list(get_args(Us)))
+
+    def rsi_30(self) -> "NamedFilterQuery":
+        return self.update_indicator_filter("RSI 30", "rsi_bullish_crossover_30")
+
+    def rsi_40(self) -> "NamedFilterQuery":
+        return self.update_indicator_filter("RSI 40", "rsi_bullish_crossover_40")
+
+    def macd(self) -> "NamedFilterQuery":
+        return self.update_indicator_filter("MACD", "macd_12_26_9_bullish_crossover")
+
+    def rsi_neutral_(self) -> "NamedFilterQuery":
+        return self.update_indicator_filter("RSI Neutral", "rsi_neutral")
+
+    def rsi_oversold_(self) -> "NamedFilterQuery":
+        return self.update_indicator_filter("RSI Oversold", "rsi_oversold")
+
+    def earnings_date(self) -> "NamedFilterQuery":
+        return NamedFilterQuery.model_validate(
+            self.model_dump()
+            | {
+                "name": f"{self.name} (Earnings Date)",
+                "next_earnings_date": [
+                    datetime.date.today(),
+                    datetime.date.today() + timedelta(days=20),
+                ],
+            }
+        )
+
+    def variants(
+        self, variants: Optional[List[List[str]]] = None
+    ) -> List["NamedFilterQuery"]:
+        variants = variants or [["europe"], ["us"]]
+
+        _variants = {v for variant in variants for v in _get_variants(variant)}
+        filters = []
+        for attributes in _variants:
+            filter = self
+            for attr in attributes:
+                filter = getattr(filter, attr)()
+            filters.append(filter)
+
+        return filters
 
 
 def load_custom_filters() -> List[NamedFilterQuery]:
@@ -282,28 +267,46 @@ SMALL_CAP = NamedFilterQuery(
     properties=["positive_debt_to_equity"],
     average_volume_30=[50000, 5e9],
     order_by_desc="market_capitalization",
-).variants()
+).variants(
+    variants=[
+        ["europe", "top_performers", "fundamentals"],
+        ["us", "top_performers", "fundamentals"],
+        ["europe", "earnings_date"],
+        ["us", "earnings_date"],
+    ]
+)
 
 LARGE_CAPS = NamedFilterQuery(
     name="Large Cap",
     order_by_desc="market_capitalization",
     market_capitalization=[1e10, 1e14],
-).variants()
+).variants(
+    variants=[
+        ["europe", "rsi_oversold_", "macd", "fundamentals"],
+        ["us", "rsi_oversold_", "macd", "fundamentals"],
+        ["europe", "rsi_neutral_", "macd", "fundamentals"],
+        ["us", "rsi_neutral_", "macd", "fundamentals"],
+        ["europe", "rsi_30", "macd", "fundamentals"],
+        ["us", "rsi_30", "macd", "fundamentals"],
+        ["europe", "top_performers", "cheap"],
+        ["us", "top_performers", "cheap"],
+        ["europe", "earnings_date"],
+        ["us", "earnings_date"],
+    ]
+)
 
 MID_CAPS = NamedFilterQuery(
     name="Mid Cap",
     order_by_desc="market_capitalization",
     market_capitalization=[5e8, 1e10],
-).variants()
-
-NEXT_EARNINGS_DATE = NamedFilterQuery(
-    name="Next Earnings date",
-    order_by_desc="market_capitalization",
-    next_earnings_date=[
-        datetime.date.today(),
-        datetime.date.today() + timedelta(days=20),
-    ],
-).variants()
+).variants(
+    variants=[
+        ["europe", "top_performers", "fundamentals"],
+        ["us", "top_performers", "fundamentals"],
+        ["europe", "earnings_date"],
+        ["us", "earnings_date"],
+    ]
+)
 
 
 def predefined_filters() -> list[NamedFilterQuery]:
@@ -312,7 +315,6 @@ def predefined_filters() -> list[NamedFilterQuery]:
         *SMALL_CAP,
         *MID_CAPS,
         *LARGE_CAPS,
-        *NEXT_EARNINGS_DATE,
     ]
 
 
