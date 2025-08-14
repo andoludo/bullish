@@ -178,7 +178,7 @@ class GeneralFilter(BaseModel):
     )
     market_capitalization: Optional[List[float]] = Field(default=[5e8, 1e12])
     price_per_earning_ratio: Optional[List[float]] = Field(default=[0.0, 1000.0])
-    last_price: Optional[List[float]] = Field(default=[0.0, 100000.0])
+
 
 
 class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysisFilters):  # type: ignore
