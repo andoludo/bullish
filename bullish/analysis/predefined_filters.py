@@ -135,17 +135,29 @@ class NamedFilterQuery(FilterQuery):
             self.model_dump() | {"name": f"{self.name} ({suffix})", **properties}
         )
 
-    def top_performers(self) -> "NamedFilterQuery":
+    def week_top_performers(self) -> "NamedFilterQuery":
+        properties = {
+            "volume_above_average": DATE_THRESHOLD,
+            "weekly_growth": [1, 100],
+        }
+        return self._custom_variant("Week Top Performers", properties)
+
+    def month_top_performers(self) -> "NamedFilterQuery":
+        properties = {
+            "monthly_growth": [8, 100],
+        }
+        return self._custom_variant("Month Top Performers", properties)
+
+    def year_top_performers(self) -> "NamedFilterQuery":
         properties = {
             "volume_above_average": DATE_THRESHOLD,
             "sma_50_above_sma_200": [
                 datetime.date.today() - datetime.timedelta(days=5000),
                 datetime.date.today(),
             ],
-            "weekly_growth": [1, 100],
-            "monthly_growth": [8, 100],
+            "yearly_growth": [30, 100],
         }
-        return self._custom_variant("Top Performers", properties)
+        return self._custom_variant("Yearly Top Performers", properties)
 
     def poor_performers(self) -> "NamedFilterQuery":
         properties = {
@@ -161,7 +173,7 @@ class NamedFilterQuery(FilterQuery):
         }
         return self._custom_variant("Poor Performers", properties)
 
-    def fundamentals(self) -> "NamedFilterQuery":
+    def yearly_fundamentals(self) -> "NamedFilterQuery":
         properties = {
             "income": [
                 "positive_operating_income",
@@ -170,20 +182,63 @@ class NamedFilterQuery(FilterQuery):
                 "growing_operating_income",
             ],
             "cash_flow": ["positive_free_cash_flow", "growing_operating_cash_flow"],
-            "eps": [
-                "growing_basic_eps",
-                "growing_diluted_eps",
-                "positive_basic_eps",
-                "positive_diluted_eps",
-            ],
             "properties": [
-                "positive_return_on_assets",
                 "positive_return_on_equity",
-                "positive_debt_to_equity",
                 "operating_cash_flow_is_higher_than_net_income",
             ],
         }
-        return self._custom_variant("Fundamentals", properties)
+        return self._custom_variant("Yearly Fundamentals", properties)
+
+    def quarterly_fundamentals(self) -> "NamedFilterQuery":
+        properties = {
+            "income": [
+                "quarterly_positive_operating_income",
+                "quarterly_positive_net_income",
+            ],
+            "cash_flow": [
+                "quarterly_positive_free_cash_flow",
+            ],
+            "properties": [
+                "quarterly_operating_cash_flow_is_higher_than_net_income",
+            ],
+        }
+        return self._custom_variant("Quarterly Fundamentals", properties)
+
+    def growing_quarterly_fundamentals(self) -> "NamedFilterQuery":
+        properties = {
+            "income": [
+                "quarterly_positive_operating_income",
+                "quarterly_positive_net_income",
+                "quarterly_growing_net_income",
+            ],
+            "cash_flow": [
+                "quarterly_positive_free_cash_flow",
+                "quarterly_growing_operating_cash_flow",
+            ],
+            "properties": [
+                "quarterly_operating_cash_flow_is_higher_than_net_income",
+            ],
+        }
+        return self._custom_variant("Growing Quarterly Fundamentals", properties)
+
+    def min_fundamentals(self) -> "NamedFilterQuery":
+        properties = {
+            "income": [
+                "positive_operating_income",
+                "positive_net_income",
+            ],
+            "cash_flow": [
+                "positive_free_cash_flow",
+            ],
+            "eps": [
+                "positive_diluted_eps",  # or positive_basic_eps if diluted not available
+            ],
+            "properties": [
+                "positive_return_on_equity",
+                "operating_cash_flow_is_higher_than_net_income",
+            ],
+        }
+        return self._custom_variant("Min Fundamentals", properties)
 
     def high_growth(self) -> "NamedFilterQuery":
         properties = {"industry": list(get_args(HighGrowthIndustry))}
@@ -285,10 +340,10 @@ SMALL_CAP = NamedFilterQuery(
     order_by_desc="market_capitalization",
 ).variants(
     variants=[
-        ["europe", "top_performers", "fundamentals"],
-        ["us", "top_performers", "fundamentals"],
-        ["europe", "earnings_date"],
-        ["us", "earnings_date"],
+        ["week_top_performers", "min_fundamentals"],
+        ["month_top_performers", "min_fundamentals"],
+        ["earnings_date", "min_fundamentals"],
+        ["rsi_oversold_", "min_fundamentals"],
     ]
 )
 
@@ -298,16 +353,13 @@ LARGE_CAPS = NamedFilterQuery(
     market_capitalization=[1e10, 1e14],
 ).variants(
     variants=[
-        ["europe", "rsi_oversold_", "macd", "fundamentals"],
-        ["us", "rsi_oversold_", "macd", "adx", "fundamentals"],
-        ["europe", "rsi_neutral_", "macd", "adx", "fundamentals"],
-        ["us", "rsi_neutral_", "macd", "adx", "fundamentals"],
-        ["europe", "rsi_30", "macd", "adx", "fundamentals"],
-        ["us", "rsi_30", "macd", "adx", "fundamentals"],
-        ["europe", "top_performers", "cheap"],
-        ["us", "top_performers", "cheap"],
-        ["europe", "earnings_date"],
-        ["us", "earnings_date"],
+        ["rsi_oversold_", "macd", "yearly_fundamentals"],
+        ["rsi_neutral_", "macd", "adx", "yearly_fundamentals"],
+        ["rsi_30", "macd", "adx", "yearly_fundamentals"],
+        ["rsi_oversold_", "macd", "quarterly_fundamentals"],
+        ["rsi_neutral_", "macd", "adx", "quarterly_fundamentals"],
+        ["rsi_30", "macd", "adx", "quarterly_fundamentals"],
+        ["earnings_date", "quarterly_fundamentals", "yearly_fundamentals"],
     ]
 )
 
@@ -317,10 +369,10 @@ MID_CAPS = NamedFilterQuery(
     market_capitalization=[5e8, 1e10],
 ).variants(
     variants=[
-        ["europe", "top_performers", "fundamentals"],
-        ["us", "top_performers", "fundamentals"],
-        ["europe", "earnings_date"],
-        ["us", "earnings_date"],
+        ["week_top_performers"],
+        ["month_top_performers"],
+        ["earnings_date", "quarterly_fundamentals", "yearly_fundamentals"],
+        ["rsi_oversold_", "macd", "adx"],
     ]
 )
 

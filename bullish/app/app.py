@@ -290,7 +290,7 @@ def dialog_plot_figure() -> None:
             <div class="news-hover" >
               📰 <span class="label">News</span>
               <div class="tooltip">
-                <h2>Date: {st.session_state.ticker_news.news_date.date()}</h2>
+                <h2>Date: {st.session_state.ticker_news.to_date()}</h2>
                 <h2>Price targets</h2>
                 <p>High price target: {st.session_state.ticker_news.high_price_target}</p>
                 <p>Low price target: {st.session_state.ticker_news.low_price_target}</p>

@@ -554,6 +554,11 @@ class SubjectAnalysis(BaseModel):
             ]
         )
 
+    def to_date(self) -> Optional[date]:
+        if self.news_date:
+            return self.news_date.date()
+        return None
+
 
 class Analysis(SubjectAnalysis, AnalysisEarningsDate, AnalysisView, BaseEquity, TechnicalAnalysis, FundamentalAnalysis):  # type: ignore
 
