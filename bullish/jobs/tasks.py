@@ -15,6 +15,7 @@ from .models import JobTrackerStatus, JobTracker, JobType
 from ..analysis.analysis import run_analysis, run_signal_series_analysis
 from ..analysis.backtest import run_many_tests, BackTestConfig
 from ..analysis.industry_views import compute_industry_view
+from ..analysis.openai import get_open_ai_news
 from ..analysis.predefined_filters import predefined_filters, load_custom_filters
 from ..database.crud import BullishDb
 from bullish.analysis.filter import FilterUpdate
@@ -186,6 +187,9 @@ def news(
     headless: bool = True,
     task: Optional[Task] = None,
 ) -> None:
+    bullish_db = BullishDb(database_path=database_path)
+    get_open_ai_news(bullish_db, symbols)
+    run_analysis(bullish_db)
     base_news(
         database_path=database_path,
         job_type=job_type,

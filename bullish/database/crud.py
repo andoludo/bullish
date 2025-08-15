@@ -22,6 +22,7 @@ from bullish.analysis.constants import Industry, IndustryGroup, Sector, Country
 from bullish.analysis.filter import FilteredResults
 from bullish.analysis.indicators import SignalSeries
 from bullish.analysis.industry_views import Type, IndustryView
+
 from bullish.database.schemas import (
     AnalysisORM,
     JobTrackerORM,
@@ -29,6 +30,7 @@ from bullish.database.schemas import (
     IndustryViewORM,
     SignalSeriesORM,
     BacktestResultORM,
+    OpenAINewsORM,
 )
 from bullish.database.scripts.upgrade import upgrade
 from bullish.exceptions import DatabaseFileNotFoundError
@@ -38,6 +40,7 @@ from tickermood.database.scripts.upgrade import upgrade as tickermood_upgrade  #
 
 if TYPE_CHECKING:
     from bullish.analysis.backtest import BacktestResult, BacktestResultQuery
+    from bullish.analysis.openai import OpenAINews
 
 logger = logging.getLogger(__name__)
 
@@ -358,11 +361,44 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             LIMIT  1
         """
         )
+        sql_oai = text(
+            """
+            SELECT *
+            FROM   openai
+            WHERE  symbol = :symbol
+            ORDER  BY date DESC
+            LIMIT  1
+        """
+        )
 
         with Session(self._engine) as session:
             row = session.execute(sql, {"symbol": symbol}).mappings().one_or_none()
+            row_oai = (
+                session.execute(sql_oai, {"symbol": symbol}).mappings().one_or_none()
+            )
+            row_dict = {}
             if row:
                 row_dict = dict(row)
                 row_dict = row_dict | {"news_date": row_dict["date"]}
-                return SubjectAnalysis.model_validate(row_dict)
-            return None
+            if row_oai:
+                row_dict_oai = dict(row_oai)
+                row_dict = row_dict | {
+                    "oai_news_date": row_dict_oai.get("news_date"),
+                    "oai_recent_news": row_dict_oai.get("recent_news"),
+                    "oai_recommendation": row_dict_oai.get("recommendation"),
+                    "oai_explanation": row_dict_oai.get("explanation"),
+                    "oai_high_price_target": row_dict_oai.get("high_price_target"),
+                    "oai_low_price_target": row_dict_oai.get("low_price_target"),
+                }
+
+            return SubjectAnalysis.model_validate(row_dict)
+
+    def write_many_openai_news(self, openai_news: List["OpenAINews"]) -> None:
+        with Session(self._engine) as session:
+            stmt = (
+                insert(OpenAINewsORM)
+                .prefix_with("OR REPLACE")
+                .values([a.model_dump() for a in openai_news])
+            )
+            session.exec(stmt)  # type: ignore
+            session.commit()

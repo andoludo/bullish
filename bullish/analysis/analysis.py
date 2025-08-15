@@ -528,6 +528,13 @@ class SubjectAnalysis(BaseModel):
     summary: Annotated[Optional[Dict[str, Any]], BeforeValidator(json_loads)] = None
     upside: Optional[float] = None
 
+    oai_high_price_target: Optional[float] = None
+    oai_low_price_target: Optional[float] = None
+    oai_news_date: Optional[datetime] = None
+    oai_recent_news: Optional[str] = None
+    oai_recommendation: Optional[str] = None
+    oai_explanation: Optional[str] = None
+
     def compute_upside(self, last_price: float) -> None:
         if self.high_price_target is not None:
             self.upside = (

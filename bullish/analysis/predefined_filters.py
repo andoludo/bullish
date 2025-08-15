@@ -253,7 +253,7 @@ class NamedFilterQuery(FilterQuery):
                 filter__ = getattr(filter__, attr)()
             filters_.append(filter__)
 
-        return filters_
+        return [self, *filters_]
 
 
 def load_custom_filters() -> List[NamedFilterQuery]:

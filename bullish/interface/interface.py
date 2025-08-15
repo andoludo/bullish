@@ -15,6 +15,7 @@ from bullish.analysis.constants import Industry, Sector, IndustryGroup, Country
 from bullish.analysis.filter import FilterQuery, FilteredResults
 from bullish.analysis.indicators import SignalSeries
 from bullish.analysis.industry_views import Type, IndustryView
+from bullish.analysis.openai import OpenAINews
 from bullish.jobs.models import JobTracker, JobTrackerStatus, add_icons
 
 logger = logging.getLogger(__name__)
@@ -155,3 +156,5 @@ class BullishDbBase(BearishDbBase):  # type: ignore
 
     @abc.abstractmethod
     def read_subject(self, symbol: str) -> Optional[SubjectAnalysis]: ...
+    @abc.abstractmethod
+    def write_many_openai_news(self, openai_news: List[OpenAINews]) -> None: ...

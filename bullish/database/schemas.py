@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Dict, Any, List, Optional
 
 from sqlmodel import Field, SQLModel
@@ -7,6 +8,7 @@ from bullish.analysis.backtest import BacktestResult
 from bullish.analysis.filter import FilteredResults
 from bullish.analysis.indicators import SignalSeries
 from bullish.analysis.industry_views import IndustryView
+from bullish.analysis.openai import OpenAINews
 
 from bullish.jobs.models import JobTracker
 from sqlalchemy import Index
@@ -20,6 +22,13 @@ class BaseTable(SQLModel):
 dynamic_indexes = tuple(
     Index(f"ix_analysis_{col}", col) for col in Analysis.model_fields
 )
+
+
+class OpenAINewsORM(SQLModel, OpenAINews, table=True):
+    __tablename__ = "openai"
+    __table_args__ = {"extend_existing": True}  # noqa:RUF012
+    symbol: str = Field(primary_key=True)
+    news_date: date = Field(primary_key=True)
 
 
 class AnalysisORM(BaseTable, Analysis, table=True):
