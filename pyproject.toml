@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bullishpy"
-version = "0.66.0"
+version = "0.67.0"
 description = ""
 authors = ["aan <andoludovic.andriamamonjy@gmail.com>"]
 readme = "README.md"
