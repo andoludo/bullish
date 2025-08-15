@@ -180,7 +180,6 @@ class GeneralFilter(BaseModel):
     price_per_earning_ratio: Optional[List[float]] = Field(default=[0.0, 1000.0])
 
 
-
 class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysisFilters):  # type: ignore
 
     def valid(self) -> bool:

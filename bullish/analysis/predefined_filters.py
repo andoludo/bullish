@@ -218,6 +218,12 @@ class NamedFilterQuery(FilterQuery):
     def rsi_oversold_(self) -> "NamedFilterQuery":
         return self.update_indicator_filter("RSI Oversold", "rsi_oversold")
 
+    def rsi_overbought_(self) -> "NamedFilterQuery":
+        return self.update_indicator_filter("RSI Overbought", "rsi_overbought")
+
+    def adx(self) -> "NamedFilterQuery":
+        return self.update_indicator_filter("ADX 14", "adx_14")
+
     def earnings_date(self) -> "NamedFilterQuery":
         return NamedFilterQuery.model_validate(
             self.model_dump()
@@ -231,25 +237,35 @@ class NamedFilterQuery(FilterQuery):
         )
 
     def variants(
-        self, variants: Optional[List[List[str]]] = None
+        self,
+        variants: Optional[List[List[str]]] = None,
+        filters: Optional[List[str]] = None,
     ) -> List["NamedFilterQuery"]:
+        if filters and self.name not in filters:
+            return [self]
         variants = variants or [["europe"], ["us"]]
 
         _variants = {v for variant in variants for v in _get_variants(variant)}
-        filters = []
+        filters_ = []
         for attributes in _variants:
-            filter = self
+            filter__ = self
             for attr in attributes:
-                filter = getattr(filter, attr)()
-            filters.append(filter)
+                filter__ = getattr(filter__, attr)()
+            filters_.append(filter__)
 
-        return filters
+        return filters_
 
 
 def load_custom_filters() -> List[NamedFilterQuery]:
     if "CUSTOM_FILTERS_PATH" in os.environ:
         custom_filters_path = os.environ["CUSTOM_FILTERS_PATH"]
-        return read_custom_filters(Path(custom_filters_path))
+        return [
+            variant
+            for f in read_custom_filters(Path(custom_filters_path))
+            for variant in f.variants(
+                variants=[["rsi_overbought_"]], filters=["portfolio", "Portfolio"]
+            )
+        ]
     return []
 
 
@@ -283,11 +299,11 @@ LARGE_CAPS = NamedFilterQuery(
 ).variants(
     variants=[
         ["europe", "rsi_oversold_", "macd", "fundamentals"],
-        ["us", "rsi_oversold_", "macd", "fundamentals"],
-        ["europe", "rsi_neutral_", "macd", "fundamentals"],
-        ["us", "rsi_neutral_", "macd", "fundamentals"],
-        ["europe", "rsi_30", "macd", "fundamentals"],
-        ["us", "rsi_30", "macd", "fundamentals"],
+        ["us", "rsi_oversold_", "macd", "adx", "fundamentals"],
+        ["europe", "rsi_neutral_", "macd", "adx", "fundamentals"],
+        ["us", "rsi_neutral_", "macd", "adx", "fundamentals"],
+        ["europe", "rsi_30", "macd", "adx", "fundamentals"],
+        ["us", "rsi_30", "macd", "adx", "fundamentals"],
         ["europe", "top_performers", "cheap"],
         ["us", "top_performers", "cheap"],
         ["europe", "earnings_date"],

@@ -434,3 +434,38 @@ def add_indicators(data: pd.DataFrame) -> pd.DataFrame:
             f"Expected columns {expected_columns} not found in data columns {data.columns.tolist()}"
         )
     return data
+
+
+class Line(BaseModel):
+    value: float
+    previous: float
+
+
+class SupportResistance(BaseModel):
+    support: Line
+    resistance: Line
+
+
+def support_resistance(df: pd.DataFrame, window: int = 5) -> SupportResistance:
+
+    w = window * 2 + 1
+    highs = df.high.rolling(w, center=True).max()
+    lows = df.low.rolling(w, center=True).min()
+    swing_high_mask = df.high == highs
+    swing_low_mask = df.low == lows
+
+    raw_res = df.loc[swing_high_mask, "high"].to_numpy()
+    raw_sup = df.loc[swing_low_mask, "low"].to_numpy()
+    return SupportResistance(
+        support=Line(value=float(raw_sup[-1]), previous=float(raw_sup[-2])),
+        resistance=Line(value=float(raw_res[-1]), previous=float(raw_res[-2])),
+    )
+
+
+def bollinger_bands(
+    data: pd.DataFrame, window: int = 20, std_dev: float = 2.0
+) -> pd.DataFrame:
+    bbands = ta.bbands(
+        data.close, timeperiod=window, nbdevup=std_dev, nbdevdn=std_dev, matype=0
+    )
+    return bbands  # type: ignore

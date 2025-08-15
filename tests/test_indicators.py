@@ -46,6 +46,8 @@ from bullish.analysis.functions import (
     PRICE,
     find_last_true_run_start,
     VOLUME,
+    support_resistance,
+    bollinger_bands,
 )
 from bullish.analysis.indicators import (
     indicators_factory,
@@ -294,3 +296,13 @@ def test_indicator_function_sma_momentum_with_change(data_aapl: pd.DataFrame) ->
 def test_indicator_volume(data_aapl: pd.DataFrame) -> None:
     d3 = VOLUME.call(data_aapl)
     assert not d3.empty
+
+
+def test_support_resistance(data_aapl: pd.DataFrame) -> None:
+    support_resistance_ = support_resistance(data_aapl, window=5)
+    assert support_resistance_.resistance.value
+
+
+def test_bollinger_bands(data_aapl: pd.DataFrame) -> None:
+    bbands = bollinger_bands(data_aapl)
+    assert not bbands.empty

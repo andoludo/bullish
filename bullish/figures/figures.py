@@ -5,7 +5,10 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from bullish.analysis.functions import add_indicators
+from bullish.analysis.functions import (
+    add_indicators,
+    support_resistance,
+)
 from datetime import date
 
 
@@ -17,6 +20,8 @@ def plot(
     industry_data: Optional[pd.DataFrame] = None,
 ) -> go.Figure:
     data = add_indicators(data)
+    supports = support_resistance(data)
+
     fig = make_subplots(
         rows=7,
         cols=1,
@@ -36,8 +41,8 @@ def plot(
             f"RSI ({symbol} [{name}])",
             f"MACD ({symbol} [{name}])",
             f"ADX ({symbol} [{name}])",
-            f"OBV ({symbol} [{name}])",
-            f"Industry ({symbol} [{name}])",
+            f"ATR ({symbol} [{name}])",
+            f"ADOSC ({symbol} [{name}])",
         ),
     )
     # Row 1: Candlestick + SMAs
@@ -114,28 +119,15 @@ def plot(
         col=1,
     )
     fig.add_trace(
-        go.Scatter(x=data.index, y=data.OBV, name="OBV", mode="lines"),
+        go.Scatter(x=data.index, y=data.ATR, name="ATR", mode="lines"),
         row=6,
         col=1,
     )
     fig.add_trace(
         go.Scatter(x=data.index, y=data.ADOSC, name="ADOSC", mode="lines"),
-        row=6,
+        row=7,
         col=1,
     )
-    if industry_data is not None and not industry_data.empty:
-        for c in industry_data.columns:
-            fig.add_trace(
-                go.Scatter(
-                    x=industry_data.index,
-                    y=industry_data[c],
-                    name=c,
-                    mode="lines",
-                    opacity=0.5 if c != "symbol" else 1.0,
-                ),
-                row=7,
-                col=1,
-            )
 
     if dates is not None and dates:
         for date in dates:
@@ -166,5 +158,23 @@ def plot(
     fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1)
     fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1)
     fig.add_hline(y=25, line_dash="dash", line_color="red", row=5, col=1)
+    fig.add_hline(
+        y=supports.support.value,
+        line_dash="dash",
+        line_color="rgba(26, 188, 156, 1)",  # teal, fully opaque
+        annotation_text=f"Support ({supports.support.value:.2f})",
+        line_width=0.75,
+        row=1,
+        col=1,
+    )
+    fig.add_hline(
+        y=supports.resistance.value,
+        line_dash="dash",
+        line_color="rgba(230, 126, 34, 1)",  # orange, fully opaque
+        annotation_text=f"Resistance ({supports.resistance.value:.2f})",
+        line_width=0.75,
+        row=1,
+        col=1,
+    )
 
     return fig

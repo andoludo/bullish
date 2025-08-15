@@ -175,6 +175,20 @@ def indicators_factory() -> List[Indicator]:
                     type=Optional[date],
                     function=lambda d: (d.ADX_14 > 20) & (d.MINUS_DI > d.PLUS_DI),
                 ),
+                Signal(
+                    name="ADX_14",
+                    description="ADX 14",
+                    type_info="Short",
+                    type=Optional[date],
+                    function=lambda d: (d.ADX_14 > 25),
+                ),
+                Signal(
+                    name="ADX_14_OVERBOUGHT",
+                    description="ADX 14 OVERBOUGHT",
+                    type_info="Short",
+                    type=Optional[date],
+                    function=lambda d: (d.ADX_14 > 50),
+                ),
             ],
         ),
         Indicator(
