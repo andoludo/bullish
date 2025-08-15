@@ -19,6 +19,7 @@ def delete_tables(database_path: Path):
         conn.execute("DROP TABLE IF EXISTS  alembic_version;")
         conn.execute("DROP TABLE IF EXISTS jobtracker;")
         conn.execute("DROP TABLE IF EXISTS analysis;")
+        conn.execute("DROP TABLE IF EXISTS openai;")
         conn.execute("DROP TABLE IF EXISTS view;")
         conn.execute("DROP TABLE IF EXISTS filteredresults;")
         conn.execute("DROP TABLE IF EXISTS subject;")
