@@ -294,11 +294,17 @@ def dialog_plot_figure() -> None:
                 <h2>Price targets</h2>
                 <p>High price target: {st.session_state.ticker_news.high_price_target}</p>
                 <p>Low price target: {st.session_state.ticker_news.low_price_target}</p>
+                <p>OpenAI High price target: {st.session_state.ticker_news.oai_high_price_target}</p>
+                <p>OpenAI Low price target: {st.session_state.ticker_news.oai_low_price_target}</p>
                 <h2>Recommendation: {st.session_state.ticker_news.recommendation}</h2>
+                <h2>OpenAI Recommendation: {st.session_state.ticker_news.oai_recommendation}</h2>
                 <h2>Consensus: {st.session_state.ticker_news.consensus}</h2>
                 <h2>Explanation & reasons</h2>
                 <p>{st.session_state.ticker_news.explanation}</p>
                 <p>{st.session_state.ticker_news.reason}</p>
+                <p>{st.session_state.ticker_news.oai_explanation}</p>
+                <h2>Recent news</h2>
+                <p>{st.session_state.ticker_news.oai_recent_news}</p>
                 <h2>News summaries</h2>
                 {st.session_state.ticker_news.to_news()}
               </div>

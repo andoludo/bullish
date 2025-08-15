@@ -548,7 +548,7 @@ class SubjectAnalysis(BaseModel):
             return None
         return "".join(
             [
-                f"<p>{scrub(t.get('content').replace("\n",""))}</p>"  # type: ignore
+                f"<p>{t.get('content').replace("\n","")}</p>"  # type: ignore
                 for t in self.news_summary
                 if t.get("content")
             ]
