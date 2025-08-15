@@ -188,8 +188,22 @@ def news(
     task: Optional[Task] = None,
 ) -> None:
     bullish_db = BullishDb(database_path=database_path)
-    get_open_ai_news(bullish_db, symbols)
-    run_analysis(bullish_db)
+    if get_open_ai_news(bullish_db, symbols):
+        for symbol in symbols:
+            subject = bullish_db.read_subject(symbol)
+            if subject:
+                logger.debug(
+                    f"extracting news for {symbol} subject: {subject.model_dump()}"
+                )
+                bullish_db.update_analysis(
+                    symbol,
+                    subject.model_dump(
+                        exclude_none=True,
+                        exclude_unset=True,
+                        exclude_defaults=True,
+                        exclude={"symbol"},
+                    ),
+                )
     base_news(
         database_path=database_path,
         job_type=job_type,

@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from datetime import date
 from typing import Optional, List, TYPE_CHECKING
@@ -8,6 +9,8 @@ from openai import OpenAI
 
 if TYPE_CHECKING:
     from bullish.database.crud import BullishDb
+
+logger = logging.getLogger(__name__)
 
 
 def prompt(ticker: str) -> str:
@@ -61,17 +64,26 @@ class OpenAINews(BaseModel):
     def from_ticker(cls, ticker: str) -> "OpenAINews":
         if "OPENAI_API_KEY" not in os.environ:
             return cls(symbol=ticker)
+        print(f"Fetching OpenAI news for {ticker}...")
         client = OpenAI()
         resp = client.responses.create(
             model="gpt-4o-mini", input=prompt(ticker), tools=[{"type": "web_search"}]  # type: ignore
         )
-        return cls.model_validate(json.loads(resp.output_text) | {"symbol": ticker})
+        try:
+            return cls.model_validate(json.loads(resp.output_text) | {"symbol": ticker})
+        except Exception as e:
+            logger.error(f"Failed to parse OpenAI response for {ticker}: {e}")
+            return cls(symbol=ticker)
 
     @classmethod
     def from_tickers(cls, tickers: List[str]) -> List["OpenAINews"]:
         return [cls.from_ticker(t) for t in tickers]
 
 
-def get_open_ai_news(bullish_db: "BullishDb", tickers: List[str]) -> None:
+def get_open_ai_news(bullish_db: "BullishDb", tickers: List[str]) -> bool:
     news = OpenAINews.from_tickers(tickers)
-    bullish_db.write_many_openai_news([n for n in news if n.valid()])
+    valid_news = [n for n in news if n.valid()]
+    if valid_news:
+        bullish_db.write_many_openai_news(valid_news)
+        return True
+    return False

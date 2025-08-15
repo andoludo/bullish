@@ -3,7 +3,7 @@ import logging
 from datetime import date
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Dict
 
 import pandas as pd
 from bearish.database.crud import BearishDb  # type: ignore
@@ -366,7 +366,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             SELECT *
             FROM   openai
             WHERE  symbol = :symbol
-            ORDER  BY date DESC
+            ORDER  BY news_date DESC
             LIMIT  1
         """
         )
@@ -399,6 +399,14 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                 insert(OpenAINewsORM)
                 .prefix_with("OR REPLACE")
                 .values([a.model_dump() for a in openai_news])
+            )
+            session.exec(stmt)  # type: ignore
+            session.commit()
+
+    def update_analysis(self, symbol: str, fields: Dict[str, Any]) -> None:
+        with Session(self._engine) as session:
+            stmt = (
+                update(AnalysisORM).where(AnalysisORM.symbol == symbol).values(**fields)  # type: ignore
             )
             session.exec(stmt)  # type: ignore
             session.commit()

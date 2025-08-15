@@ -1,7 +1,7 @@
 import abc
 import logging
 from datetime import date
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import pandas as pd
 from bearish.interface.interface import BearishDbBase  # type: ignore
@@ -158,3 +158,6 @@ class BullishDbBase(BearishDbBase):  # type: ignore
     def read_subject(self, symbol: str) -> Optional[SubjectAnalysis]: ...
     @abc.abstractmethod
     def write_many_openai_news(self, openai_news: List[OpenAINews]) -> None: ...
+
+    @abc.abstractmethod
+    def update_analysis(self, symbol: str, fields: Dict[str, Any]) -> None: ...
