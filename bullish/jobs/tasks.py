@@ -195,7 +195,7 @@ def news(
     )
 
 
-@huey.periodic_task(crontab(minute="0", hour="3"), context=True)  # type: ignore
+@huey.periodic_task(crontab(minute="0", hour="8"), context=True)  # type: ignore
 def cron_news(
     task: Optional[Task] = None,
 ) -> None:
