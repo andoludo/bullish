@@ -497,6 +497,9 @@ class AnalysisView(BaseModel):
     weekly_growth: Optional[float] = None
     monthly_growth: Optional[float] = None
     upside: Optional[float] = None
+    oai_high_price_target: Optional[float] = None
+    oai_low_price_target: Optional[float] = None
+    oai_recommendation: Optional[str] = None
 
 
 def json_loads(value: Any) -> Any:

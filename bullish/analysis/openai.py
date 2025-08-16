@@ -67,7 +67,7 @@ class OpenAINews(BaseModel):
         print(f"Fetching OpenAI news for {ticker}...")
         client = OpenAI()
         resp = client.responses.create(
-            model="gpt-4o-mini", input=prompt(ticker), tools=[{"type": "web_search"}]  # type: ignore
+            model="gpt-4o", input=prompt(ticker), tools=[{"type": "web_search"}]  # type: ignore
         )
         try:
             return cls.model_validate(json.loads(resp.output_text) | {"symbol": ticker})
