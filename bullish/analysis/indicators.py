@@ -297,6 +297,13 @@ def indicators_factory() -> List[Indicator]:
                     type=Optional[date],
                     function=lambda d: (d.RSI < 60) & (d.RSI > 30),
                 ),
+                Signal(
+                    name="RSI",
+                    description="RSI value",
+                    type_info="Overbought",
+                    type=Optional[float],
+                    function=lambda d: d.RSI ,
+                ),
             ],
         ),
         Indicator(
