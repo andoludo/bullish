@@ -4,7 +4,7 @@ from typing import Optional, Callable, cast
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta  # type: ignore
+import pandas_ta as ta
 
 from pydantic import BaseModel
 
@@ -18,7 +18,7 @@ except Exception:
 def cross_simple(
     series_a: pd.Series, series_b: pd.Series, above: bool = True
 ) -> pd.Series:
-    crossing = ta.cross(series_a=series_a, series_b=series_b, above=above)
+    crossing = ta.cross(series_a=series_a, series_b=series_b, above=above)  # type: ignore
     return crossing  # type: ignore
 
 
@@ -466,6 +466,6 @@ def bollinger_bands(
     data: pd.DataFrame, window: int = 20, std_dev: float = 2.0
 ) -> pd.DataFrame:
     bbands = ta.bbands(
-        data.close, timeperiod=window, nbdevup=std_dev, nbdevdn=std_dev, matype=0
+        data.close, timeperiod=window, nbdevup=std_dev, nbdevdn=std_dev, matype=0  # type: ignore
     )
-    return bbands  # type: ignore
+    return bbands
