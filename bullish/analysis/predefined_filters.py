@@ -332,7 +332,6 @@ def read_custom_filters(custom_filters_path: Path) -> List[NamedFilterQuery]:
 
 
 SMALL_CAP = NamedFilterQuery(
-
     name="Small Cap",
     last_price=[1, 20],
     market_capitalization=[5e7, 5e8],

@@ -302,7 +302,7 @@ def indicators_factory() -> List[Indicator]:
                     description="RSI value",
                     type_info="Overbought",
                     type=Optional[float],
-                    function=lambda d: d.RSI ,
+                    function=lambda d: d.RSI,
                 ),
             ],
         ),
