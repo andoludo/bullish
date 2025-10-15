@@ -18,7 +18,7 @@ except Exception:
 def cross_simple(
     series_a: pd.Series, series_b: pd.Series, above: bool = True
 ) -> pd.Series:
-    crossing = ta.cross(series_a=series_a, series_b=series_b, above=above)  # type: ignore
+    crossing = ta.cross(x=series_a, y=series_b, above=above)  # type: ignore
     return crossing  # type: ignore
 
 
