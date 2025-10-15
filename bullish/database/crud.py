@@ -389,6 +389,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                     "oai_explanation": row_dict_oai.get("explanation"),
                     "oai_high_price_target": row_dict_oai.get("high_price_target"),
                     "oai_low_price_target": row_dict_oai.get("low_price_target"),
+                    "oai_moat": row_dict_oai.get("moat"),
                 }
 
             return SubjectAnalysis.model_validate(row_dict)

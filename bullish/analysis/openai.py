@@ -31,6 +31,7 @@ fences, no extra text:
     "recommendation": str,       // One of: "Strong Buy", "Buy", "Hold", "Sell", "Strong Sell"
     "explanation": str           // Concise explanation for the recommendation above, covering key pros/cons 
     for investors
+    "moat": bool           // Give as a boolean true or false if the company has a strong economic moat
 }}
 
 Formatting rules:
@@ -49,6 +50,7 @@ class OpenAINews(BaseModel):
     recent_news: Optional[str] = None
     recommendation: Optional[str] = None
     explanation: Optional[str] = None
+    moat: Optional[bool] = None
 
     def valid(self) -> bool:
         return bool(

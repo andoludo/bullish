@@ -499,7 +499,9 @@ class AnalysisView(BaseModel):
     upside: Optional[float] = None
     oai_high_price_target: Optional[float] = None
     oai_low_price_target: Optional[float] = None
+    rsi: Optional[float] = None
     oai_recommendation: Optional[str] = None
+    oai_moat: Optional[bool] = None
 
 
 def json_loads(value: Any) -> Any:
@@ -530,6 +532,7 @@ class SubjectAnalysis(BaseModel):
     ] = None
     summary: Annotated[Optional[Dict[str, Any]], BeforeValidator(json_loads)] = None
     upside: Optional[float] = None
+    downside: Optional[float] = None
 
     oai_high_price_target: Optional[float] = None
     oai_low_price_target: Optional[float] = None
@@ -537,11 +540,18 @@ class SubjectAnalysis(BaseModel):
     oai_recent_news: Optional[str] = None
     oai_recommendation: Optional[str] = None
     oai_explanation: Optional[str] = None
+    oai_moat: Optional[bool] = None
 
     def compute_upside(self, last_price: float) -> None:
-        if self.high_price_target is not None:
+        if self.oai_high_price_target is not None:
             self.upside = (
-                (float(self.high_price_target) - float(last_price))
+                (float(self.oai_high_price_target) - float(last_price))
+                * 100
+                / float(last_price)
+            )
+        if self.oai_low_price_target is not None:
+            self.downside = (
+                (float(last_price) - float(self.oai_low_price_target))
                 * 100
                 / float(last_price)
             )
