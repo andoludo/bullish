@@ -74,7 +74,11 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             logger.info(
                 "Running tickermood upgrade to create the subject table in the database."
             )
-            tickermood_upgrade(database_url=database_url, no_migration=True)
+            try:
+                tickermood_upgrade(database_url=database_url, no_migration=True)
+            except Exception as e:
+                logger.error(f"failed to update database: {e}")
+                print(f"failed to update database: {e}")
         return engine
 
     def model_post_init(self, __context: Any) -> None:

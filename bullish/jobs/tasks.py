@@ -195,22 +195,20 @@ def news(
                 logger.debug(
                     f"extracting news for {symbol} subject: {subject.model_dump()}"
                 )
-                bullish_db.update_analysis(
-                    symbol,
-                    subject.model_dump(
-                        exclude_none=True,
-                        exclude_unset=True,
-                        exclude_defaults=True,
-                        exclude={"symbol"},
-                    ),
-                )
-    base_news(
-        database_path=database_path,
-        job_type=job_type,
-        symbols=symbols,
-        headless=headless,
-        task=task,
-    )
+                try:
+                    bullish_db.update_analysis(
+                        symbol,
+                        subject.model_dump(
+                            exclude_none=True,
+                            exclude_unset=True,
+                            exclude_defaults=True,
+                            exclude={"symbol"},
+                        ),
+                    )
+                except Exception as e:
+                    logger.error(f"failed to extract news for {symbol}: {e}")
+                    print(f"failed to extract news for {symbol}: {e}")
+                    continue
 
 
 @huey.periodic_task(crontab(minute="0", hour="8"), context=True)  # type: ignore

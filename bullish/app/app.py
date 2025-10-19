@@ -123,7 +123,7 @@ def dialog_pick_database() -> None:
                 f"The database {db_path} has not the necessary data to run this application. "
                 "A backround job will be started to update the data."
             )
-            analysis(db_path)
+            analysis(db_path, "Update analysis")
         st.rerun()
     if event is None:
         st.stop()
