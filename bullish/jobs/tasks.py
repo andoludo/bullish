@@ -4,6 +4,7 @@ from typing import Optional, Any, Callable, List
 
 import pandas as pd
 from bearish.main import Bearish  # type: ignore
+from bearish.models.sec.sec import Secs # type: ignore
 from tickermood.main import get_news  # type: ignore
 from tickermood.types import DatabaseConfig  # type: ignore
 
@@ -84,6 +85,8 @@ def _base_update(
             series_length=update_query.window_size,
             delay=update_query.data_age_in_days,
         )
+        bearish.get_prices_index(series_length=update_query.window_size)  # type: ignore
+        Secs.upload(bearish._bearish_db)  # type: ignore
         if update_query.update_financials:
             bearish.update_financials()
     bullish_db = BullishDb(database_path=database_path)
