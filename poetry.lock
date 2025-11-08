@@ -132,14 +132,14 @@ tests-mypy = ["mypy (>=1.11.1)", "pytest-mypy-plugins"]
 
 [[package]]
 name = "bearishpy"
-version = "0.29.0"
+version = "0.32.0"
 description = ""
 category = "main"
 optional = false
 python-versions = "<3.13,>=3.11"
 files = [
-    {file = "bearishpy-0.29.0-py3-none-any.whl", hash = "sha256:b9f25580e67851b2b4e4ad0a44887a311ff92bb77133e1414f06b51a80570603"},
-    {file = "bearishpy-0.29.0.tar.gz", hash = "sha256:d08c0f297fc799f447f26ccd7a42f377fc2ff8d8a3cfcecf50615ce402ac57d9"},
+    {file = "bearishpy-0.32.0-py3-none-any.whl", hash = "sha256:fe9875baed0e0d3f7dfbcc49eb83947c64fd37471bf8d9bcfaf1ed8986681363"},
+    {file = "bearishpy-0.32.0.tar.gz", hash = "sha256:0e1e63b8344408926328b807e396b64e0e0d5011a61560956f29457dbf1426ba"},
 ]
 
 [package.dependencies]
@@ -149,6 +149,7 @@ numpy = "2.2.6"
 pandas = ">=2.1.4,<3.0.0"
 pydantic = ">=2.5.3,<3.0.0"
 python-dotenv = ">=1.0.1,<2.0.0"
+sec-cik-mapper = ">=2.1.0,<3.0.0"
 sec-edgar-downloader = ">=5.0.3,<6.0.0"
 setuptools = ">=78.1.0,<79.0.0"
 sqlmodel = ">=0.0.22,<0.0.23"
@@ -4444,6 +4445,27 @@ doc = ["intersphinx_registry", "jupyterlite-pyodide-kernel", "jupyterlite-sphinx
 test = ["Cython", "array-api-strict (>=2.3.1)", "asv", "gmpy2", "hypothesis (>=6.30)", "meson", "mpmath", "ninja", "pooch", "pytest", "pytest-cov", "pytest-timeout", "pytest-xdist", "scikit-umfpack", "threadpoolctl"]
 
 [[package]]
+name = "sec-cik-mapper"
+version = "2.1.0"
+description = "Generate mappings between SEC identifiers using Python"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "sec-cik-mapper-2.1.0.tar.gz", hash = "sha256:7ef321eec7f2b017bd982886249ed7f514263cbf704f4e1bf04093bce1ee3d4b"},
+    {file = "sec_cik_mapper-2.1.0-py3-none-any.whl", hash = "sha256:c826b3f70ec3040ee59ad788c6e8e916f717786cac6f0e2897bba121252d1487"},
+]
+
+[package.dependencies]
+pandas = "*"
+requests = "*"
+typing_extensions = "*"
+
+[package.extras]
+doc = ["sphinx", "sphinx-autodoc-typehints"]
+test = ["pytest", "pytest-cov"]
+
+[[package]]
 name = "sec-edgar-downloader"
 version = "5.0.3"
 description = "Download SEC filings from the EDGAR database using Python"
@@ -5994,4 +6016,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.12,<3.13"
-content-hash = "986b2f521485d2bc2407a2c79e144b384ef356eade1b6d979283d90f42e9d784"
+content-hash = "fe06bfbffbb2ead179b81754c1ea90c7265c65482f8287a32a1a94486fb0bc48"
