@@ -2421,6 +2421,22 @@ files = [
 ]
 
 [[package]]
+name = "mysec"
+version = "0.3.0"
+description = ""
+category = "main"
+optional = false
+python-versions = "<3.13,>=3.11"
+files = [
+    {file = "mysec-0.3.0-py3-none-any.whl", hash = "sha256:2b29c09c5c4c6310fd373479122de725ca4d49bf51c693aaf455b9d961778311"},
+    {file = "mysec-0.3.0.tar.gz", hash = "sha256:f00fb17d727e3f13a222c49e5647f6517c209aa00b68b7ff02e873c94b31226f"},
+]
+
+[package.dependencies]
+bearishpy = ">=0.35.0,<0.36.0"
+plotly = ">=4.12.0,<6.0.0"
+
+[[package]]
 name = "narwhals"
 version = "1.46.0"
 description = "Extremely lightweight compatibility layer between dataframe libraries"
@@ -6016,4 +6032,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.12,<3.13"
-content-hash = "7b1090a109fb95ba97177bdacab15039ddb58c754ce1cd10dcb9ec28ddfaa932"
+content-hash = "87f352f698eb8469beda8b67b83eda4b70bfbe01233db608deee61d52016a0e1"

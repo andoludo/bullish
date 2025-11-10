@@ -35,6 +35,7 @@ from bullish.utils.checks import (
     compatible_bullish_database,
     empty_analysis_table,
 )
+from mysec.services import sec  # type: ignore
 
 CACHE_SHELVE = "user_cache"
 DB_KEY = "db_path"
@@ -428,7 +429,7 @@ def main() -> None:
         st.session_state.initialized = True
     bearish_db_ = bearish_db(st.session_state.database_path)
 
-    charts_tab, jobs_tab = st.tabs(["Charts", "Jobs"])
+    charts_tab, jobs_tab, sec_tab = st.tabs(["Charts", "Jobs", "Sec"])
     if "data" not in st.session_state:
         st.session_state.data = load_analysis_data(bearish_db_)
 
@@ -479,6 +480,8 @@ def main() -> None:
             use_container_width=True,
             hide_index=True,
         )
+    with sec_tab:
+        st.plotly_chart(sec(bearish_db_), use_container_width=True)
 
 
 if __name__ == "__main__":
