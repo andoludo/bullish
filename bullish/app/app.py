@@ -80,7 +80,7 @@ def on_table_select() -> None:
 
     db = bearish_db(st.session_state.database_path)
     if st.session_state.data.empty or (
-        not st.session_state.data.iloc[row]["symbol"].to_numpy()
+        not st.session_state.data.iloc[row]["symbol"].to_numpy().size > 0
     ):
         return
 
