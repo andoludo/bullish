@@ -132,14 +132,14 @@ tests-mypy = ["mypy (>=1.11.1)", "pytest-mypy-plugins"]
 
 [[package]]
 name = "bearishpy"
-version = "0.36.0"
+version = "0.37.0"
 description = ""
 category = "main"
 optional = false
 python-versions = "<3.13,>=3.11"
 files = [
-    {file = "bearishpy-0.36.0-py3-none-any.whl", hash = "sha256:d671a69be6da106384cf032180989cfb2bfa9df4143439bdd39d6f866fa69d19"},
-    {file = "bearishpy-0.36.0.tar.gz", hash = "sha256:8c959a1208244639c0be83d22c617d2f105f36282fb24355d442b30d1db0d726"},
+    {file = "bearishpy-0.37.0-py3-none-any.whl", hash = "sha256:96e4e902a373e576af7024f2a4e9eb60bc575c4d123435fb0ca2a8cd5caed805"},
+    {file = "bearishpy-0.37.0.tar.gz", hash = "sha256:cc388c258727439f7bd44dec8f4c80075d8690e57e90c2eea26d15c753c2b904"},
 ]
 
 [package.dependencies]
@@ -2422,18 +2422,18 @@ files = [
 
 [[package]]
 name = "mysec"
-version = "0.4.0"
+version = "0.5.0"
 description = ""
 category = "main"
 optional = false
 python-versions = "<3.13,>=3.11"
 files = [
-    {file = "mysec-0.4.0-py3-none-any.whl", hash = "sha256:ddc609ac1b2922a927cba6e9a89933cf9a03ce74d692ac9f819b9bb512d1232a"},
-    {file = "mysec-0.4.0.tar.gz", hash = "sha256:abf1ef2a27cfcea60c423b968f2b402366c844ba0b8a9692258e38e3432fb757"},
+    {file = "mysec-0.5.0-py3-none-any.whl", hash = "sha256:b9b28d0c7cec85cbf4b0140606a570a57da351b3cc92aa7f9ddea8cd45d76c69"},
+    {file = "mysec-0.5.0.tar.gz", hash = "sha256:8870ed548ddc92e1a608f0f02607b6b3479b5938062f388f284329f78e75cba3"},
 ]
 
 [package.dependencies]
-bearishpy = ">=0.36.0,<0.37.0"
+bearishpy = ">=0.37.0,<0.38.0"
 plotly = ">=4.12.0,<6.0.0"
 
 [[package]]
@@ -6032,4 +6032,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.12,<3.13"
-content-hash = "9015a6d362fe037758f46445d8fd93c540cb91445eb53dc9f984d43b01156720"
+content-hash = "3dc5d29283e18eb231e678aceb0b7016e5aae928886c04eac604d8ae72f778cd"
