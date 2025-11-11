@@ -260,6 +260,8 @@ class FilterQueryStored(FilterQuery): ...
 class FilterUpdate(BaseModel):
     window_size: SeriesLength = Field("1mo")
     data_age_in_days: int = 1
+    pause: int = 10
+    batch_size: int = 250
     update_financials: bool = False
     update_analysis_only: bool = False
 
