@@ -22,6 +22,21 @@ def cross_simple(
     return crossing  # type: ignore
 
 
+def consecutive_highs(low: pd.Series, high: pd.Series) -> pd.Series:
+    m1 = low.shift(-2) < low.shift(-1)
+    m2 = low.shift(-1) < low
+    mask_low = m1 & m2
+    m1_h = high.shift(-2) < high.shift(-1)
+    m2_h = high.shift(-1) < high
+    mask_high = m1_h & m2_h
+    low_indexes = low[mask_low].index if mask_low.any() else None
+    high_indexes = high[mask_high].index if mask_high.any() else None
+    if low_indexes is None or high_indexes is None:
+        return pd.Series()
+    common_indexes = sorted(set(low_indexes).intersection(set(high_indexes)))
+    return mask_high[common_indexes]
+
+
 def cross(
     series_a: pd.Series, series_b: pd.Series, above: bool = True
 ) -> Optional[date]:
@@ -282,6 +297,8 @@ def compute_price(data: pd.DataFrame) -> pd.DataFrame:
     results["20_DAY_HIGH"] = data.close.rolling(window=20).max()
     results["20_DAY_LOW"] = data.close.rolling(window=20).min()
     results["LAST_PRICE"] = data.close
+    results["HIGH"] = data.high
+    results["LOW"] = data.low
     results["WEEKLY_GROWTH"] = data.close.resample("W").transform(perc).ffill()  # type: ignore
     results["MONTHLY_GROWTH"] = data.close.resample("ME").transform(perc).ffill()  # type: ignore
     results["YEARLY_GROWTH"] = data.close.resample("YE").transform(perc).ffill()  # type: ignore
@@ -416,6 +433,8 @@ PRICE = IndicatorFunction(
         "20_DAY_HIGH",
         "20_DAY_LOW",
         "LAST_PRICE",
+        "HIGH",
+        "LOW",
         "WEEKLY_GROWTH",
         "MONTHLY_GROWTH",
         "YEARLY_GROWTH",

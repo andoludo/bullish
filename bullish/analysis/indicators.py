@@ -21,6 +21,7 @@ from bullish.analysis.functions import (
     cross_value_series,
     find_last_true_run_start,
     VOLUME,
+    consecutive_highs,
 )
 
 logger = logging.getLogger(__name__)
@@ -212,6 +213,15 @@ def indicators_factory() -> List[Indicator]:
                     in_use_backtest=True,
                 ),
                 Signal(
+                    name="MACD_12_26_9_UPTREND",
+                    description="MACD 12-26-9 Uptrend",
+                    type_info="Long",
+                    type=Optional[date],
+                    function=lambda d: (d.MACD_12_26_9 > d.MACD_12_26_9_SIGNAL)
+                    & (d.MACD_12_26_9 > 0),
+                    in_use_backtest=True,
+                ),
+                Signal(
                     name="MACD_12_26_9_BEARISH_CROSSOVER",
                     description="MACD 12-26-9 Bearish Crossover",
                     type_info="Short",
@@ -298,6 +308,13 @@ def indicators_factory() -> List[Indicator]:
                     function=lambda d: (d.RSI < 60) & (d.RSI > 30),
                 ),
                 Signal(
+                    name="RSI_UPTREND",
+                    description="RSI Uptrend Signal",
+                    type_info="Overbought",
+                    type=Optional[date],
+                    function=lambda d: (d.RSI < 70) & (d.RSI > 50),
+                ),
+                Signal(
                     name="RSI",
                     description="RSI value",
                     type_info="Overbought",
@@ -370,6 +387,13 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Overbought",
                     type=Optional[date],
                     function=lambda d: cross_simple(d.SMA_50, d.SMA_200, above=False),
+                ),
+                Signal(
+                    name="SMA_UPTREND",
+                    description="SMA Uptrend Signal",
+                    type_info="Overbought",
+                    type=Optional[date],
+                    function=lambda d: (d.SMA_50 > d.SMA_200) & (d.SMA_50 < d.CLOSE),
                 ),
                 Signal(
                     name="SMA_50_ABOVE_SMA_200",
@@ -486,6 +510,13 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Oversold",
                     type=Optional[date],
                     function=lambda d: 0.6 * d["20_DAY_HIGH"] > d.LAST_PRICE,
+                ),
+                Signal(
+                    name="PRICE_UPTREND",
+                    description="3 Higher high and higher low",
+                    type_info="Oversold",
+                    type=Optional[date],
+                    function=lambda d: consecutive_highs(d.LOW, d.HIGH),
                 ),
             ],
         ),
