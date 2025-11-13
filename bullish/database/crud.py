@@ -22,6 +22,7 @@ from bullish.analysis.constants import Industry, IndustryGroup, Sector, Country
 from bullish.analysis.filter import FilteredResults
 from bullish.analysis.indicators import SignalSeries
 from bullish.analysis.industry_views import Type, IndustryView
+from bullish.analysis.portfolio import Portfolio
 
 from bullish.database.schemas import (
     AnalysisORM,
@@ -30,7 +31,7 @@ from bullish.database.schemas import (
     IndustryViewORM,
     SignalSeriesORM,
     BacktestResultORM,
-    OpenAINewsORM,
+    OpenAINewsORM, PortfolioORM,
 )
 from bullish.database.scripts.upgrade import upgrade
 from bullish.exceptions import DatabaseFileNotFoundError
@@ -60,14 +61,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
         if not self.valid():
             raise DatabaseFileNotFoundError("Database file not found.")
         database_url = f"sqlite:///{Path(self.database_path)}"
-        try:
-            upgrade(self.database_path)
-        except Exception as e:
-            logger.warning(
-                f"Failed to upgrade the database at {self.database_path}. "
-                f"Reason: {e}"
-                "Skipping upgrade. "
-            )
+        upgrade(self.database_path)
         engine = create_engine(database_url)
         inspector = inspect(engine)
         if "subject" not in inspector.get_table_names():
@@ -415,3 +409,29 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             )
             session.exec(stmt)  # type: ignore
             session.commit()
+
+    def write_portfolio(self, portfolios: List[Portfolio]) -> None:
+        with Session(self._engine) as session:
+            stmt = (
+                insert(PortfolioORM)
+                .prefix_with("OR REPLACE")
+                .values([a.model_dump() for a in portfolios])
+            )
+            session.exec(stmt)  # type: ignore
+            session.commit()
+    def read_portfolio_list(self) -> List[str]:
+        with Session(self._engine) as session:
+            stmt = select(PortfolioORM.name)
+            result = session.execute(stmt).scalars().all()
+            return list(result)
+
+    def read_portfolio(self, name: str) -> Optional[Portfolio]:
+        with Session(self._engine) as session:
+            stmt = select(PortfolioORM).where(PortfolioORM.name == name)
+            result = session.execute(stmt).scalar_one_or_none()
+
+            if result:
+                return Portfolio.model_validate(
+                    result.model_dump()
+                )  # if you're using Pydantic or DTOs
+            return None

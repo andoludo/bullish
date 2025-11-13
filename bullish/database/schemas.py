@@ -9,6 +9,7 @@ from bullish.analysis.filter import FilteredResults
 from bullish.analysis.indicators import SignalSeries
 from bullish.analysis.industry_views import IndustryView
 from bullish.analysis.openai import OpenAINews
+from bullish.analysis.portfolio import Portfolio
 
 from bullish.jobs.models import JobTracker
 from sqlalchemy import Index
@@ -29,6 +30,20 @@ class OpenAINewsORM(SQLModel, OpenAINews, table=True):
     __table_args__ = {"extend_existing": True}  # noqa:RUF012
     symbol: str = Field(primary_key=True)
     news_date: date = Field(primary_key=True)
+
+
+class PortfolioORM(SQLModel, Portfolio, table=True):
+    __tablename__ = "portfolio"
+    __table_args__ = {"extend_existing": True}  # noqa:RUF012
+    name: str = Field(primary_key=True)
+    current_assets: Optional[List[Dict[str, Any]]] = Field(
+        default=None, sa_column=Column(JSON)
+    )
+    new_assets: Optional[List[Dict[str, Any]]] = Field(
+        default=None, sa_column=Column(JSON)
+    )
+
+
 
 
 class AnalysisORM(BaseTable, Analysis, table=True):
