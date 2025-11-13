@@ -31,7 +31,8 @@ from bullish.database.schemas import (
     IndustryViewORM,
     SignalSeriesORM,
     BacktestResultORM,
-    OpenAINewsORM, PortfolioORM,
+    OpenAINewsORM,
+    PortfolioORM,
 )
 from bullish.database.scripts.upgrade import upgrade
 from bullish.exceptions import DatabaseFileNotFoundError
@@ -419,6 +420,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             )
             session.exec(stmt)  # type: ignore
             session.commit()
+
     def read_portfolio_list(self) -> List[str]:
         with Session(self._engine) as session:
             stmt = select(PortfolioORM.name)

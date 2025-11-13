@@ -10,7 +10,7 @@ import streamlit_pydantic as sp
 from bearish.models.base import Ticker  # type: ignore
 from bearish.models.price.prices import Prices  # type: ignore
 from bearish.models.query.query import AssetQuery, Symbols  # type: ignore
-from myportfolio.models import portfolio_optimize, PortfolioDescription
+from myportfolio.models import portfolio_optimize, PortfolioDescription  # type: ignore
 from mysec.services import sec  # type: ignore
 from pydantic import BaseModel
 from streamlit_file_browser import st_file_browser  # type: ignore
@@ -232,6 +232,7 @@ def load() -> None:
             )
             st.rerun()
 
+
 @st.dialog("📥  Load Portfolio", width="large")
 def load_portfolio() -> None:
     bearish_db_ = bearish_db(st.session_state.database_path)
@@ -243,6 +244,7 @@ def load_portfolio() -> None:
             st.session_state.portfolio = portfolio
             st.rerun()
 
+
 @st.dialog("⭐ Save filtered results")
 def save_portfolio() -> None:
     bearish_db_ = bearish_db(st.session_state.database_path)
@@ -251,9 +253,15 @@ def save_portfolio() -> None:
     if apply:
         if not st.session_state.portfolio.default_name():
             portfolio_name = f"{st.session_state.portfolio.name}_{portfolio_name}"
-        portfolio = Portfolio(name=portfolio_name, current_assets=st.session_state.portfolio.current_assets, new_assets=st.session_state.portfolio.new_assets, amount=st.session_state.portfolio.amount)
+        portfolio = Portfolio(
+            name=portfolio_name,
+            current_assets=st.session_state.portfolio.current_assets,
+            new_assets=st.session_state.portfolio.new_assets,
+            amount=st.session_state.portfolio.amount,
+        )
         bearish_db_.write_portfolio([portfolio])
         st.rerun()
+
 
 @st.dialog("🔍  Filter", width="large")
 def filter() -> None:
@@ -428,36 +436,45 @@ def save_filtered_results(bearish_db_: BullishDb) -> None:
             st.rerun()
 
 
-
-
-
 def portfolio_current_asset() -> None:
     for i, row in enumerate(st.session_state.portfolio.current_assets):
         left, middle, right = st.columns(3, vertical_alignment="bottom")
-        row.symbol = left.selectbox(label="ticker", options=[row.symbol,*symbols()], key=f"input_{i}")
-        row.value = middle.number_input(label="amount", value =row.value, key=f"number_{i}")
+        row.symbol = left.selectbox(
+            label="ticker", options=[row.symbol, *symbols()], key=f"input_{i}"
+        )
+        row.value = middle.number_input(
+            label="amount", value=row.value, key=f"number_{i}"
+        )
         if right.button("🗑", key=f"del_{i}"):
             st.session_state.portfolio.current_assets.pop(i)
             st.rerun()
-    if st.button("➕", key=f"add_asset"):
-        st.session_state.portfolio.current_assets.append(PortfolioAsset(symbol="", value=1000))
+    if st.button("➕", key="add_asset"):  # noqa: RUF001
+        st.session_state.portfolio.current_assets.append(
+            PortfolioAsset(symbol="", value=1000)
+        )
         st.rerun()
 
-    if st.button("💾", key=f"save_asset"):
+    if st.button("💾", key="save_asset"):
         save_portfolio()
+
 
 def portfolio_new_assets() -> None:
     left, right = st.columns(2, vertical_alignment="bottom")
-    symbols_ = left.multiselect(label="ticker", options=symbols(), key=f"new_input")
-    value = right.number_input(label="amount", value =1000, key=f"new_number")
+    symbols__ = [s.symbol for s in st.session_state.portfolio.new_assets]
+    symbols_ = left.multiselect(
+        label="ticker", default=symbols__, options=symbols(), key="new_input"
+    )
+    value = right.number_input(label="amount", value=1000, key="new_number")
     if bool(symbols_) and value:
-        st.session_state.portfolio.new_assets = [PortfolioNewAsset(symbol=s) for s in symbols_]
+        st.session_state.portfolio.new_assets = [
+            PortfolioNewAsset(symbol=s) for s in symbols_
+        ]
         st.session_state.portfolio.amount = value
-    if st.button("💾", key=f"save"):
+    if st.button("💾", key="save"):
         save_portfolio()
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0915, C901
     hide_elements = """
             <style>
                 div[data-testid="stSliderTickBarMin"],
@@ -472,7 +489,6 @@ def main() -> None:
     if "portfolio" not in st.session_state:
         st.session_state.portfolio = Portfolio()
 
-
     if st.session_state.database_path is None:
         dialog_pick_database()
     if "initialized" not in st.session_state:
@@ -483,7 +499,9 @@ def main() -> None:
         st.session_state.initialized = True
     bearish_db_ = bearish_db(st.session_state.database_path)
 
-    charts_tab, portfolio_tab, jobs_tab, sec_tab = st.tabs(["Charts","Portfolio", "Jobs", "Sec"])
+    charts_tab, portfolio_tab, jobs_tab, sec_tab = st.tabs(
+        ["Charts", "Portfolio", "Jobs", "Sec"]
+    )
     if "data" not in st.session_state:
         st.session_state.data = load_analysis_data(bearish_db_)
 
@@ -537,7 +555,7 @@ def main() -> None:
     with sec_tab:
         st.plotly_chart(sec(bearish_db_), use_container_width=True)
     with portfolio_tab:
-        if st.button("📥", key=f"load_portfolio"):
+        if st.button("📥", key="load_portfolio"):
             load_portfolio()
         with st.container():
             with st.expander("Existing Assets"):
@@ -545,8 +563,16 @@ def main() -> None:
             with st.expander("New assets"):
                 portfolio_new_assets()
         with st.container():
-            if st.button("Analyse", key=f"analyse_portfolio") and st.session_state.portfolio.valid():
-                figure = portfolio_optimize(bearish_db_, portfolio_description=PortfolioDescription.model_validate(st.session_state.portfolio.to_dict()))
+            if (
+                st.button("Analyse", key="analyse_portfolio")
+                and st.session_state.portfolio.valid()
+            ):
+                figure = portfolio_optimize(
+                    bearish_db_,
+                    portfolio_description=PortfolioDescription.model_validate(
+                        st.session_state.portfolio.to_dict()
+                    ),
+                )
                 st.plotly_chart(figure, use_container_width=True)
 
 

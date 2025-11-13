@@ -36,14 +36,12 @@ class PortfolioORM(SQLModel, Portfolio, table=True):
     __tablename__ = "portfolio"
     __table_args__ = {"extend_existing": True}  # noqa:RUF012
     name: str = Field(primary_key=True)
-    current_assets: Optional[List[Dict[str, Any]]] = Field(
+    current_assets: Optional[List[Dict[str, Any]]] = Field(  # type: ignore
         default=None, sa_column=Column(JSON)
     )
-    new_assets: Optional[List[Dict[str, Any]]] = Field(
+    new_assets: Optional[List[Dict[str, Any]]] = Field(  # type: ignore
         default=None, sa_column=Column(JSON)
     )
-
-
 
 
 class AnalysisORM(BaseTable, Analysis, table=True):
