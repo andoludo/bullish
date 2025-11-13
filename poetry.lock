@@ -2477,14 +2477,14 @@ files = [
 
 [[package]]
 name = "myportfolio"
-version = "0.3.0"
+version = "0.5.0"
 description = ""
 category = "main"
 optional = false
 python-versions = "<3.13,>=3.11"
 files = [
-    {file = "myportfolio-0.3.0-py3-none-any.whl", hash = "sha256:b94f986d5bb8682ff739277c8d447609a8327c607c8bd9d13c09c5bf173065ab"},
-    {file = "myportfolio-0.3.0.tar.gz", hash = "sha256:0a1b89a7e8357f7c2311814d9f5e0edc2d874da9b84f4c31daa304c61ec28ee2"},
+    {file = "myportfolio-0.5.0-py3-none-any.whl", hash = "sha256:ab03d3dd5bbad7095169a2025abeaaaddec441baa18d59db251ee64c3be2e6fa"},
+    {file = "myportfolio-0.5.0.tar.gz", hash = "sha256:bceed16e9d82b51bdb43d580e4430c723287be340b4281f147c6e7295cb17d75"},
 ]
 
 [package.dependencies]
@@ -6302,4 +6302,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.12,<3.13"
-content-hash = "665c85c07fcc6f77cfe0efc04424f265bb503cb047f7a95f5b186c98e5aeae7f"
+content-hash = "02cac7e46af789ddbd3232255419b5778987105f889551f3d6316b408891b936"
