@@ -29,6 +29,7 @@ def delete_tables(database_path: Path):
         conn.execute("DROP TABLE IF EXISTS industryreturns;")
         conn.execute("DROP TABLE IF EXISTS industryview;")
         conn.execute("DROP TABLE IF EXISTS backtestresult;")
+        conn.execute("DROP TABLE IF EXISTS portfolio;")
         conn.commit()
 
 
