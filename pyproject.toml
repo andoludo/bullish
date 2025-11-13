@@ -20,7 +20,7 @@ click = ">=7.0,<=8.1"
 joblib = "^1.5.1"
 vectorbt = "^0.28.0"
 mysec = ">=0.8.0, <1.0.0"
-myportfolio = ">=0.2.0, <1.0.0"
+myportfolio = ">=0.6.0, <1.0.0"
 
 [tool.poetry.scripts]
 bullish = "bullish.cli:app"
