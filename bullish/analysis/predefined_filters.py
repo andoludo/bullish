@@ -25,7 +25,7 @@ from bullish.analysis.indicators import Indicators
 from bullish.database.crud import BullishDb
 
 DATE_THRESHOLD = [
-    datetime.date.today() - datetime.timedelta(days=7),
+    datetime.date.today() - datetime.timedelta(days=5),
     datetime.date.today(),
 ]
 
