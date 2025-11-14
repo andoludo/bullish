@@ -48,7 +48,6 @@ from pydantic import BaseModel, BeforeValidator, Field, create_model
 from bullish.analysis.indicators import Indicators, IndicatorModels, SignalSeries
 from joblib import Parallel, delayed  # type: ignore
 
-from bullish.analysis.industry_views import compute_industry_view
 
 if TYPE_CHECKING:
     from bullish.database.crud import BullishDb
@@ -663,10 +662,7 @@ def run_signal_series_analysis(bullish_db: "BullishDb") -> None:
 
 
 def run_analysis(bullish_db: "BullishDb") -> None:
-    compute_industry_view(bullish_db)
-    price_trackers = set(bullish_db._read_tracker(TrackerQuery(), PriceTracker))
-    finance_trackers = set(bullish_db._read_tracker(TrackerQuery(), FinancialsTracker))
-    tickers = list(price_trackers.intersection(finance_trackers))
+    tickers = list(set(bullish_db._read_tracker(TrackerQuery(), PriceTracker)))
     parallel = Parallel(n_jobs=-1)
 
     for batch_ticker in batched(tickers, 1000):

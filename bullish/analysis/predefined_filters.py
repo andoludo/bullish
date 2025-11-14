@@ -25,7 +25,7 @@ from bullish.analysis.indicators import Indicators
 from bullish.database.crud import BullishDb
 
 DATE_THRESHOLD = [
-    datetime.date.today() - datetime.timedelta(days=2),
+    datetime.date.today() - datetime.timedelta(days=7),
     datetime.date.today(),
 ]
 
@@ -374,6 +374,8 @@ LARGE_CAPS = NamedFilterQuery(
         ["rsi_30", "macd", "adx", "quarterly_fundamentals"],
         ["earnings_date", "quarterly_fundamentals", "yearly_fundamentals"],
         ["price_uptrend_", "sma_uptrend_", "macd_uptrend_", "rsi_uptrend_"],
+        ["sma_uptrend_", "macd_uptrend_", "rsi_uptrend_"],
+        ["rsi_uptrend_", "sma_uptrend_", "macd_uptrend_"],
     ]
 )
 
@@ -388,6 +390,8 @@ MID_CAPS = NamedFilterQuery(
         ["earnings_date", "quarterly_fundamentals", "yearly_fundamentals"],
         ["rsi_oversold_", "macd", "adx"],
         ["price_uptrend_", "sma_uptrend_", "macd_uptrend_", "rsi_uptrend_"],
+        ["sma_uptrend_", "macd_uptrend_", "rsi_uptrend_"],
+        ["rsi_uptrend_", "sma_uptrend_", "macd_uptrend_"],
     ]
 )
 

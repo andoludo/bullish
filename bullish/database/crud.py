@@ -62,7 +62,19 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
         if not self.valid():
             raise DatabaseFileNotFoundError("Database file not found.")
         database_url = f"sqlite:///{Path(self.database_path)}"
-        upgrade(self.database_path)
+        try:
+            upgrade(self.database_path)
+        except Exception as e:
+            print(
+                f"Failed to upgrade the database at {self.database_path}. "
+                f"Reason: {e}"
+                "Skipping upgrade. "
+            )
+            logger.error(
+                f"Failed to upgrade the database at {self.database_path}. "
+                f"Reason: {e}"
+                "Skipping upgrade. "
+            )
         engine = create_engine(database_url)
         inspector = inspect(engine)
         if "subject" not in inspector.get_table_names():
