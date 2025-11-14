@@ -219,7 +219,6 @@ def indicators_factory() -> List[Indicator]:
                     type=Optional[date],
                     function=lambda d: (d.MACD_12_26_9 > d.MACD_12_26_9_SIGNAL)
                     & (d.MACD_12_26_9 > 0),
-                    in_use_backtest=True,
                 ),
                 Signal(
                     name="MACD_12_26_9_BEARISH_CROSSOVER",
@@ -394,6 +393,7 @@ def indicators_factory() -> List[Indicator]:
                     type_info="Overbought",
                     type=Optional[date],
                     function=lambda d: (d.SMA_50 > d.SMA_200) & (d.SMA_50 < d.CLOSE),
+                    processing=ProcessingFunction(date=find_last_true_run_start),
                 ),
                 Signal(
                     name="SMA_50_ABOVE_SMA_200",

@@ -279,6 +279,18 @@ class NamedFilterQuery(FilterQuery):
     def adx(self) -> "NamedFilterQuery":
         return self.update_indicator_filter("ADX 14", "adx_14")
 
+    def price_uptrend_(self) -> "NamedFilterQuery":
+        return self.update_indicator_filter("HIGHER highs", "price_uptrend")
+
+    def sma_uptrend_(self) -> "NamedFilterQuery":
+        return self.update_indicator_filter("SMA uptrend", "sma_uptrend")
+
+    def macd_uptrend_(self) -> "NamedFilterQuery":
+        return self.update_indicator_filter("MACD uptrend", "macd_12_26_9_uptrend")
+
+    def rsi_uptrend_(self) -> "NamedFilterQuery":
+        return self.update_indicator_filter("RSI uptrend", "rsi_uptrend")
+
     def earnings_date(self) -> "NamedFilterQuery":
         return NamedFilterQuery.model_validate(
             self.model_dump()
@@ -306,6 +318,7 @@ class NamedFilterQuery(FilterQuery):
             filter__ = self
             for attr in attributes:
                 filter__ = getattr(filter__, attr)()
+
             filters_.append(filter__)
 
         return [self, *filters_]
@@ -360,6 +373,7 @@ LARGE_CAPS = NamedFilterQuery(
         ["rsi_neutral_", "macd", "adx", "quarterly_fundamentals"],
         ["rsi_30", "macd", "adx", "quarterly_fundamentals"],
         ["earnings_date", "quarterly_fundamentals", "yearly_fundamentals"],
+        ["price_uptrend_", "sma_uptrend_", "macd_uptrend_", "rsi_uptrend_"],
     ]
 )
 
@@ -373,6 +387,7 @@ MID_CAPS = NamedFilterQuery(
         ["month_top_performers"],
         ["earnings_date", "quarterly_fundamentals", "yearly_fundamentals"],
         ["rsi_oversold_", "macd", "adx"],
+        ["price_uptrend_", "sma_uptrend_", "macd_uptrend_", "rsi_uptrend_"],
     ]
 )
 

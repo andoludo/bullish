@@ -299,9 +299,9 @@ def compute_price(data: pd.DataFrame) -> pd.DataFrame:
     results["LAST_PRICE"] = data.close
     results["HIGH"] = data.high
     results["LOW"] = data.low
-    results["WEEKLY_GROWTH"] = data.close.resample("W").transform(perc).ffill()  # type: ignore
-    results["MONTHLY_GROWTH"] = data.close.resample("ME").transform(perc).ffill()  # type: ignore
-    results["YEARLY_GROWTH"] = data.close.resample("YE").transform(perc).ffill()  # type: ignore
+    results["WEEKLY_GROWTH"] = data.close.pct_change(5)
+    results["MONTHLY_GROWTH"] = data.close.pct_change(21)
+    results["YEARLY_GROWTH"] = data.close.pct_change(252)
     return results
 
 
