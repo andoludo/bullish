@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{ include = "bullish" }]
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
-bearishpy = ">=0.43.0, <1.0.0"
+bearishpy = ">=0.45.0, <1.0.0"
 tickermood = "^0.29.0"
 streamlit = "^1.45.1"
 streamlit-pydantic = "^v0.6.1-rc.3"
