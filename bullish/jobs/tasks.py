@@ -88,7 +88,8 @@ def _base_update(
             pause=update_query.pause,
         )
         bearish.get_prices_index(series_length=update_query.window_size)
-        Secs.upload(bearish._bearish_db)
+        if update_query.update_sec:
+            Secs.upload(bearish._bearish_db)
         if update_query.update_financials:
             bearish.update_financials()
     bullish_db = BullishDb(database_path=database_path)

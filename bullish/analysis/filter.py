@@ -264,6 +264,7 @@ class FilterUpdate(BaseModel):
     batch_size: int = 250
     update_financials: bool = False
     update_analysis_only: bool = False
+    update_sec: bool = False
 
 
 class FilteredResults(BaseModel):
