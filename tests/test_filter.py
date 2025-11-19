@@ -1,23 +1,20 @@
 import datetime
-import json
 from datetime import date
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+from bullish.analysis.analysis import run_analysis
 from bullish.analysis.filter import (
     FilterQuery,
-    INCOME_GROUP,
-    CASH_FLOW_GROUP,
-    EPS_GROUP,
-    PROPERTIES_GROUP,
 )
-from bullish.analysis.predefined_filters import NamedFilterQuery, read_custom_filters
+from bullish.analysis.predefined_filters import read_custom_filters
 from bullish.database.crud import BullishDb
 
 
 def test_read_filter_query(bullish_view: BullishDb) -> None:
+    run_analysis(bullish_view)
     today = date.today()
     start_date = today - datetime.timedelta(days=30 * 10)
 

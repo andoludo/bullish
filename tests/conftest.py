@@ -12,8 +12,6 @@ from tickermood.database.scripts.upgrade import upgrade
 
 
 DATABASE_PATH = Path(__file__).parent / "data" / "bear.db"
-DATABASE_PATH_VIEW = Path(__file__).parent / "data" / "filter_bear.db"
-DATABASE_PATH_WITH_SERIES = Path(__file__).parent / "data" / "filter_bear_series.db"
 
 
 def delete_tables(database_path: Path):
@@ -33,38 +31,39 @@ def delete_tables(database_path: Path):
         conn.commit()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def bullish_db() -> BullishDb:
     delete_tables(DATABASE_PATH)
 
     return BullishDb(database_path=DATABASE_PATH)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def bullish_db_with_analysis(bullish_db: BullishDb) -> BullishDb:
     run_analysis(bullish_db)
     return bullish_db
 
 
-@pytest.fixture
-def bullish_view() -> BullishDb:
-    return BullishDb(database_path=DATABASE_PATH_VIEW)
+@pytest.fixture(scope="session")
+def bullish_view(bullish_db: BullishDb) -> BullishDb:
+    run_analysis(bullish_db)
+    return bullish_db
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_aapl(bullish_db: BullishDb) -> pd.DataFrame:
     ticker = Ticker(symbol="AAPL")
     prices = Prices.from_ticker(bullish_db, ticker)
     return prices.to_dataframe()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def bullish_db_with_signal_series(bullish_view: BullishDb) -> BullishDb:
 
     bullish_db = BullishDb(database_path=DATABASE_PATH_WITH_SERIES)
     return bullish_db
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def custom_filter_path() -> Path:
     return Path(__file__).parent / "data" / "custom_filter.json"

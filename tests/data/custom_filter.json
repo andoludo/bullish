@@ -1,14 +1,14 @@
 [
     {
         "symbol": [
-            "BPOST.BR",
-            "LOTB.BR"
+            "AAPL",
+            "NVDA"
         ],
         "name": "Sold Positions"
     },
     {
         "symbol": [
-            "KBC.BR"
+            "AMZN"
         ],
         "name": "Selection"
     }

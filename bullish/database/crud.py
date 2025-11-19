@@ -62,13 +62,21 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
         if not self.valid():
             raise DatabaseFileNotFoundError("Database file not found.")
         database_url = f"sqlite:///{Path(self.database_path)}"
+        try:
+            upgrade(self.database_path)
+        except Exception as e:
+            print(
+                f"Failed to upgrade the database at {self.database_path}. "
+                f"Reason: {e}"
+                "Skipping upgrade. "
+            )
+            logger.error(
+                f"Failed to upgrade the database at {self.database_path}. "
+                f"Reason: {e}"
+                "Skipping upgrade. "
+            )
         engine = create_engine(database_url)
         inspector = inspect(engine)
-        if "analysis" not in inspector.get_table_names():
-            upgrade(self.database_path)
-
-            engine = create_engine(database_url)
-            inspector = inspect(engine)
         if "subject" not in inspector.get_table_names():
             logger.info(
                 "Running tickermood upgrade to create the subject table in the database."
@@ -116,20 +124,33 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
         data = pd.read_sql_query(query, self._engine)
         return data["symbol"].tolist()
 
+    def copy_sec_to_analysis(self) -> None:
+        with Session(self._engine) as session:
+            query = text(
+                """UPDATE analysis
+    SET 
+        occurrences = (SELECT secshareincrease.occurrences 
+                       FROM secshareincrease WHERE secshareincrease.ticker = analysis.symbol),
+        total_value = (SELECT secshareincrease.total_value 
+                       FROM secshareincrease WHERE secshareincrease.ticker = analysis.symbol),
+        total_increase = (SELECT secshareincrease.total_increase 
+                          FROM secshareincrease WHERE secshareincrease.ticker = analysis.symbol)
+    WHERE EXISTS (SELECT 1 FROM secshareincrease WHERE secshareincrease.ticker = analysis.symbol);"""
+            )
+            session.exec(query)  # type: ignore
+            session.commit()
+
     def _read_analysis_data(
         self, columns: List[str], symbols: Optional[List[str]] = None
     ) -> pd.DataFrame:
-        columns__ = columns.copy()
 
-        columns_ = ",".join(columns__)
+        columns_ = ",".join(columns)
 
         if symbols:
             symbols_str = ",".join([f"'{s}'" for s in symbols])
-            query = f"""SELECT {columns_} FROM analysis 
-            LEFT JOIN secshareincrease ON secshareincrease.ticker=analysis.symbol WHERE symbol IN ({symbols_str})"""  # noqa: S608
+            query = f"""SELECT {columns_} FROM analysis WHERE symbol IN ({symbols_str})"""  # noqa: S608
         else:
-            query = f"""SELECT {columns_} FROM analysis 
-            LEFT JOIN secshareincrease ON secshareincrease.ticker=analysis.symbol"""  # noqa: S608
+            query = f"""SELECT {columns_} FROM analysis"""  # noqa: S608
         return pd.read_sql_query(query, self._engine)
 
     def _read_filter_query(self, query: str) -> pd.DataFrame:
