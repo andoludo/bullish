@@ -3,7 +3,6 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from alembic.util import CommandError
 
 from bullish.database.scripts.stamp import stamp
 
@@ -18,7 +17,7 @@ def upgrade(database_path: Path) -> None:
     alembic_cfg.set_main_option("script_location", str(root_folder / "alembic"))
     try:
         command.upgrade(alembic_cfg, "head")
-    except CommandError:
+    except Exception:
         stamp(database_path)
         command.upgrade(alembic_cfg, "head")
 

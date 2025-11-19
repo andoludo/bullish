@@ -49,6 +49,7 @@ def job_tracker(func: Callable[..., Any]) -> Callable[..., Any]:
         task: Optional[Task] = None,
         **kwargs: Any,
     ) -> None:
+        print(database_path)
         bullish_db = BullishDb(database_path=database_path)
         if task is None:
             raise ValueError("Task must be provided for job tracking.")

@@ -501,6 +501,10 @@ class AnalysisView(BaseModel):
     rsi: Optional[float] = None
     oai_recommendation: Optional[str] = None
     oai_moat: Optional[bool] = None
+    # SEC
+    occurrences: Optional[int] = None
+    total_value: Optional[float] = None
+    total_increase: Optional[float] = None
 
 
 def json_loads(value: Any) -> Any:

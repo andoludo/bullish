@@ -34,9 +34,15 @@ class BullishDbBase(BearishDbBase):  # type: ignore
     def read_filter_query(self, query: FilterQuery) -> pd.DataFrame:
 
         query_ = query.to_query()
-        fields = ",".join(list(AnalysisView.model_fields))
+        columns = list(AnalysisView.model_fields)
+        columns_copy = columns.copy()
+        if "name" in columns_copy:
+            columns_copy.remove("name")
+            columns_copy.append("analysis.name AS name")
+        fields = ",".join(columns_copy)
         query_str: str = f""" 
-        SELECT {fields} FROM analysis WHERE {query_}
+        SELECT {fields} FROM analysis 
+        LEFT JOIN secshareincrease ON secshareincrease.ticker=analysis.symbol  WHERE {query_}
         """  # noqa: S608
         return self._read_filter_query(query_str)
 
@@ -44,12 +50,19 @@ class BullishDbBase(BearishDbBase):  # type: ignore
         self, columns: Optional[List[str]] = None, symbols: Optional[List[str]] = None
     ) -> pd.DataFrame:
         columns = columns or list(AnalysisView.model_fields)
-        data = self._read_analysis_data(columns, symbols=symbols)
+        columns_copy = columns.copy()
+        if "name" in columns_copy:
+            columns_copy.remove("name")
+            columns_copy.append("analysis.name AS name")
+        data = self._read_analysis_data(columns_copy, symbols=symbols)
         if set(data.columns) != set(columns):
             raise ValueError(
                 f"Expected columns {columns}, but got {data.columns.tolist()}"
             )
         return data
+
+    def read_sec_data(self) -> pd.DataFrame:
+        return self.read_query("SELECT * FROM secshareincrease")  # type: ignore
 
     def read_job_trackers(self) -> pd.DataFrame:
         return add_icons(self._read_job_trackers())

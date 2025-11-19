@@ -11,7 +11,6 @@ from bearish.models.base import Ticker  # type: ignore
 from bearish.models.price.prices import Prices  # type: ignore
 from bearish.models.query.query import AssetQuery, Symbols  # type: ignore
 from myportfolio.models import portfolio_optimize, PortfolioDescription  # type: ignore
-from mysec.services import sec  # type: ignore
 from pydantic import BaseModel
 from streamlit_file_browser import st_file_browser  # type: ignore
 
@@ -70,9 +69,18 @@ def assign_db_state() -> None:
         st.session_state.database_path = load_db()
 
 
-@st.cache_data(hash_funcs={BullishDb: lambda obj: hash(obj.database_path)})
+@st.cache_data(
+    hash_funcs={BullishDb: lambda obj: hash(("load_analysis_data", obj.database_path))}
+)
 def load_analysis_data(bullish_db: BullishDb) -> pd.DataFrame:
     return bullish_db.read_analysis_data()
+
+
+@st.cache_data(
+    hash_funcs={BullishDb: lambda obj: hash(("load_sec_data", obj.database_path))}
+)
+def load_sec_data(bullish_db: BullishDb) -> pd.DataFrame:
+    return bullish_db.read_sec_data()
 
 
 def on_table_select() -> None:
@@ -505,6 +513,9 @@ def main() -> None:  # noqa: PLR0915, C901
     if "data" not in st.session_state:
         st.session_state.data = load_analysis_data(bearish_db_)
 
+    if "sec_data" not in st.session_state:
+        st.session_state.sec_data = load_sec_data(bearish_db_)
+
     with charts_tab:
         with st.container():
             columns = st.columns(12)
@@ -553,7 +564,14 @@ def main() -> None:  # noqa: PLR0915, C901
             hide_index=True,
         )
     with sec_tab:
-        st.plotly_chart(sec(bearish_db_), use_container_width=True)
+        st.dataframe(
+            st.session_state.sec_data,
+            on_select=on_table_select,
+            selection_mode="single-row",
+            key="selected_sec_data",
+            use_container_width=True,
+            height=600,
+        )
     with portfolio_tab:
         if st.button("📥", key="load_portfolio"):
             load_portfolio()
