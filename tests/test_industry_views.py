@@ -9,6 +9,7 @@ from bullish.analysis.industry_views import (
     get_industry_comparison_data,
 )
 from bullish.database.crud import BullishDb
+import pytest
 
 
 @pytest.mark.skip(reason="Irrelevant?")
