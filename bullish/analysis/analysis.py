@@ -666,7 +666,7 @@ def run_signal_series_analysis(bullish_db: "BullishDb") -> None:
 
 
 def run_analysis(bullish_db: "BullishDb") -> None:
-    bullish_db.copy_sec_to_analysis()
+
     tickers = list(set(bullish_db._read_tracker(TrackerQuery(), PriceTracker)))
     parallel = Parallel(n_jobs=-1)
 
@@ -681,3 +681,4 @@ def run_analysis(bullish_db: "BullishDb") -> None:
         print(
             f"Computed analysis for {len(batch_ticker)} tickers in {elapsed_time:.2f} seconds."
         )
+    bullish_db.copy_sec_to_analysis()
