@@ -125,6 +125,7 @@ def dialog_pick_database() -> None:
         st.session_state.database_path = db_path
         store_db(db_path)
         compatible_bullish_db = compatible_bullish_database(db_path)
+        BullishDb(database_path=db_path)
         if (not compatible_bullish_db) or (
             compatible_bullish_db and empty_analysis_table(db_path)
         ):
