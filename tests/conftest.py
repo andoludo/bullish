@@ -16,7 +16,6 @@ DATABASE_PATH = Path(__file__).parent / "data" / "bear.db"
 
 def delete_tables(database_path: Path):
     with sqlite3.connect(database_path) as conn:
-        conn.execute("DROP TABLE IF EXISTS  alembic_version;")
         conn.execute("DROP TABLE IF EXISTS jobtracker;")
         conn.execute("DROP TABLE IF EXISTS analysis;")
         conn.execute("DROP TABLE IF EXISTS openai;")

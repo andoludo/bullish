@@ -102,3 +102,4 @@ def test_ticker_mood_instantiation(bullish_db: BullishDb) -> None:
 def test_read_dates(bullish_db: BullishDb) -> None:
     dates = bullish_db.read_dates(symbol="AAPL")
     assert len(dates) > 0
+
