@@ -14,26 +14,8 @@ from tickermood.database.scripts.upgrade import upgrade
 DATABASE_PATH = Path(__file__).parent / "data" / "bear.db"
 
 
-def delete_tables(database_path: Path):
-    with sqlite3.connect(database_path) as conn:
-        conn.execute("DROP TABLE IF EXISTS jobtracker;")
-        conn.execute("DROP TABLE IF EXISTS analysis;")
-        conn.execute("DROP TABLE IF EXISTS openai;")
-        conn.execute("DROP TABLE IF EXISTS view;")
-        conn.execute("DROP TABLE IF EXISTS filteredresults;")
-        conn.execute("DROP TABLE IF EXISTS subject;")
-        conn.execute("DROP TABLE IF EXISTS signalseries;")
-        conn.execute("DROP TABLE IF EXISTS industryreturns;")
-        conn.execute("DROP TABLE IF EXISTS industryview;")
-        conn.execute("DROP TABLE IF EXISTS backtestresult;")
-        conn.execute("DROP TABLE IF EXISTS portfolio;")
-        conn.commit()
-
-
 @pytest.fixture(scope="session")
 def bullish_db() -> BullishDb:
-    delete_tables(DATABASE_PATH)
-
     return BullishDb(database_path=DATABASE_PATH)
 
 
