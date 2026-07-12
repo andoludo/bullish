@@ -1,46 +1,52 @@
-[tool.poetry]
+[project]
 name = "bullishpy"
 version = "0.89.0"
 description = ""
-authors = ["aan <andoludovic.andriamamonjy@gmail.com>"]
+authors = [{ name = "aan", email = "andoludovic.andriamamonjy@gmail.com" }]
 readme = "README.md"
-packages = [{ include = "bullish" }]
-[tool.poetry.dependencies]
-python = ">=3.12,<3.13"
-bearishpy = ">=0.49.0, <1.0.0"
-tickermood = "^0.29.0"
-streamlit = "^1.45.1"
-streamlit-pydantic = "^v0.6.1-rc.3"
-streamlit-file-browser = "^3.2.22"
-huey = "^2.5.3"
-pandas-ta = "^0.4.71b0"
-plotly = ">=4.12.0,<6.0.0"
-ta-lib = "^0.6.4"
-click = ">=7.0,<=8.1"
-joblib = "^1.5.1"
-vectorbt = "^0.28.0"
-mysec = ">=0.8.0, <1.0.0"
-myportfolio = ">=0.6.0, <1.0.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "bearishpy>=0.49.0,<1.0.0",
+    "tickermood>=0.29.0,<0.30.0",
+    "streamlit>=1.45.1,<2.0.0",
+    "streamlit-pydantic>=0.6.1rc3,<0.7.0",
+    "streamlit-file-browser>=3.2.22,<4.0.0",
+    "huey>=2.5.3,<3.0.0",
+    "pandas-ta>=0.4.71b0,<0.5.0",
+    "plotly>=4.12.0,<6.0.0",
+    "ta-lib>=0.6.5,<0.7.0",
+    "click>=7.0,<=8.1",
+    "joblib>=1.5.1,<2.0.0",
+    "vectorbt>=0.28.0,<0.29.0",
+    "mysec>=0.8.0,<1.0.0",
+    "myportfolio>=0.6.0,<1.0.0",
+]
 
-[tool.poetry.scripts]
+[project.scripts]
 bullish = "bullish.cli:app"
 
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.4"
-mypy = "^1.8.0"
-nox = "^2023.4.22"
-ruff = "^0.3.0"
-pre-commit = "^3.6.2"
-pandas-stubs = "^2.2.0.240218"
-types-simplejson = "^3.19.0.20240218"
-types-beautifulsoup4 = "^4.12.0.20240229"
-black = "^25.1.0"
+[dependency-groups]
+dev = [
+    "pytest>=7.4.4,<8.0.0",
+    "mypy>=1.16.1,<1.17.0",
+    "nox>=2023.4.22",
+    "ruff>=0.3.0,<0.4.0",
+    "pre-commit>=3.6.2,<4.0.0",
+    "pandas-stubs>=2.2.0.240218",
+    "types-simplejson>=3.19.0.20240218",
+    "types-beautifulsoup4>=4.12.0.20240229",
+    "black>=25.1.0,<26.0.0",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["bullish"]
+
+[tool.uv]
+package = true
 
 [tool.mypy]
 plugins = "pydantic.mypy"

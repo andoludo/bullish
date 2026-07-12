@@ -5,9 +5,6 @@ on:
 jobs:
   linting:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [ "18.x" ]
     if: startsWith(github.ref, 'refs/heads/') && ! contains(github.event.head_commit.message, 'Auto-increment')
     steps:
       - name: Checkout repository
@@ -17,20 +14,16 @@ jobs:
           ref: ${{ github.ref_name }}
       - name: Install TA-Lib
         uses: ./.github/actions/install-ta-lib
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install 3.12
       - name: Install dependencies
-        run: poetry install
-
-      - name: Install nox dependencies
-        run: poetry run nox -s install
-
+        run: uv sync --all-groups --frozen
       - name: Run linting
-        run: poetry run nox -s linting
+        run: uv run nox -s linting
 
   tests:
     needs: [linting]
@@ -43,19 +36,16 @@ jobs:
           ref: ${{ github.ref_name }}
       - name: Install TA-Lib
         uses: ./.github/actions/install-ta-lib
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install 3.12
       - name: Install dependencies
-        run: poetry install
-
-      - name: Install nox dependencies
-        run: poetry run nox -s install
+        run: uv sync --all-groups --frozen
       - name: Run tests
-        run: poetry run nox -s tests
+        run: uv run nox -s tests
 
   create-revision-and-tag:
     if: startsWith(github.ref, 'refs/heads/master')
@@ -67,13 +57,13 @@ jobs:
         with:
           token: ${{ secrets.ACCESS_TOKEN }}
           ref: ${{ github.ref_name }}
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
       - name: Determine Versioning Strategy
         run: |
           echo "Bumping minor version"
-          poetry version minor
-          echo "NEW_VERSION=$(poetry version -s)" >> $GITHUB_ENV
+          uv version --bump minor --no-sync
+          echo "NEW_VERSION=$(uv version --short)" >> $GITHUB_ENV
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
@@ -97,15 +87,15 @@ jobs:
           ref: ${{ github.ref_name }}
       - name: Install TA-Lib
         uses: ./.github/actions/install-ta-lib
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
       - name: Determine Current Version
         run: |
           echo "NEW_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
 
       - name: Build source and wheel archives
         id: build
-        run: poetry build
+        run: uv build
       - name: Get Commit Messages Since Last Tag
         id: commit_messages
         run: |
