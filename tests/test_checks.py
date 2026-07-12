@@ -1,8 +1,14 @@
+import pytest
+
 from bullish.utils.checks import (
     compatible_bearish_database,
     compatible_bullish_database,
 )
-from tests.conftest import DATABASE_PATH
+from tests.conftest import DATABASE_PATH, DB_AVAILABLE
+
+pytestmark = pytest.mark.skipif(
+    not DB_AVAILABLE, reason="bear.db (Git-LFS) test database is not available"
+)
 
 
 def test_compatible_bearish_database() -> None:

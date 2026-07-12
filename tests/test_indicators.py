@@ -287,8 +287,8 @@ def test_indicator_function_sma_momentum(data_aapl: pd.DataFrame) -> None:
 def test_indicator_function_sma_momentum_with_change(data_aapl: pd.DataFrame) -> None:
     d1 = compute_sma(data_aapl)
     data = d1.SMA_50 > d1.SMA_200
-    data[-12:] = True
-    data[-10] = False
+    data.iloc[-12:] = True
+    data.iloc[-10] = False
     res = find_last_true_run_start(data)
     assert isinstance(res, datetime.date)
 
