@@ -3,7 +3,7 @@ import logging
 import random
 from datetime import date, timedelta
 from io import StringIO
-from typing import TYPE_CHECKING, Optional, Union, List, Dict, Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -44,14 +44,14 @@ class BacktestQueryRange(BacktestQueryBase):
 
 class BacktestQuerySelection(BacktestQueryBase):
 
-    selections: List[str]
+    selections: list[str]
 
     def to_selections(self) -> str:
         return ", ".join([f"'{s}'" for s in self.selections])
 
 
 class BacktestQueries(BaseModel):
-    queries: list[Union[BacktestQueryDate, BacktestQueryRange, BacktestQuerySelection]]
+    queries: list[BacktestQueryDate | BacktestQueryRange | BacktestQuerySelection]
 
     def to_query(self) -> str:
         query_parts = []
@@ -102,14 +102,14 @@ class BacktestResultQuery(BaseBacktestResult):
 
 
 class BacktestResult(BacktestResultQuery):
-    data: Dict[str, Any]
+    data: dict[str, Any]
 
     def to_dataframe(self) -> pd.DataFrame:
         return pd.read_json(StringIO(json.dumps(self.data))).sort_index()
 
 
 class BacktestResults(BaseModel):
-    results: List[BacktestResult]
+    results: list[BacktestResult]
 
     def figure(self, type: str = "mean") -> go.Figure:
         fig = go.Figure()
@@ -162,7 +162,7 @@ class Equity(BaseModel):
     buy: float
     sell: float
     investment_in: float
-    investment_out: Optional[float] = None
+    investment_out: float | None = None
 
     def profit(self) -> float:
         return (self.sell - self.buy) * (self.investment_in / self.buy)
@@ -406,7 +406,7 @@ def run_tests(
 
 def run_many_tests(
     bullish_db: "BullishDb",
-    named_filters: List["NamedFilterQuery"],
+    named_filters: list["NamedFilterQuery"],
     config: BackTestConfig,
 ) -> None:
     back_tests = []
@@ -415,7 +415,7 @@ def run_many_tests(
             back_tests.append(
                 run_tests(bullish_db, named_filter, config).to_backtest_result()
             )
-        except Exception as e:  # noqa: PERF203
+        except Exception as e:
             logger.error(e)
             continue
 

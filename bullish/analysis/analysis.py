@@ -8,15 +8,11 @@ from pathlib import Path
 from typing import (
     Annotated,
     Any,
-    List,
-    Optional,
-    Sequence,
-    Type,
     get_args,
     TYPE_CHECKING,
     ClassVar,
-    Dict,
 )
+from collections.abc import Sequence
 
 import pandas as pd
 from bearish.models.assets.equity import BaseEquity  # type: ignore
@@ -56,7 +52,7 @@ QUARTERLY = "quarterly"
 logger = logging.getLogger(__name__)
 
 
-def to_float(value: Any) -> Optional[float]:
+def to_float(value: Any) -> float | None:
     if value == "None":
         return None
     if value is None:
@@ -70,7 +66,7 @@ def to_float(value: Any) -> Optional[float]:
 
 
 def _load_data(
-    data: Sequence[DataSourceBase], symbol: str, class_: Type[DataSourceBase]
+    data: Sequence[DataSourceBase], symbol: str, class_: type[DataSourceBase]
 ) -> pd.DataFrame:
     try:
         records = pd.DataFrame.from_records(
@@ -95,7 +91,7 @@ def _all_positive(series: pd.Series, threshold: int = 0) -> bool:
     return all(series.dropna() > threshold)
 
 
-def _get_last(data: pd.Series) -> Optional[float]:
+def _get_last(data: pd.Series) -> float | None:
     return data.iloc[-1] if not data.empty else None
 
 
@@ -110,14 +106,14 @@ def _abs(data: pd.Series) -> pd.Series:
 class TechnicalAnalysisBase(BaseModel):
     _description: ClassVar[str] = "General technical indicators"
     last_price: Annotated[
-        Optional[float],
+        float | None,
         BeforeValidator(to_float),
         Field(
             default=None,
         ),
     ]
     max_year_loss: Annotated[
-        Optional[float],
+        float | None,
         BeforeValidator(to_float),
         Field(
             default=None,
@@ -153,92 +149,92 @@ class TechnicalAnalysis(*TechnicalAnalysisModels):  # type: ignore
 
 
 class BaseFundamentalAnalysis(BaseModel):
-    positive_debt_to_equity: Optional[bool] = Field(
+    positive_debt_to_equity: bool | None = Field(
         None,
         description="True if the company's debt-to-equity ratio is favorable (typically low or improving).",
     )
-    positive_return_on_assets: Optional[bool] = Field(
+    positive_return_on_assets: bool | None = Field(
         None,
         description="True if the company reports a positive return on assets (ROA), "
         "indicating efficient use of its assets.",
     )
-    positive_return_on_equity: Optional[bool] = Field(
+    positive_return_on_equity: bool | None = Field(
         None,
         description="True if the return on equity (ROE) is positive, "
         "showing profitability relative to shareholder equity.",
     )
-    positive_diluted_eps: Optional[bool] = Field(
+    positive_diluted_eps: bool | None = Field(
         None,
         description="True if the diluted earnings per share (EPS), "
         "which includes the effect of convertible securities, is positive.",
     )
-    positive_basic_eps: Optional[bool] = Field(
+    positive_basic_eps: bool | None = Field(
         None,
         description="True if the basic earnings per share (EPS) is positive, reflecting profitable operations.",
     )
-    growing_basic_eps: Optional[bool] = Field(
+    growing_basic_eps: bool | None = Field(
         None,
         description="True if the basic EPS has shown consistent growth over a defined time period.",
     )
-    growing_diluted_eps: Optional[bool] = Field(
+    growing_diluted_eps: bool | None = Field(
         None,
         description="True if the diluted EPS has consistently increased over time.",
     )
-    positive_net_income: Optional[bool] = Field(
+    positive_net_income: bool | None = Field(
         None,
         description="True if the net income is positive, indicating overall profitability.",
     )
-    positive_operating_income: Optional[bool] = Field(
+    positive_operating_income: bool | None = Field(
         None,
         description="True if the company has positive operating income from its core business operations.",
     )
-    growing_net_income: Optional[bool] = Field(
+    growing_net_income: bool | None = Field(
         None, description="True if net income has shown consistent growth over time."
     )
-    growing_operating_income: Optional[bool] = Field(
+    growing_operating_income: bool | None = Field(
         None,
         description="True if the operating income has consistently increased over a period.",
     )
-    positive_free_cash_flow: Optional[bool] = Field(
+    positive_free_cash_flow: bool | None = Field(
         None,
         description="True if the company has positive free cash flow, indicating financial flexibility and health.",
     )
-    growing_operating_cash_flow: Optional[bool] = Field(
+    growing_operating_cash_flow: bool | None = Field(
         None,
         description="True if the company's operating cash flow is growing steadily.",
     )
-    operating_cash_flow_is_higher_than_net_income: Optional[bool] = Field(
+    operating_cash_flow_is_higher_than_net_income: bool | None = Field(
         None,
         description="True if the operating cash flow exceeds net income, often a sign of high-quality earnings.",
     )
 
     # Capital Expenditure Ratios
-    mean_capex_ratio: Optional[float] = Field(
+    mean_capex_ratio: float | None = Field(
         None,
         description="Average capital expenditure (CapEx) ratio, usually "
         "calculated as CapEx divided by revenue or operating cash flow.",
     )
-    max_capex_ratio: Optional[float] = Field(
+    max_capex_ratio: float | None = Field(
         None, description="Maximum observed CapEx ratio over the evaluation period."
     )
-    min_capex_ratio: Optional[float] = Field(
+    min_capex_ratio: float | None = Field(
         None, description="Minimum observed CapEx ratio over the evaluation period."
     )
 
     # Dividend Payout Ratios
-    mean_dividend_payout_ratio: Optional[float] = Field(
+    mean_dividend_payout_ratio: float | None = Field(
         None,
         description="Average dividend payout ratio, representing the proportion of earnings paid out as dividends.",
     )
-    max_dividend_payout_ratio: Optional[float] = Field(
+    max_dividend_payout_ratio: float | None = Field(
         None, description="Maximum dividend payout ratio observed over the period."
     )
-    min_dividend_payout_ratio: Optional[float] = Field(
+    min_dividend_payout_ratio: float | None = Field(
         None, description="Minimum dividend payout ratio observed over the period."
     )
 
     # EPS Value
-    earning_per_share: Optional[float] = Field(
+    earning_per_share: float | None = Field(
         None,
         description="The latest or most relevant value of earnings per share (EPS), indicating net income per share.",
     )
@@ -260,9 +256,9 @@ class BaseFundamentalAnalysis(BaseModel):
     @classmethod
     def _from_financials(
         cls,
-        balance_sheets: List[BalanceSheet] | List[QuarterlyBalanceSheet],
-        financial_metrics: List[FinancialMetrics] | List[QuarterlyFinancialMetrics],
-        cash_flows: List[CashFlow] | List[QuarterlyCashFlow],
+        balance_sheets: list[BalanceSheet] | list[QuarterlyBalanceSheet],
+        financial_metrics: list[FinancialMetrics] | list[QuarterlyFinancialMetrics],
+        cash_flows: list[CashFlow] | list[QuarterlyCashFlow],
         ticker: Ticker,
     ) -> "BaseFundamentalAnalysis":
         try:
@@ -387,7 +383,7 @@ BaseQuarterlyFundamentalAnalysis = create_model(  # type: ignore
 )
 
 
-class QuarterlyFundamentalAnalysis(BaseQuarterlyFundamentalAnalysis):  # type: ignore
+class QuarterlyFundamentalAnalysis(BaseQuarterlyFundamentalAnalysis):
     @classmethod
     def from_quarterly_financials(
         cls, financials: "Financials", ticker: Ticker
@@ -398,7 +394,12 @@ class QuarterlyFundamentalAnalysis(BaseQuarterlyFundamentalAnalysis):  # type: i
             cash_flows=financials.quarterly_cash_flows,
             ticker=ticker,
         )
-        return cls.model_validate({f"{QUARTERLY}_{k}": v for k, v in base_financial_analisys.model_dump().items()})  # type: ignore
+        return cls.model_validate(
+            {
+                f"{QUARTERLY}_{k}": v
+                for k, v in base_financial_analisys.model_dump().items()
+            }
+        )
 
 
 class FundamentalAnalysis(YearlyFundamentalAnalysis, QuarterlyFundamentalAnalysis):
@@ -419,7 +420,7 @@ class FundamentalAnalysis(YearlyFundamentalAnalysis, QuarterlyFundamentalAnalysi
     @classmethod
     def compute_series(
         cls, financials: FinancialsWithDate, ticker: Ticker
-    ) -> List[SignalSeries]:
+    ) -> list[SignalSeries]:
         fundamendal_analysis = FundamentalAnalysis.from_financials(financials, ticker)
         fundamental_analysis_ = fundamendal_analysis.model_dump(
             exclude_none=True, exclude_unset=True, exclude_defaults=True
@@ -436,12 +437,12 @@ class FundamentalAnalysis(YearlyFundamentalAnalysis, QuarterlyFundamentalAnalysi
 
 
 class AnalysisEarningsDate(BaseModel):
-    next_earnings_date: Optional[date] = None
+    next_earnings_date: date | None = None
 
 
 class AnalysisView(BaseModel):
     sector: Annotated[
-        Optional[str],
+        str | None,
         Field(
             None,
             description="Broad sector to which the company belongs, "
@@ -449,7 +450,7 @@ class AnalysisView(BaseModel):
         ),
     ]
     industry: Annotated[
-        Optional[str],
+        str | None,
         Field(
             None,
             description="Detailed industry categorization for the company, "
@@ -457,7 +458,7 @@ class AnalysisView(BaseModel):
         ),
     ]
     market_capitalization: Annotated[
-        Optional[float],
+        float | None,
         BeforeValidator(to_float),
         Field(
             default=None,
@@ -465,46 +466,46 @@ class AnalysisView(BaseModel):
         ),
     ]
     country: Annotated[
-        Optional[str],
+        str | None,
         Field(None, description="Country where the company's headquarters is located"),
     ]
     symbol: str = Field(
         description="Unique ticker symbol identifying the company on the stock exchange"
     )
     name: Annotated[
-        Optional[str],
+        str | None,
         Field(None, description="Full name of the company"),
     ]
-    price_per_earning_ratio: Optional[float] = None
+    price_per_earning_ratio: float | None = None
     last_price: Annotated[
-        Optional[float],
+        float | None,
         BeforeValidator(to_float),
         Field(
             default=None,
         ),
     ]
     max_year_loss: Annotated[
-        Optional[float],
+        float | None,
         BeforeValidator(to_float),
         Field(
             default=None,
         ),
     ]
-    consensus: Optional[str] = None
-    recommendation: Optional[str] = None
-    yearly_growth: Optional[float] = None
-    weekly_growth: Optional[float] = None
-    monthly_growth: Optional[float] = None
-    upside: Optional[float] = None
-    oai_high_price_target: Optional[float] = None
-    oai_low_price_target: Optional[float] = None
-    rsi: Optional[float] = None
-    oai_recommendation: Optional[str] = None
-    oai_moat: Optional[bool] = None
+    consensus: str | None = None
+    recommendation: str | None = None
+    yearly_growth: float | None = None
+    weekly_growth: float | None = None
+    monthly_growth: float | None = None
+    upside: float | None = None
+    oai_high_price_target: float | None = None
+    oai_low_price_target: float | None = None
+    rsi: float | None = None
+    oai_recommendation: str | None = None
+    oai_moat: bool | None = None
     # SEC
-    occurrences: Optional[int] = None
-    total_value: Optional[float] = None
-    total_increase: Optional[float] = None
+    occurrences: int | None = None
+    total_value: float | None = None
+    total_increase: float | None = None
 
 
 def json_loads(value: Any) -> Any:
@@ -523,27 +524,27 @@ def scrub(text: str) -> str:
 
 
 class SubjectAnalysis(BaseModel):
-    high_price_target: Optional[float] = None
-    low_price_target: Optional[float] = None
-    consensus: Optional[str] = None
-    reason: Optional[str] = None
-    recommendation: Optional[str] = None
-    explanation: Optional[str] = None
-    news_date: Optional[datetime] = None
+    high_price_target: float | None = None
+    low_price_target: float | None = None
+    consensus: str | None = None
+    reason: str | None = None
+    recommendation: str | None = None
+    explanation: str | None = None
+    news_date: datetime | None = None
     news_summary: Annotated[
-        Optional[List[Dict[str, Any]]], BeforeValidator(json_loads)
+        list[dict[str, Any]] | None, BeforeValidator(json_loads)
     ] = None
-    summary: Annotated[Optional[Dict[str, Any]], BeforeValidator(json_loads)] = None
-    upside: Optional[float] = None
-    downside: Optional[float] = None
+    summary: Annotated[dict[str, Any] | None, BeforeValidator(json_loads)] = None
+    upside: float | None = None
+    downside: float | None = None
 
-    oai_high_price_target: Optional[float] = None
-    oai_low_price_target: Optional[float] = None
-    oai_news_date: Optional[datetime] = None
-    oai_recent_news: Optional[str] = None
-    oai_recommendation: Optional[str] = None
-    oai_explanation: Optional[str] = None
-    oai_moat: Optional[bool] = None
+    oai_high_price_target: float | None = None
+    oai_low_price_target: float | None = None
+    oai_news_date: datetime | None = None
+    oai_recent_news: str | None = None
+    oai_recommendation: str | None = None
+    oai_explanation: str | None = None
+    oai_moat: bool | None = None
 
     def compute_upside(self, last_price: float) -> None:
         if self.oai_high_price_target is not None:
@@ -559,7 +560,7 @@ class SubjectAnalysis(BaseModel):
                 / float(last_price)
             )
 
-    def to_news(self) -> Optional[str]:
+    def to_news(self) -> str | None:
         if not self.news_summary:
             return None
         return "".join(
@@ -570,7 +571,7 @@ class SubjectAnalysis(BaseModel):
             ]
         )
 
-    def to_date(self) -> Optional[date]:
+    def to_date(self) -> date | None:
         if self.news_date:
             return self.news_date.date()
         return None
@@ -620,7 +621,7 @@ class Analysis(SubjectAnalysis, AnalysisEarningsDate, AnalysisView, BaseEquity, 
 
 def compute_financials_series(
     financials_: Financials, ticker: Ticker
-) -> List[SignalSeries]:
+) -> list[SignalSeries]:
     financials_with_dates = FinancialsWithDate.from_financials(financials_)
     series = []
     for f in financials_with_dates:
@@ -635,7 +636,7 @@ def compute_analysis(database_path: Path, ticker: Ticker) -> Analysis:
     return Analysis.from_ticker(bullish_db, ticker)
 
 
-def compute_signal_series(database_path: Path, ticker: Ticker) -> List[SignalSeries]:
+def compute_signal_series(database_path: Path, ticker: Ticker) -> list[SignalSeries]:
     from bullish.database.crud import BullishDb
 
     bullish_db = BullishDb(database_path=database_path)

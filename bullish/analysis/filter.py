@@ -1,6 +1,6 @@
 import datetime
 from datetime import date
-from typing import get_args, Any, Optional, List, Tuple, Type, Dict
+from typing import get_args, Any
 
 from bearish.types import SeriesLength  # type: ignore
 from pydantic import BaseModel, Field, ConfigDict
@@ -19,21 +19,21 @@ from bullish.analysis.constants import Industry, IndustryGroup, Sector, Country
 SIZE_RANGE = 2
 
 
-def _get_type(name: str, info: FieldInfo) -> Tuple[Any, Any]:
+def _get_type(name: str, info: FieldInfo) -> tuple[Any, Any]:
     alias = info.alias or " ".join(name.capitalize().split("_")).strip()
-    if info.annotation == Optional[float]:  # type: ignore
+    if info.annotation == float | None:
         ge = next((item.ge for item in info.metadata if hasattr(item, "ge")), 0)
         le = next((item.le for item in info.metadata if hasattr(item, "le")), 100)
         default = [ge, le]
         return (
-            Optional[List[float]],
+            list[float] | None,
             Field(default=default, alias=alias, description=info.description),
         )
-    elif info.annotation == Optional[date]:  # type: ignore
+    elif info.annotation == date | None:
         le = date.today()
         ge = le - datetime.timedelta(days=30 * 2)  # 30 days * 12 months
         return (
-            List[date],
+            list[date],
             Field(default=[ge, le], alias=alias, description=info.description),
         )
     else:
@@ -43,28 +43,28 @@ def _get_type(name: str, info: FieldInfo) -> Tuple[Any, Any]:
 FUNDAMENTAL_ANALYSIS_GROUP = ["income", "cash_flow", "eps"]
 
 
-def _get_fundamental_analysis_boolean_fields() -> List[str]:
+def _get_fundamental_analysis_boolean_fields() -> list[str]:
     return [
         name
         for name, info in {
             **YearlyFundamentalAnalysis.model_fields,
             **QuarterlyFundamentalAnalysis.model_fields,
         }.items()
-        if info.annotation == Optional[bool]
+        if info.annotation == bool | None
     ]
 
 
-def _get_technical_analysis_float_fields() -> List[str]:
+def _get_technical_analysis_float_fields() -> list[str]:
     return [
         name
         for name, info in (
             TechnicalAnalysis.model_fields | AnalysisView.model_fields
         ).items()
-        if info.annotation == Optional[float]
+        if info.annotation == float | None
     ]
 
 
-def get_boolean_field_group(group: str) -> List[str]:
+def get_boolean_field_group(group: str) -> list[str]:
     groups = FUNDAMENTAL_ANALYSIS_GROUP.copy()
     groups.remove(group)
     return [
@@ -82,13 +82,13 @@ PROPERTIES_GROUP = list(
         {*INCOME_GROUP, *CASH_FLOW_GROUP, *EPS_GROUP}
     )
 )
-BOOLEAN_GROUP_MAPPING: Dict[str, List[str]] = {
+BOOLEAN_GROUP_MAPPING: dict[str, list[str]] = {
     "income": INCOME_GROUP,
     "cash_flow": CASH_FLOW_GROUP,
     "eps": EPS_GROUP,
     "properties": PROPERTIES_GROUP,
 }
-GROUP_MAPPING: Dict[str, List[str]] = {
+GROUP_MAPPING: dict[str, list[str]] = {
     **BOOLEAN_GROUP_MAPPING,
     "properties": PROPERTIES_GROUP,
     "country": list(get_args(Country)),
@@ -101,32 +101,32 @@ GROUP_MAPPING: Dict[str, List[str]] = {
 }
 
 
-def _create_fundamental_analysis_models() -> List[Type[BaseModel]]:
-    models = []
+def _create_fundamental_analysis_models() -> list[type[BaseModel]]:
+    models: list[type[BaseModel]] = []
     boolean_fields = {
-        "income": (Optional[List[str]], Field(default=None, description="Income")),
+        "income": (list[str] | None, Field(default=None, description="Income")),
         "cash_flow": (
-            Optional[List[str]],
+            list[str] | None,
             Field(default=None, description="Cash flow"),
         ),
         "eps": (
-            Optional[List[str]],
+            list[str] | None,
             Field(default=None, description="Earnings per share"),
         ),
         "properties": (
-            Optional[List[str]],
+            list[str] | None,
             Field(default=None, description="General properties"),
         ),
     }
     yearly_fields = {
         name: _get_type(name, info)
         for name, info in YearlyFundamentalAnalysis.model_fields.items()
-        if info.annotation != Optional[bool]  # type: ignore
+        if info.annotation != bool | None
     }
     quarterly_fields = {
         name: _get_type(name, info)
         for name, info in QuarterlyFundamentalAnalysis.model_fields.items()
-        if info.annotation != Optional[bool]
+        if info.annotation != bool | None
     }
     for property in [
         (boolean_fields, "Selection filter", "SelectionFilter"),
@@ -138,14 +138,14 @@ def _create_fundamental_analysis_models() -> List[Type[BaseModel]]:
             __config__=ConfigDict(populate_by_name=True),
             **property[0],
         )
-        model_._description = property[1]
+        model_._description = property[1]  # type: ignore[attr-defined]
         models.append(model_)
 
     return models
 
 
-def create_technical_analysis_models() -> List[Type[BaseModel]]:
-    models = []
+def create_technical_analysis_models() -> list[type[BaseModel]]:
+    models: list[type[BaseModel]] = []
     for model in TechnicalAnalysisModels:
         model_ = create_model(  # type: ignore
             f"{model.__name__}Filter",  # type: ignore
@@ -165,19 +165,19 @@ FundamentalAnalysisFilters = _create_fundamental_analysis_models()
 
 
 class GeneralFilter(BaseModel):
-    country: Optional[List[str]] = None
-    order_by_asc: Optional[str] = None
-    order_by_desc: Optional[str] = None
-    industry: Optional[List[str]] = None
-    industry_group: Optional[List[str]] = None
-    sector: Optional[List[str]] = None
-    symbol: Optional[List[str]] = None
-    limit: Optional[str] = None
-    next_earnings_date: List[date] = Field(
+    country: list[str] | None = None
+    order_by_asc: str | None = None
+    order_by_desc: str | None = None
+    industry: list[str] | None = None
+    industry_group: list[str] | None = None
+    sector: list[str] | None = None
+    symbol: list[str] | None = None
+    limit: str | None = None
+    next_earnings_date: list[date] = Field(
         default=[date.today(), date.today() + datetime.timedelta(days=30 * 12)],
     )
-    market_capitalization: Optional[List[float]] = Field(default=[5e8, 1e12])
-    price_per_earning_ratio: Optional[List[float]] = Field(default=[0.0, 1000.0])
+    market_capitalization: list[float] | None = Field(default=[5e8, 1e12])
+    price_per_earning_ratio: list[float] | None = Field(default=[0.0, 1000.0])
 
 
 class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysisFilters):  # type: ignore
@@ -219,7 +219,7 @@ class FilterQuery(GeneralFilter, *TechnicalAnalysisFilters, *FundamentalAnalysis
             elif (
                 isinstance(value, list)
                 and len(value) == SIZE_RANGE
-                and all(isinstance(item, (int, float)) for item in value)
+                and all(isinstance(item, int | float) for item in value)
             ):
                 query.append(f"{parameter} BETWEEN {value[0]} AND {value[1]}")
             elif (

@@ -1,5 +1,4 @@
 import datetime
-from typing import Optional, List
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -15,9 +14,9 @@ from datetime import date
 def plot(
     data: pd.DataFrame,
     symbol: str,
-    name: Optional[str] = None,
-    dates: Optional[List[date]] = None,
-    industry_data: Optional[pd.DataFrame] = None,
+    name: str | None = None,
+    dates: list[date] | None = None,
+    industry_data: pd.DataFrame | None = None,
 ) -> go.Figure:
     data = add_indicators(data)
     supports = support_resistance(data)

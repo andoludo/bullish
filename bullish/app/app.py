@@ -2,7 +2,7 @@ import logging
 import shelve
 import uuid
 from pathlib import Path
-from typing import Optional, List, Type, Dict, Any
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -58,7 +58,7 @@ def store_db(db_path: Path) -> None:
         storage[db_id()] = str(db_path)
 
 
-def load_db() -> Optional[str]:
+def load_db() -> str | None:
     with shelve.open(CACHE_SHELVE) as db:  # noqa:S301
         db_path = db.get(db_id())
         return db_path
@@ -140,24 +140,24 @@ def dialog_pick_database() -> None:
 
 
 @st.cache_resource
-def symbols() -> List[str]:
+def symbols() -> list[str]:
     bearish_db_ = bearish_db(st.session_state.database_path)
     return bearish_db_.read_symbols()
 
 
-def groups_mapping() -> Dict[str, List[str]]:
+def groups_mapping() -> dict[str, list[str]]:
     GROUP_MAPPING["symbol"] = symbols()
     return GROUP_MAPPING
 
 
-def build_filter(model: Type[BaseModel], data: Dict[str, Any]) -> Dict[str, Any]:
+def build_filter(model: type[BaseModel], data: dict[str, Any]) -> dict[str, Any]:
 
     for field, info in model.model_fields.items():
         name = info.description or info.alias or field
         default = info.default
         if data.get(field) and data[field] != info.default:
             default = data[field]
-        if info.annotation == Optional[List[str]]:  # type: ignore
+        if info.annotation == list[str] | None:
             mapping = groups_mapping().get(field)
             if not mapping:
                 continue
@@ -167,7 +167,7 @@ def build_filter(model: Type[BaseModel], data: Dict[str, Any]) -> Dict[str, Any]
                 default=default,
                 key=hash((model.__name__, field)),
             )
-        elif info.annotation == Optional[str]:  # type: ignore
+        elif info.annotation == str | None:
             mapping = groups_mapping().get(field)
             if not mapping:
                 continue
@@ -188,7 +188,7 @@ def build_filter(model: Type[BaseModel], data: Dict[str, Any]) -> Dict[str, Any]
                 (item.le for item in info.metadata if hasattr(item, "le")),
                 info.default[1] if info.default and len(info.default) == 2 else None,
             )
-            if info.annotation == Optional[List[float]]:  # type: ignore
+            if info.annotation == list[float] | None:
                 ge = int(ge)  # type: ignore
                 le = int(le)  # type: ignore
                 default = [int(d) for d in default]

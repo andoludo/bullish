@@ -1,6 +1,7 @@
 import logging
 from datetime import date
-from typing import Optional, Callable, cast
+from typing import cast
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -37,16 +38,14 @@ def consecutive_highs(low: pd.Series, high: pd.Series) -> pd.Series:
     return mask_high[common_indexes]
 
 
-def cross(
-    series_a: pd.Series, series_b: pd.Series, above: bool = True
-) -> Optional[date]:
+def cross(series_a: pd.Series, series_b: pd.Series, above: bool = True) -> date | None:
     crossing = cross_simple(series_a=series_a, series_b=series_b, above=above)
     if not crossing[crossing == 1].index.empty:
         return crossing[crossing == 1].last_valid_index().date()  # type: ignore
     return None
 
 
-def cross_value(series: pd.Series, number: int, above: bool = True) -> Optional[date]:
+def cross_value(series: pd.Series, number: int, above: bool = True) -> date | None:
     return cross(series, pd.Series(number, index=series.index), above=above)
 
 
@@ -313,7 +312,7 @@ def compute_volume(data: pd.DataFrame) -> pd.DataFrame:
     return results
 
 
-def find_last_true_run_start(series: pd.Series) -> Optional[date]:
+def find_last_true_run_start(series: pd.Series) -> date | None:
     if not series.iloc[-1]:
         return None
     arr = series.to_numpy()
@@ -324,12 +323,12 @@ def find_last_true_run_start(series: pd.Series) -> Optional[date]:
     return series.index[last_true_run_start].date()  # type: ignore
 
 
-def sma_50_above_sma_200(data: pd.DataFrame) -> Optional[date]:
+def sma_50_above_sma_200(data: pd.DataFrame) -> date | None:
     date_1 = find_last_true_run_start(data.SMA_50 > data.SMA_200)
     return date_1
 
 
-def price_above_sma50(data: pd.DataFrame) -> Optional[date]:
+def price_above_sma50(data: pd.DataFrame) -> date | None:
     date_1 = find_last_true_run_start(data.SMA_50 < data.CLOSE)
     return date_1
 

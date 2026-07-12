@@ -1,12 +1,9 @@
 import datetime
 import logging
 from typing import (
-    Optional,
     Any,
     Annotated,
     Literal,
-    Dict,
-    List,
     TYPE_CHECKING,
     get_args,
 )
@@ -40,11 +37,11 @@ def compute_normalized_close(close_: pd.Series) -> pd.Series:
     close = close_.copy()
     close.index = close.index.tz_localize(None)  # type: ignore
     closest_ts = close.index[
-        close.index.get_indexer([BASELINE_DATE], method="nearest")[0]
+        close.index.get_indexer([BASELINE_DATE], method="nearest")[0]  # type: ignore[arg-type]
     ]
     normalized_close = (close / close.loc[closest_ts]).rename("normalized_close")
     normalized_close.index = close_.index
-    return normalized_close  # type: ignore
+    return normalized_close
 
 
 def get_industry_comparison_data(
@@ -90,7 +87,7 @@ class PricesReturns(Prices):  # type: ignore
             )
 
 
-def to_float(value: Any) -> Optional[float]:
+def to_float(value: Any) -> float | None:
     if value == "None":
         return None
     if value is None:
@@ -120,12 +117,12 @@ class IndustryView(BaseIndustryView):
     created_at: datetime.date
     country: Country
     industry: Industry
-    industry_group: Optional[IndustryGroup] = None
-    sector: Optional[Sector] = None
+    industry_group: IndustryGroup | None = None
+    sector: Sector | None = None
     type: Type
 
     @model_validator(mode="before")
-    def _validate(cls, values: Dict[str, Any]) -> Dict[str, Any]:  # noqa: N805
+    def _validate(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
         created_at = datetime.date.today()
         current_date = values.get("date", created_at)
         return (
@@ -143,7 +140,7 @@ class IndustryView(BaseIndustryView):
         function_name: Type,
         industry: Industry,
         country: Country,
-    ) -> List["IndustryView"]:
+    ) -> list["IndustryView"]:
         function = FUNCTIONS[function_name]
         data_ = []
         for field in KPI.model_fields:
@@ -168,7 +165,7 @@ class IndustryView(BaseIndustryView):
     @classmethod
     def from_db(
         cls, bullish: "BullishDb", industry: Industry, country: Country
-    ) -> List["IndustryView"]:
+    ) -> list["IndustryView"]:
         returns = []
         symbols = bullish.read_industry_symbols(industries=[industry], country=country)
         query = AssetQuery(
@@ -189,7 +186,7 @@ class IndustryView(BaseIndustryView):
 
 
 class IndustryViews(BaseModel):
-    views: List[IndustryView]
+    views: list[IndustryView]
 
     def to_dataframe(self) -> pd.DataFrame:
         data = pd.DataFrame.from_records(
@@ -208,7 +205,7 @@ class IndustryViews(BaseModel):
         return data
 
     @classmethod
-    def from_views(cls, views: List[IndustryView]) -> "IndustryViews":
+    def from_views(cls, views: list[IndustryView]) -> "IndustryViews":
         return cls(views=views)
 
 
