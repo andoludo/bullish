@@ -3,7 +3,7 @@ import logging
 from datetime import date
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional, Dict
+from typing import TYPE_CHECKING, Any, Optional
 
 import pandas as pd
 from bearish.database.crud import BearishDb  # type: ignore
@@ -89,7 +89,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             session.exec(stmt)  # type: ignore
             session.commit()
 
-    def _write_many_analysis(self, many_analysis: List[Analysis]) -> None:
+    def _write_many_analysis(self, many_analysis: list[Analysis]) -> None:
         with Session(self._engine) as session:
             stmt = (
                 insert(AnalysisORM)
@@ -99,7 +99,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             session.exec(stmt)  # type: ignore
             session.commit()
 
-    def _read_analysis(self, ticker: Ticker) -> Optional[Analysis]:
+    def _read_analysis(self, ticker: Ticker) -> Analysis | None:
         with Session(self._engine) as session:
             query = select(AnalysisORM).where(AnalysisORM.symbol == ticker.symbol)
             analysis = session.exec(query).first()
@@ -107,7 +107,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                 return None
             return Analysis.model_validate(analysis)
 
-    def read_symbols(self) -> List[str]:
+    def read_symbols(self) -> list[str]:
         query = "SELECT DISTINCT symbol FROM analysis"
         data = pd.read_sql_query(query, self._engine)
         return data["symbol"].tolist()
@@ -129,7 +129,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             session.commit()
 
     def _read_analysis_data(
-        self, columns: List[str], symbols: Optional[List[str]] = None
+        self, columns: list[str], symbols: list[str] | None = None
     ) -> pd.DataFrame:
 
         columns_ = ",".join(columns)
@@ -161,7 +161,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             session.exec(stmt)  # type: ignore
             session.commit()
 
-    def read_job_tracker(self, task_id: str) -> Optional[JobTracker]:
+    def read_job_tracker(self, task_id: str) -> JobTracker | None:
         stmt = select(JobTrackerORM).where(JobTrackerORM.job_id == task_id)
         with Session(self._engine) as session:
             result = session.execute(stmt).scalar_one_or_none()
@@ -169,7 +169,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                 return JobTracker.model_validate(result.model_dump())
             return None
 
-    def delete_job_trackers(self, job_ids: List[str]) -> None:
+    def delete_job_trackers(self, job_ids: list[str]) -> None:
         with Session(self._engine) as session:
             stmt = delete(JobTrackerORM).where(JobTrackerORM.job_id.in_(job_ids))  # type: ignore
             result = session.execute(stmt)
@@ -195,7 +195,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                     f"Job tracker with ID {job_tracker_status.job_id} not found."
                 )
 
-    def read_filtered_results(self, name: str) -> Optional[FilteredResults]:
+    def read_filtered_results(self, name: str) -> FilteredResults | None:
         with Session(self._engine) as session:
             stmt = select(FilteredResultsORM).where(FilteredResultsORM.name == name)
             result = session.execute(stmt).scalar_one_or_none()
@@ -206,7 +206,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                 )  # if you're using Pydantic or DTOs
             return None
 
-    def read_list_filtered_results(self) -> List[str]:
+    def read_list_filtered_results(self) -> list[str]:
         with Session(self._engine) as session:
             stmt = select(FilteredResultsORM.name)
             result = session.execute(stmt).scalars().all()
@@ -225,7 +225,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             session.exec(stmt)  # type: ignore
             session.commit()
 
-    def read_dates(self, symbol: str) -> List[date]:
+    def read_dates(self, symbol: str) -> list[date]:
         with Session(self._engine) as session:
             return [
                 r.date()
@@ -235,8 +235,8 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             ]
 
     def read_industry_symbols(
-        self, industries: List[Industry], country: Country, source: Sources = "Yfinance"
-    ) -> List[str]:
+        self, industries: list[Industry], country: Country, source: Sources = "Yfinance"
+    ) -> list[str]:
         with Session(self._engine) as session:
             stmt = select(EquityORM.symbol).where(
                 EquityORM.industry.in_(industries),
@@ -248,10 +248,10 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
 
     def read_industry_group_symbols(
         self,
-        industry_groups: List[IndustryGroup],
+        industry_groups: list[IndustryGroup],
         country: Country,
         source: Sources = "Yfinance",
-    ) -> List[str]:
+    ) -> list[str]:
         with Session(self._engine) as session:
             stmt = select(EquityORM.symbol).where(
                 EquityORM.industry_group.in_(industry_groups),
@@ -262,8 +262,8 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             return list(result)
 
     def read_sector_symbols(
-        self, sectors: List[Sector], country: Country, source: Sources = "Yfinance"
-    ) -> List[str]:
+        self, sectors: list[Sector], country: Country, source: Sources = "Yfinance"
+    ) -> list[str]:
         with Session(self._engine) as session:
             stmt = select(EquityORM.symbol).where(
                 EquityORM.sector.in_(sectors),
@@ -273,7 +273,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             result = session.exec(stmt).all()
             return list(result)
 
-    def write_returns(self, industry_returns: List[IndustryView]) -> None:
+    def write_returns(self, industry_returns: list[IndustryView]) -> None:
         with Session(self._engine) as session:
             stmt = (
                 insert(IndustryViewORM)
@@ -285,7 +285,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
 
     def read_returns(
         self, type: Type, industry: Industry, country: Country
-    ) -> List[IndustryView]:
+    ) -> list[IndustryView]:
         with Session(self._engine) as session:
             stmt = select(IndustryViewORM)
             if industry:
@@ -295,7 +295,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             result = session.exec(stmt).all()
             return [IndustryView.model_validate(r) for r in result]
 
-    def write_signal_series(self, signal_series: List[SignalSeries]) -> None:
+    def write_signal_series(self, signal_series: list[SignalSeries]) -> None:
         with Session(self._engine) as session:
             stmt = (
                 insert(SignalSeriesORM)
@@ -307,7 +307,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
 
     def read_signal_series(
         self, name: str, start_date: date, end_date: date
-    ) -> List[str]:
+    ) -> list[str]:
         with Session(self._engine) as session:
             stmt = select(SignalSeriesORM.symbol).where(
                 SignalSeriesORM.name == name,
@@ -317,7 +317,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             return list(set(session.exec(stmt).all()))
 
     def read_symbol_series(
-        self, symbol: str, start_date: date, end_date: Optional[date] = None
+        self, symbol: str, start_date: date, end_date: date | None = None
     ) -> pd.DataFrame:
 
         with Session(self._engine) as session:
@@ -334,7 +334,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             return Prices(prices=prices).to_dataframe()  # type: ignore
 
     def write_many_backtest_results(
-        self, backtest_results: List["BacktestResult"]
+        self, backtest_results: list["BacktestResult"]
     ) -> None:
         with Session(self._engine) as session:
             stmt = (
@@ -347,7 +347,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
 
     def read_many_backtest_results(
         self, query: Optional["BacktestResultQuery"] = None
-    ) -> List["BacktestResult"]:
+    ) -> list["BacktestResult"]:
         from bullish.analysis.backtest import BacktestResult
 
         with Session(self._engine) as session:
@@ -358,7 +358,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             else:
                 return []
 
-    def read_next_earnings_date(self, symbol: str) -> Optional[date]:
+    def read_next_earnings_date(self, symbol: str) -> date | None:
         with Session(self._engine) as session:
             stmt = select(EarningsDateORM.date).where(
                 EarningsDateORM.symbol == symbol, EarningsDateORM.date > date.today()
@@ -368,7 +368,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
                 return result.date()  # type: ignore
             return None
 
-    def read_subject(self, symbol: str) -> Optional[SubjectAnalysis]:
+    def read_subject(self, symbol: str) -> SubjectAnalysis | None:
         sql = text(
             """
             SELECT *
@@ -411,7 +411,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
 
             return SubjectAnalysis.model_validate(row_dict)
 
-    def write_many_openai_news(self, openai_news: List["OpenAINews"]) -> None:
+    def write_many_openai_news(self, openai_news: list["OpenAINews"]) -> None:
         with Session(self._engine) as session:
             stmt = (
                 insert(OpenAINewsORM)
@@ -421,7 +421,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             session.exec(stmt)  # type: ignore
             session.commit()
 
-    def update_analysis(self, symbol: str, fields: Dict[str, Any]) -> None:
+    def update_analysis(self, symbol: str, fields: dict[str, Any]) -> None:
         with Session(self._engine) as session:
             stmt = (
                 update(AnalysisORM).where(AnalysisORM.symbol == symbol).values(**fields)  # type: ignore
@@ -429,7 +429,7 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             session.exec(stmt)  # type: ignore
             session.commit()
 
-    def write_portfolio(self, portfolios: List[Portfolio]) -> None:
+    def write_portfolio(self, portfolios: list[Portfolio]) -> None:
         with Session(self._engine) as session:
             stmt = (
                 insert(PortfolioORM)
@@ -439,13 +439,13 @@ class BullishDb(BearishDb, BullishDbBase):  # type: ignore
             session.exec(stmt)  # type: ignore
             session.commit()
 
-    def read_portfolio_list(self) -> List[str]:
+    def read_portfolio_list(self) -> list[str]:
         with Session(self._engine) as session:
             stmt = select(PortfolioORM.name)
             result = session.execute(stmt).scalars().all()
             return list(result)
 
-    def read_portfolio(self, name: str) -> Optional[Portfolio]:
+    def read_portfolio(self, name: str) -> Portfolio | None:
         with Session(self._engine) as session:
             stmt = select(PortfolioORM).where(PortfolioORM.name == name)
             result = session.execute(stmt).scalar_one_or_none()

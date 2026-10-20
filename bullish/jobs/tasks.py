@@ -1,6 +1,7 @@
 import functools
 import logging
-from typing import Optional, Any, Callable, List
+from typing import Any
+from collections.abc import Callable
 
 import pandas as pd
 from bearish.main import Bearish  # type: ignore
@@ -32,7 +33,7 @@ class DataBaseSingleTon:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, path: Optional[Path] = None) -> None:
+    def __init__(self, path: Path | None = None) -> None:
         if not hasattr(self, "path"):  # Only set once
             self.path = path
 
@@ -46,7 +47,7 @@ def job_tracker(func: Callable[..., Any]) -> Callable[..., Any]:
         database_path: Path,
         job_type: JobType,
         *args: Any,
-        task: Optional[Task] = None,
+        task: Task | None = None,
         **kwargs: Any,
     ) -> None:
         print(database_path)
@@ -75,9 +76,9 @@ def job_tracker(func: Callable[..., Any]) -> Callable[..., Any]:
 def _base_update(
     database_path: Path,
     job_type: JobType,
-    symbols: Optional[List[str]],
+    symbols: list[str] | None,
     update_query: FilterUpdate,
-    task: Optional[Task] = None,
+    task: Task | None = None,
 ) -> None:
 
     if not update_query.update_analysis_only:
@@ -103,7 +104,7 @@ def _base_update(
 def initialize(
     database_path: Path,
     job_type: JobType,
-    task: Optional[Task] = None,
+    task: Task | None = None,
 ) -> None:
     database = DataBaseSingleTon(path=database_path)
     if not database.valid():
@@ -115,16 +116,16 @@ def initialize(
 def update(
     database_path: Path,
     job_type: JobType,
-    symbols: Optional[List[str]],
+    symbols: list[str] | None,
     update_query: FilterUpdate,
-    task: Optional[Task] = None,
+    task: Task | None = None,
 ) -> None:
     _base_update(database_path, job_type, symbols, update_query, task)
 
 
 @huey.periodic_task(crontab(minute="0", hour="1"), context=True)  # type: ignore
 def cron_update(
-    task: Optional[Task] = None,
+    task: Task | None = None,
 ) -> None:
     database = DataBaseSingleTon()
     if database.valid():
@@ -135,7 +136,7 @@ def cron_update(
 
 @huey.periodic_task(crontab(day_of_week=0, hour=9, minute=0), context=True)  # type: ignore
 def cron_financial_update(
-    task: Optional[Task] = None,
+    task: Task | None = None,
 ) -> None:
     database = DataBaseSingleTon()
     if database.valid():
@@ -153,7 +154,7 @@ def cron_financial_update(
 def analysis(
     database_path: Path,
     job_type: JobType,
-    task: Optional[Task] = None,
+    task: Task | None = None,
 ) -> None:
     bullish_db = BullishDb(database_path=database_path)
     run_analysis(bullish_db)
@@ -165,7 +166,7 @@ def analysis(
 def backtest_signals(
     database_path: Path,
     job_type: JobType,
-    task: Optional[Task] = None,
+    task: Task | None = None,
 ) -> None:
     bullish_db = BullishDb(database_path=database_path)
     run_signal_series_analysis(bullish_db)
@@ -175,9 +176,9 @@ def backtest_signals(
 def base_news(
     database_path: Path,
     job_type: JobType,
-    symbols: List[str],
+    symbols: list[str],
     headless: bool = True,
-    task: Optional[Task] = None,
+    task: Task | None = None,
 ) -> None:
     bullish_db = BullishDb(database_path=database_path)
     database_config = DatabaseConfig(database_path=database_path, no_migration=True)
@@ -190,9 +191,9 @@ def base_news(
 def news(
     database_path: Path,
     job_type: JobType,
-    symbols: List[str],
+    symbols: list[str],
     headless: bool = True,
-    task: Optional[Task] = None,
+    task: Task | None = None,
 ) -> None:
     bullish_db = BullishDb(database_path=database_path)
     if get_open_ai_news(bullish_db, symbols):
@@ -220,7 +221,7 @@ def news(
 
 @huey.periodic_task(crontab(minute="0", hour="8"), context=True)  # type: ignore
 def cron_news(
-    task: Optional[Task] = None,
+    task: Task | None = None,
 ) -> None:
     filters = load_custom_filters()
     database = DataBaseSingleTon()

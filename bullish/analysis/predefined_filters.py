@@ -3,7 +3,7 @@ import json
 import os
 from datetime import timedelta
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Union, get_args, Tuple
+from typing import Any, get_args
 
 from bullish.analysis.analysis import AnalysisView
 from bullish.analysis.backtest import (
@@ -30,15 +30,15 @@ DATE_THRESHOLD = [
 ]
 
 
-def _get_variants(variants: List[str]) -> List[Tuple[str, ...]]:
+def _get_variants(variants: list[str]) -> list[tuple[str, ...]]:
     return [tuple(variants[:i]) for i in range(1, len(variants) + 1)]
 
 
 class NamedFilterQuery(FilterQuery):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return self.model_dump(
             exclude_unset=True,
             exclude_none=True,
@@ -49,13 +49,13 @@ class NamedFilterQuery(FilterQuery):
     def to_backtesting_query(
         self, backtest_start_date: datetime.date
     ) -> BacktestQueries:
-        queries: List[
-            Union[BacktestQueryRange, BacktestQueryDate, BacktestQuerySelection]
+        queries: list[
+            BacktestQueryRange | BacktestQueryDate | BacktestQuerySelection
         ] = []
         in_use_backtests = Indicators().in_use_backtest()
         for in_use in in_use_backtests:
             value = self.to_dict().get(in_use)
-            if value and self.model_fields[in_use].annotation == List[datetime.date]:
+            if value and self.model_fields[in_use].annotation == list[datetime.date]:
                 delta = value[1] - value[0]
                 queries.append(
                     BacktestQueryDate(
@@ -68,7 +68,7 @@ class NamedFilterQuery(FilterQuery):
         for field in self.to_dict():
             if field in BOOLEAN_GROUP_MAPPING:
                 value = self.to_dict().get(field)
-                if value and self.model_fields[field].annotation == Optional[List[str]]:  # type: ignore
+                if value and self.model_fields[field].annotation == list[str] | None:
                     queries.extend(
                         [
                             BacktestQueryDate(
@@ -85,7 +85,7 @@ class NamedFilterQuery(FilterQuery):
                 value = self.to_dict().get(field)
                 if (
                     value
-                    and self.model_fields[field].annotation == Optional[List[float]]  # type: ignore
+                    and self.model_fields[field].annotation == list[float] | None
                     and len(value) == 2
                 ):
                     queries.append(
@@ -96,7 +96,7 @@ class NamedFilterQuery(FilterQuery):
                             table="analysis",
                         )
                     )
-                if value and self.model_fields[field].annotation == Optional[List[str]]:  # type: ignore
+                if value and self.model_fields[field].annotation == list[str] | None:
                     queries.append(
                         BacktestQuerySelection(
                             name=field.lower(),
@@ -109,12 +109,12 @@ class NamedFilterQuery(FilterQuery):
 
     def get_backtesting_symbols(
         self, bullish_db: BullishDb, backtest_start_date: datetime.date
-    ) -> List[str]:
+    ) -> list[str]:
         queries = self.to_backtesting_query(backtest_start_date)
 
         return bullish_db.read_query(queries.to_query())["symbol"].tolist()  # type: ignore
 
-    def country_variant(self, suffix: str, countries: List[str]) -> "NamedFilterQuery":
+    def country_variant(self, suffix: str, countries: list[str]) -> "NamedFilterQuery":
         return NamedFilterQuery.model_validate(
             self.model_dump()
             | {"name": f"{self.name} ({suffix})", "country": countries}
@@ -129,7 +129,7 @@ class NamedFilterQuery(FilterQuery):
         )
 
     def _custom_variant(
-        self, suffix: str, properties: Dict[str, Any]
+        self, suffix: str, properties: dict[str, Any]
     ) -> "NamedFilterQuery":
         return NamedFilterQuery.model_validate(
             self.model_dump() | {"name": f"{self.name} ({suffix})", **properties}
@@ -305,9 +305,9 @@ class NamedFilterQuery(FilterQuery):
 
     def variants(
         self,
-        variants: Optional[List[List[str]]] = None,
-        filters: Optional[List[str]] = None,
-    ) -> List["NamedFilterQuery"]:
+        variants: list[list[str]] | None = None,
+        filters: list[str] | None = None,
+    ) -> list["NamedFilterQuery"]:
         if filters and self.name not in filters:
             return [self]
         variants = variants or [["europe"], ["us"]]
@@ -324,7 +324,7 @@ class NamedFilterQuery(FilterQuery):
         return [self, *filters_]
 
 
-def load_custom_filters() -> List[NamedFilterQuery]:
+def load_custom_filters() -> list[NamedFilterQuery]:
     if "CUSTOM_FILTERS_PATH" in os.environ:
         custom_filters_path = os.environ["CUSTOM_FILTERS_PATH"]
         return [
@@ -337,7 +337,7 @@ def load_custom_filters() -> List[NamedFilterQuery]:
     return []
 
 
-def read_custom_filters(custom_filters_path: Path) -> List[NamedFilterQuery]:
+def read_custom_filters(custom_filters_path: Path) -> list[NamedFilterQuery]:
     if custom_filters_path.exists():
         filters = json.loads(custom_filters_path.read_text())
         return [NamedFilterQuery.model_validate(filter) for filter in filters]
@@ -411,7 +411,7 @@ class PredefinedFilters(BaseModel):
     def get_predefined_filter_names(self) -> list[str]:
         return [filter.name for filter in self.filters]
 
-    def get_predefined_filter(self, name: str) -> Dict[str, Any]:
+    def get_predefined_filter(self, name: str) -> dict[str, Any]:
         for filter in self.filters:
             if filter.name == name:
                 return filter.to_dict()

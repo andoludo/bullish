@@ -2,7 +2,7 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from sqlite3 import Connection
-from typing import Generator, List
+from collections.abc import Generator
 
 from bearish.database.schemas import *  # type: ignore # noqa: F403
 
@@ -18,18 +18,19 @@ def get_sqlite_connection(database_path: Path) -> Generator[Connection, None, No
         conn.close()
 
 
-def get_table_names(module_name: str) -> List[str]:
+def get_table_names(module_name: str) -> list[str]:
     return [
         value.__tablename__
-        for _, value in locals().items()
-        if issubclass(value, SQLModel)  # type: ignore # noqa: F405
+        for value in globals().values()
+        if isinstance(value, type)
+        and issubclass(value, SQLModel)  # type: ignore # noqa: F405
         and hasattr(value, "__tablename__")
         and hasattr(value, "__table__")
         and module_name in value.__module__
     ]
 
 
-def get_table_names_from_path(database_path: Path) -> List[str]:
+def get_table_names_from_path(database_path: Path) -> list[str]:
     with get_sqlite_connection(database_path) as conn:
         cursor = conn.cursor()
         cursor.execute(

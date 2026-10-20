@@ -1,6 +1,7 @@
 import logging
 from datetime import date
-from typing import Optional, List, Callable, Any, Literal, Dict
+from typing import Any, Literal
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -26,9 +27,14 @@ from bullish.analysis.functions import (
 
 logger = logging.getLogger(__name__)
 SignalType = Literal["Short", "Long", "Oversold", "Overbought", "Value"]
+# ``ProcessingFunction`` below defines a field literally named ``date`` which
+# shadows the ``date`` type inside the class body. PEP 604 unions (``date |
+# None``) are evaluated eagerly, so referencing ``date`` there would resolve to
+# the field instead of the type. Alias the union here, outside the class scope.
+_OptionalDate = date | None
 
 
-def _last_date(d: pd.Series) -> Optional[date]:
+def _last_date(d: pd.Series) -> date | None:
     d_valid = d[d == 1]
     if d_valid.empty:
         return None
@@ -37,8 +43,8 @@ def _last_date(d: pd.Series) -> Optional[date]:
 
 
 class ProcessingFunction(BaseModel):
-    date: Callable[[pd.Series], Optional[date]] = Field(default=_last_date)
-    number: Callable[[pd.Series], Optional[float]] = Field(
+    date: Callable[[pd.Series], _OptionalDate] = Field(default=_last_date)
+    number: Callable[[pd.Series], float | None] = Field(
         default=lambda d: d.iloc[-1] if not d.dropna().empty else None
     )
 
@@ -54,18 +60,18 @@ class Signal(BaseModel):
     name: str
     type_info: SignalType
     type: Any
-    range: Optional[List[float]] = None
+    range: list[float] | None = None
     function: Callable[[pd.DataFrame], pd.Series]
     processing: ProcessingFunction = Field(default_factory=ProcessingFunction)
     description: str
-    date: Optional[date] = None
-    value: Optional[float] = None
+    date: _OptionalDate = None  # field name shadows the ``date`` type (see alias above)
+    value: float | None = None
     in_use_backtest: bool = False
 
     def is_date(self) -> bool:
-        if self.type == Optional[date]:
+        if self.type == date | None:
             return True
-        elif self.type == Optional[float]:
+        elif self.type == float | None:
             return False
         else:
             raise NotImplementedError
@@ -91,10 +97,10 @@ class Signal(BaseModel):
 class Indicator(BaseModel):
     name: str
     description: str
-    expected_columns: List[str]
+    expected_columns: list[str]
     function: Callable[[pd.DataFrame], pd.DataFrame]
     _data: pd.DataFrame = PrivateAttr(default=pd.DataFrame())
-    signals: List[Signal] = Field(default_factory=list)
+    signals: list[Signal] = Field(default_factory=list)
 
     def compute(self, data: pd.DataFrame) -> None:
         results = self.function(data)
@@ -109,7 +115,7 @@ class Indicator(BaseModel):
         for signal in self.signals:
             try:
                 signal.compute(self._data)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 logger.error(
                     f"Fail to compute signal {signal.name} for indicator {self.name}: {e}"
                 )
@@ -132,7 +138,7 @@ class Indicator(BaseModel):
                 continue
             try:
                 series_ = signal.compute_series(results)
-                if signal.type == Optional[date]:
+                if signal.type == date | None:
                     series__ = pd.DataFrame(series_[series_ == 1].rename("value"))
                 else:
                     series__ = pd.DataFrame(
@@ -154,7 +160,7 @@ class Indicator(BaseModel):
         return data
 
 
-def indicators_factory() -> List[Indicator]:
+def indicators_factory() -> list[Indicator]:
     return [
         Indicator(
             name="ADX_14",
@@ -166,28 +172,28 @@ def indicators_factory() -> List[Indicator]:
                     name="ADX_14_LONG",
                     description="ADX 14 Long Signal",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.ADX_14 > 20) & (d.PLUS_DI > d.MINUS_DI),
                 ),
                 Signal(
                     name="ADX_14_SHORT",
                     description="ADX 14 Short Signal",
                     type_info="Short",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.ADX_14 > 20) & (d.MINUS_DI > d.PLUS_DI),
                 ),
                 Signal(
                     name="ADX_14",
                     description="ADX 14",
                     type_info="Short",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.ADX_14 > 25),
                 ),
                 Signal(
                     name="ADX_14_OVERBOUGHT",
                     description="ADX 14 OVERBOUGHT",
                     type_info="Short",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.ADX_14 > 50),
                 ),
             ],
@@ -206,7 +212,7 @@ def indicators_factory() -> List[Indicator]:
                     name="MACD_12_26_9_BULLISH_CROSSOVER",
                     description="MACD 12-26-9 Bullish Crossover",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: cross_simple(
                         d.MACD_12_26_9, d.MACD_12_26_9_SIGNAL
                     ),
@@ -216,7 +222,7 @@ def indicators_factory() -> List[Indicator]:
                     name="MACD_12_26_9_UPTREND",
                     description="MACD 12-26-9 Uptrend",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.MACD_12_26_9 > d.MACD_12_26_9_SIGNAL)
                     & (d.MACD_12_26_9 > 0),
                 ),
@@ -224,7 +230,7 @@ def indicators_factory() -> List[Indicator]:
                     name="MACD_12_26_9_BEARISH_CROSSOVER",
                     description="MACD 12-26-9 Bearish Crossover",
                     type_info="Short",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: cross_simple(
                         d.MACD_12_26_9_SIGNAL, d.MACD_12_26_9
                     ),
@@ -233,14 +239,14 @@ def indicators_factory() -> List[Indicator]:
                     name="MACD_12_26_9_ZERO_LINE_CROSS_UP",
                     description="MACD 12-26-9 Zero Line Cross Up",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: cross_value_series(d.MACD_12_26_9, 0),
                 ),
                 Signal(
                     name="MACD_12_26_9_ZERO_LINE_CROSS_DOWN",
                     description="MACD 12-26-9 Zero Line Cross Down",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: cross_value_series(
                         d.MACD_12_26_9, 0, above=False
                     ),
@@ -257,7 +263,7 @@ def indicators_factory() -> List[Indicator]:
                     name="RSI_BULLISH_CROSSOVER_30",
                     description="RSI Bullish Crossover",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: cross_value_series(d.RSI, 30),
                     in_use_backtest=True,
                 ),
@@ -265,7 +271,7 @@ def indicators_factory() -> List[Indicator]:
                     name="RSI_BULLISH_CROSSOVER_40",
                     description="RSI Bullish Crossover 40",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: cross_value_series(d.RSI, 40),
                     in_use_backtest=True,
                 ),
@@ -273,7 +279,7 @@ def indicators_factory() -> List[Indicator]:
                     name="RSI_BULLISH_CROSSOVER_45",
                     description="RSI Bullish Crossover 45",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: cross_value_series(d.RSI, 45),
                     in_use_backtest=True,
                 ),
@@ -281,14 +287,14 @@ def indicators_factory() -> List[Indicator]:
                     name="RSI_BEARISH_CROSSOVER",
                     description="RSI Bearish Crossover",
                     type_info="Short",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: cross_value_series(d.RSI, 70, above=False),
                 ),
                 Signal(
                     name="RSI_OVERSOLD",
                     description="RSI Oversold Signal",
                     type_info="Oversold",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.RSI <= 30) & (d.RSI > 0),
                     in_use_backtest=True,
                 ),
@@ -296,28 +302,28 @@ def indicators_factory() -> List[Indicator]:
                     name="RSI_OVERBOUGHT",
                     description="RSI Overbought Signal",
                     type_info="Overbought",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.RSI < 100) & (d.RSI > 70),
                 ),
                 Signal(
                     name="RSI_NEUTRAL",
                     description="RSI Neutral Signal",
                     type_info="Overbought",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.RSI < 60) & (d.RSI > 30),
                 ),
                 Signal(
                     name="RSI_UPTREND",
                     description="RSI Uptrend Signal",
                     type_info="Overbought",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.RSI < 70) & (d.RSI > 50),
                 ),
                 Signal(
                     name="RSI",
                     description="RSI value",
                     type_info="Overbought",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.RSI,
                 ),
             ],
@@ -332,14 +338,14 @@ def indicators_factory() -> List[Indicator]:
                     name="STOCH_OVERSOLD",
                     description="Stoch Oversold Signal",
                     type_info="Oversold",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.SLOW_K < 20) & (d.SLOW_K > 0),
                 ),
                 Signal(
                     name="STOCH_OVERBOUGHT",
                     description="Stoch Overbought Signal",
                     type_info="Overbought",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.SLOW_K < 100) & (d.SLOW_K > 80),
                 ),
             ],
@@ -354,14 +360,14 @@ def indicators_factory() -> List[Indicator]:
                     name="MFI_OVERSOLD",
                     description="MFI Oversold Signal",
                     type_info="Oversold",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.MFI < 20),
                 ),
                 Signal(
                     name="MFI_OVERBOUGHT",
                     description="MFI Overbought Signal",
                     type_info="Overbought",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.MFI > 80),
                 ),
             ],
@@ -376,7 +382,7 @@ def indicators_factory() -> List[Indicator]:
                     name="GOLDEN_CROSS",
                     description="Golden cross: SMA 50 crosses above SMA 200",
                     type_info="Oversold",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: cross_simple(d.SMA_50, d.SMA_200),
                     in_use_backtest=True,
                 ),
@@ -384,14 +390,14 @@ def indicators_factory() -> List[Indicator]:
                     name="DEATH_CROSS",
                     description="Death cross: SMA 50 crosses below SMA 200",
                     type_info="Overbought",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: cross_simple(d.SMA_50, d.SMA_200, above=False),
                 ),
                 Signal(
                     name="SMA_UPTREND",
                     description="SMA Uptrend Signal",
                     type_info="Overbought",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.SMA_50 > d.SMA_200) & (d.SMA_50 < d.CLOSE),
                     processing=ProcessingFunction(date=find_last_true_run_start),
                 ),
@@ -399,7 +405,7 @@ def indicators_factory() -> List[Indicator]:
                     name="SMA_50_ABOVE_SMA_200",
                     description="SMA 50 is above SMA 200",
                     type_info="Overbought",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.SMA_50 > d.SMA_200,
                     in_use_backtest=True,
                     processing=ProcessingFunction(date=find_last_true_run_start),
@@ -408,7 +414,7 @@ def indicators_factory() -> List[Indicator]:
                     name="SMA_50_BELOW_SMA_200",
                     description="SMA 50 is below SMA 200",
                     type_info="Overbought",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.SMA_50 < d.SMA_200,
                     in_use_backtest=True,
                     processing=ProcessingFunction(date=find_last_true_run_start),
@@ -417,7 +423,7 @@ def indicators_factory() -> List[Indicator]:
                     name="PRICE_ABOVE_SMA_50",
                     description="Price is above SMA 50",
                     type_info="Overbought",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.SMA_50 < d.CLOSE,
                     in_use_backtest=True,
                     processing=ProcessingFunction(date=find_last_true_run_start),
@@ -426,7 +432,7 @@ def indicators_factory() -> List[Indicator]:
                     name="PRICE_BELOW_SMA_50",
                     description="Price is below SMA 50",
                     type_info="Overbought",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.SMA_50 > d.CLOSE,
                     in_use_backtest=True,
                     processing=ProcessingFunction(date=find_last_true_run_start),
@@ -443,42 +449,42 @@ def indicators_factory() -> List[Indicator]:
                     name="LOWER_THAN_200_DAY_HIGH",
                     description="Current price is lower than the 200-day high",
                     type_info="Oversold",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: 0.6 * d["200_DAY_HIGH"] > d.LAST_PRICE,
                 ),
                 Signal(
                     name="LOWER_THAN_20_DAY_HIGH",
                     description="Current price is lower than the 20-day high",
                     type_info="Oversold",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: 0.6 * d["20_DAY_HIGH"] > d.LAST_PRICE,
                 ),
                 Signal(
                     name="WEEKLY_GROWTH",
                     description="weekly growth",
                     type_info="Oversold",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.WEEKLY_GROWTH,
                 ),
                 Signal(
                     name="MONTHLY_GROWTH",
                     description="Median monthly growth",
                     type_info="Oversold",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.MONTHLY_GROWTH,
                 ),
                 Signal(
                     name="YEARLY_GROWTH",
                     description="Median yearly growth",
                     type_info="Oversold",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.YEARLY_GROWTH,
                 ),
                 Signal(
                     name="MEDIAN_WEEKLY_GROWTH",
                     description="Median weekly growth",
                     type_info="Oversold",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.WEEKLY_GROWTH,
                     processing=ProcessingFunction(
                         number=lambda v: np.median(v.unique())
@@ -488,7 +494,7 @@ def indicators_factory() -> List[Indicator]:
                     name="MEDIAN_MONTHLY_GROWTH",
                     description="Median monthly growth",
                     type_info="Oversold",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.MONTHLY_GROWTH,
                     processing=ProcessingFunction(
                         number=lambda v: np.median(v.unique())
@@ -498,7 +504,7 @@ def indicators_factory() -> List[Indicator]:
                     name="MEDIAN_YEARLY_GROWTH",
                     description="Median yearly growth",
                     type_info="Oversold",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.YEARLY_GROWTH,
                     processing=ProcessingFunction(
                         number=lambda v: np.median(v.unique())
@@ -508,14 +514,14 @@ def indicators_factory() -> List[Indicator]:
                     name="LOWER_THAN_20_DAY_HIGH",
                     description="Current price is lower than the 20-day high",
                     type_info="Oversold",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: 0.6 * d["20_DAY_HIGH"] > d.LAST_PRICE,
                 ),
                 Signal(
                     name="PRICE_UPTREND",
                     description="3 Higher high and higher low",
                     type_info="Oversold",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: consecutive_highs(d.LOW, d.HIGH),
                 ),
             ],
@@ -530,21 +536,21 @@ def indicators_factory() -> List[Indicator]:
                     name="AVERAGE_VOLUME_10",
                     type_info="Value",
                     description="Average volume over the last 10 days",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.AVERAGE_VOLUME_10,
                 ),
                 Signal(
                     name="AVERAGE_VOLUME_30",
                     type_info="Value",
                     description="Average volume over the last 30 days",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.AVERAGE_VOLUME_30,
                 ),
                 Signal(
                     name="VOLUME_ABOVE_AVERAGE",
                     type_info="Value",
                     description="Volume above average volume over the last 30 days",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.AVERAGE_VOLUME_30 < d.VOLUME,
                 ),
             ],
@@ -559,7 +565,7 @@ def indicators_factory() -> List[Indicator]:
                     name="MEDIAN_RATE_OF_CHANGE_1",
                     type_info="Value",
                     description="Median daily Rate of Change of the last 30 days",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.ROC_1,
                     processing=ProcessingFunction(
                         number=lambda v: np.median(v.tolist()[-30:])
@@ -569,7 +575,7 @@ def indicators_factory() -> List[Indicator]:
                     name="MEDIAN_RATE_OF_CHANGE_7_4",
                     type_info="Value",
                     description="Median weekly Rate of Change of the last 4 weeks",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.ROC_7,
                     processing=ProcessingFunction(
                         number=lambda v: np.median(v.tolist()[-4:])
@@ -579,7 +585,7 @@ def indicators_factory() -> List[Indicator]:
                     name="MEDIAN_RATE_OF_CHANGE_7_12",
                     type_info="Value",
                     description="Median weekly Rate of Change of the last 12 weeks",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.ROC_7,
                     processing=ProcessingFunction(
                         number=lambda v: np.median(v.tolist()[-12:])
@@ -589,7 +595,7 @@ def indicators_factory() -> List[Indicator]:
                     name="MEDIAN_RATE_OF_CHANGE_30",
                     type_info="Value",
                     description="Median monthly Rate of Change of the last 12 Months",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.ROC_30,
                     processing=ProcessingFunction(
                         number=lambda v: np.median(v.tolist()[-12:])
@@ -599,21 +605,21 @@ def indicators_factory() -> List[Indicator]:
                     name="RATE_OF_CHANGE_30",
                     type_info="Value",
                     description="30-day Rate of Change",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.ROC_30,
                 ),
                 Signal(
                     name="RATE_OF_CHANGE_7",
                     type_info="Value",
                     description="7-day Rate of Change",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.ROC_7,
                 ),
                 Signal(
                     name="MOMENTUM",
                     type_info="Value",
                     description="7-day Rate of Change",
-                    type=Optional[float],
+                    type=float | None,
                     function=lambda d: d.MOM,
                 ),
             ],
@@ -628,14 +634,14 @@ def indicators_factory() -> List[Indicator]:
                     name="ADOSC_CROSSES_ABOVE_0",
                     type_info="Oversold",
                     description="Bullish momentum in money flow",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: cross_value_series(d.ADOSC, 0, above=True),
                 ),
                 Signal(
                     name="POSITIVE_ADOSC_20_DAY_BREAKOUT",
                     type_info="Oversold",
                     description="20-day breakout confirmed by positive ADOSC",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: (d.ADOSC_SIGNAL == True),  # noqa: E712
                 ),
             ],
@@ -658,49 +664,49 @@ def indicators_factory() -> List[Indicator]:
                     name="CDLMORNINGSTAR",
                     type_info="Long",
                     description="Morning Star Candlestick Pattern",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.CDLMORNINGSTAR == 100,
                 ),
                 Signal(
                     name="CDL3LINESTRIKE",
                     description="3 Line Strike Candlestick Pattern",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.CDL3LINESTRIKE == 100,
                 ),
                 Signal(
                     name="CDL3WHITESOLDIERS",
                     description="3 White Soldiers Candlestick Pattern",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.CDL3WHITESOLDIERS == 100,
                 ),
                 Signal(
                     name="CDLABANDONEDBABY",
                     description="Abandoned Baby Candlestick Pattern",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.CDLABANDONEDBABY == 100,
                 ),
                 Signal(
                     name="CDLTASUKIGAP",
                     description="Tasukigap Candlestick Pattern",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.CDLTASUKIGAP == 100,
                 ),
                 Signal(
                     name="CDLPIERCING",
                     description="Piercing Candlestick Pattern",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.CDLPIERCING == 100,
                 ),
                 Signal(
                     name="CDLENGULFING",
                     description="Engulfing Candlestick Pattern",
                     type_info="Long",
-                    type=Optional[date],
+                    type=date | None,
                     function=lambda d: d.CDLENGULFING == 100,
                 ),
             ],
@@ -709,9 +715,9 @@ def indicators_factory() -> List[Indicator]:
 
 
 class Indicators(BaseModel):
-    indicators: List[Indicator] = Field(default_factory=indicators_factory)
+    indicators: list[Indicator] = Field(default_factory=indicators_factory)
 
-    def in_use_backtest(self) -> List[str]:
+    def in_use_backtest(self) -> list[str]:
         return [
             signal.name.lower()
             for indicator in self.indicators
@@ -730,7 +736,7 @@ class Indicators(BaseModel):
                 f"Computed {indicator.name} with {len(indicator.signals)} signals"
             )
 
-    def compute_series(self, data: pd.DataFrame, symbol: str) -> List[SignalSeries]:
+    def compute_series(self, data: pd.DataFrame, symbol: str) -> list[SignalSeries]:
         data__ = pd.concat(
             [indicator.compute_series(data, symbol) for indicator in self.indicators]
         )
@@ -738,7 +744,7 @@ class Indicators(BaseModel):
             SignalSeries.model_validate(s) for s in data__.to_dict(orient="records")
         ]
 
-    def compute(self, data: pd.DataFrame) -> Dict[str, Any]:
+    def compute(self, data: pd.DataFrame) -> dict[str, Any]:
         self._compute(data)
         res = {}
         for indicator in self.indicators:
@@ -748,8 +754,8 @@ class Indicators(BaseModel):
                 )
         return res
 
-    def create_indicator_models(self) -> List[type[BaseModel]]:
-        models = []
+    def create_indicator_models(self) -> list[type[BaseModel]]:
+        models: list[type[BaseModel]] = []
         for indicator in self.indicators:
             model_parameters = {}
             for signal in indicator.signals:
@@ -768,7 +774,7 @@ class Indicators(BaseModel):
                     ),
                 )
             model = create_model(indicator.name, **model_parameters)  # type: ignore
-            model._description = indicator.description
+            model._description = indicator.description  # type: ignore[attr-defined]
             models.append(model)
         return models
 

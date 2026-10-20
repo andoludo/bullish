@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 from sqlmodel import Field, SQLModel
 from sqlalchemy import Column, JSON
@@ -36,10 +36,10 @@ class PortfolioORM(SQLModel, Portfolio, table=True):
     __tablename__ = "portfolio"
     __table_args__ = {"extend_existing": True}  # noqa:RUF012
     name: str = Field(primary_key=True)
-    current_assets: Optional[List[Dict[str, Any]]] = Field(  # type: ignore
+    current_assets: list[dict[str, Any]] | None = Field(  # type: ignore
         default=None, sa_column=Column(JSON)
     )
-    new_assets: Optional[List[Dict[str, Any]]] = Field(  # type: ignore
+    new_assets: list[dict[str, Any]] | None = Field(  # type: ignore
         default=None, sa_column=Column(JSON)
     )
 
@@ -47,10 +47,10 @@ class PortfolioORM(SQLModel, Portfolio, table=True):
 class AnalysisORM(BaseTable, Analysis, table=True):
     __tablename__ = "analysis"
     __table_args__ = {"extend_existing": True}  # noqa:RUF012
-    news_summary: Optional[List[Dict[str, Any]]] = Field(
+    news_summary: list[dict[str, Any]] | None = Field(
         default=None, sa_column=Column(JSON)
     )
-    summary: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    summary: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
 
 AnalysisORM.__table_args__ = tuple(  # type: ignore # noqa: RUF005
@@ -73,7 +73,7 @@ class FilteredResultsORM(SQLModel, FilteredResults, table=True):
     __table_args__ = {"extend_existing": True}  # noqa:RUF012
     name: str = Field(primary_key=True)
     symbols: list[str] = Field(sa_column=Column(JSON))
-    filter_query: Dict[str, Any] = Field(sa_column=Column(JSON))  # type: ignore
+    filter_query: dict[str, Any] = Field(sa_column=Column(JSON))  # type: ignore
 
 
 class SignalSeriesORM(SQLModel, SignalSeries, table=True):
@@ -109,4 +109,4 @@ class BacktestResultORM(SQLModel, BacktestResult, table=True):
     extend_days: int = Field(primary_key=True)
     percentage: int = Field(primary_key=True)
     iterations: int = Field(primary_key=True)
-    data: Dict[str, Any] = Field(sa_column=Column(JSON))
+    data: dict[str, Any] = Field(sa_column=Column(JSON))

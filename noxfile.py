@@ -2,36 +2,32 @@ import nox
 from nox import Session
 
 nox.options.reuse_existing_virtualenvs = True
+# uv manages the project virtual environment (.venv); nox only orchestrates the
+# commands, so it does not need to create its own environments.
+nox.options.default_venv_backend = "none"
 
 
-@nox.session(python=["3.12"])
+@nox.session
 def install(session: Session) -> None:
-    groups = ["main", "dev"]
-    session.run(
-        "poetry",
-        "install",
-        "--no-root",
-        "--sync",
-        f"--only={','.join(groups)}",
-        external=True,
-    )
+    session.run("uv", "sync", "--all-groups", "--frozen", external=True)
 
 
-@nox.session(python=["3.12"])
+@nox.session
 def linting(session: Session) -> None:
-    session.run("poetry", "run", "black", ".")
-    session.run("poetry", "run", "mypy")
+    session.run("uv", "run", "black", ".", external=True)
+    session.run("uv", "run", "mypy", external=True)
     session.run(
-        "poetry",
+        "uv",
         "run",
         "ruff",
         "check",
         "--fix",
         "--show-fixes",
         "--exit-non-zero-on-fix",
+        external=True,
     )
 
 
-@nox.session(python=["3.12"])
+@nox.session
 def tests(session: Session) -> None:
-    session.run("poetry", "run", "pytest", "-m", "not integration")
+    session.run("uv", "run", "pytest", "-m", "not integration", external=True)

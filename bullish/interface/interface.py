@@ -1,7 +1,7 @@
 import abc
 import logging
 from datetime import date
-from typing import List, Optional, Dict, Any
+from typing import Optional, Any
 
 import pandas as pd
 from bearish.interface.interface import BearishDbBase  # type: ignore
@@ -25,7 +25,7 @@ class BullishDbBase(BearishDbBase):  # type: ignore
     def write_analysis(self, analysis: "Analysis") -> None:
         return self._write_analysis(analysis)
 
-    def write_many_analysis(self, many_analysis: List["Analysis"]) -> None:
+    def write_many_analysis(self, many_analysis: list["Analysis"]) -> None:
         return self._write_many_analysis(many_analysis)
 
     def read_analysis(self, ticker: Ticker) -> Optional["Analysis"]:
@@ -42,7 +42,7 @@ class BullishDbBase(BearishDbBase):  # type: ignore
         return self._read_filter_query(query_str)
 
     def read_analysis_data(
-        self, columns: Optional[List[str]] = None, symbols: Optional[List[str]] = None
+        self, columns: list[str] | None = None, symbols: list[str] | None = None
     ) -> pd.DataFrame:
         columns = columns or list(AnalysisView.model_fields)
         data = self._read_analysis_data(columns, symbols=symbols)
@@ -65,7 +65,7 @@ class BullishDbBase(BearishDbBase):  # type: ignore
     def write_job_tracker(self, job_tracker: JobTracker) -> None: ...
 
     @abc.abstractmethod
-    def delete_job_trackers(self, job_ids: List[str]) -> None: ...
+    def delete_job_trackers(self, job_ids: list[str]) -> None: ...
 
     @abc.abstractmethod
     def update_job_tracker_status(
@@ -76,7 +76,7 @@ class BullishDbBase(BearishDbBase):  # type: ignore
     def _write_analysis(self, analysis: "Analysis") -> None: ...
 
     @abc.abstractmethod
-    def _write_many_analysis(self, many_analysis: List["Analysis"]) -> None: ...
+    def _write_many_analysis(self, many_analysis: list["Analysis"]) -> None: ...
 
     @abc.abstractmethod
     def _read_analysis(self, ticker: Ticker) -> Optional["Analysis"]: ...
@@ -86,82 +86,82 @@ class BullishDbBase(BearishDbBase):  # type: ignore
 
     @abc.abstractmethod
     def _read_analysis_data(
-        self, columns: List[str], symbols: Optional[List[str]] = None
+        self, columns: list[str], symbols: list[str] | None = None
     ) -> pd.DataFrame: ...
 
     @abc.abstractmethod
-    def read_filtered_results(self, name: str) -> Optional[FilteredResults]: ...
+    def read_filtered_results(self, name: str) -> FilteredResults | None: ...
 
     @abc.abstractmethod
-    def read_list_filtered_results(self) -> List[str]: ...
+    def read_list_filtered_results(self) -> list[str]: ...
 
     @abc.abstractmethod
     def write_filtered_results(self, filtered_results: FilteredResults) -> None: ...
 
     @abc.abstractmethod
-    def read_symbols(self) -> List[str]: ...
+    def read_symbols(self) -> list[str]: ...
 
     @abc.abstractmethod
-    def read_job_tracker(self, task_id: str) -> Optional[JobTracker]: ...
+    def read_job_tracker(self, task_id: str) -> JobTracker | None: ...
 
     @abc.abstractmethod
-    def read_dates(self, symbol: str) -> List[date]: ...
+    def read_dates(self, symbol: str) -> list[date]: ...
 
     @abc.abstractmethod
     def read_industry_symbols(
-        self, industries: List[Industry], country: Country, source: Sources = "Yfinance"
-    ) -> List[str]: ...
+        self, industries: list[Industry], country: Country, source: Sources = "Yfinance"
+    ) -> list[str]: ...
 
     @abc.abstractmethod
     def read_industry_group_symbols(
         self,
-        industry_groups: List[IndustryGroup],
+        industry_groups: list[IndustryGroup],
         country: Country,
         source: Sources = "Yfinance",
-    ) -> List[str]: ...
+    ) -> list[str]: ...
 
     @abc.abstractmethod
     def read_sector_symbols(
-        self, sectors: List[Sector], country: Country, source: Sources = "Yfinance"
-    ) -> List[str]: ...
+        self, sectors: list[Sector], country: Country, source: Sources = "Yfinance"
+    ) -> list[str]: ...
 
     @abc.abstractmethod
-    def write_returns(self, industry_returns: List[IndustryView]) -> None: ...
+    def write_returns(self, industry_returns: list[IndustryView]) -> None: ...
 
     @abc.abstractmethod
     def read_returns(
         self, type: Type, industry: Industry, country: Country
-    ) -> List[IndustryView]: ...
+    ) -> list[IndustryView]: ...
 
     @abc.abstractmethod
-    def write_signal_series(self, signal_series: List[SignalSeries]) -> None: ...
+    def write_signal_series(self, signal_series: list[SignalSeries]) -> None: ...
 
     @abc.abstractmethod
     def read_signal_series(
         self, name: str, start_date: date, end_date: date
-    ) -> List[str]: ...
+    ) -> list[str]: ...
 
     @abc.abstractmethod
     def read_symbol_series(
-        self, symbol: str, start_date: date, end_date: Optional[date] = None
+        self, symbol: str, start_date: date, end_date: date | None = None
     ) -> pd.DataFrame: ...
     @abc.abstractmethod
     def write_many_backtest_results(
-        self, backtest_results: List[BacktestResult]
+        self, backtest_results: list[BacktestResult]
     ) -> None: ...
 
     @abc.abstractmethod
     def read_many_backtest_results(
-        self, query: Optional[BacktestResultQuery] = None
-    ) -> List[BacktestResult]: ...
+        self, query: BacktestResultQuery | None = None
+    ) -> list[BacktestResult]: ...
 
     @abc.abstractmethod
-    def read_next_earnings_date(self, symbol: str) -> Optional[date]: ...
+    def read_next_earnings_date(self, symbol: str) -> date | None: ...
 
     @abc.abstractmethod
-    def read_subject(self, symbol: str) -> Optional[SubjectAnalysis]: ...
+    def read_subject(self, symbol: str) -> SubjectAnalysis | None: ...
     @abc.abstractmethod
-    def write_many_openai_news(self, openai_news: List[OpenAINews]) -> None: ...
+    def write_many_openai_news(self, openai_news: list[OpenAINews]) -> None: ...
 
     @abc.abstractmethod
-    def update_analysis(self, symbol: str, fields: Dict[str, Any]) -> None: ...
+    def update_analysis(self, symbol: str, fields: dict[str, Any]) -> None: ...

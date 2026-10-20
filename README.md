@@ -61,6 +61,33 @@ This launches a **local Streamlit app** where you can screen, filter, and analyz
 
 ---
 
+## Development
+
+Bullish uses [uv](https://docs.astral.sh/uv/) for dependency management and packaging.
+
+```bash
+# Install uv (https://docs.astral.sh/uv/getting-started/installation/)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create the virtual environment and install all dependencies (incl. dev tools)
+uv sync --all-groups
+
+# Run the test suite (integration tests excluded)
+uv run pytest -m "not integration"
+
+# Linting & type checking
+uv run nox -s linting
+
+# Run any command inside the project environment
+uv run bullish
+```
+
+> **Note:** `ta-lib` is installed from a prebuilt wheel, so the TA-Lib C library
+> no longer needs to be built separately for local development on supported
+> platforms.
+
+---
+
 ## What Bullish Is Not
 Bullish is **not**:
 - A real-time trading platform  

@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from datetime import date
-from typing import Optional, List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 from openai import OpenAI
@@ -45,12 +45,12 @@ Formatting rules:
 class OpenAINews(BaseModel):
     symbol: str
     news_date: date = Field(default_factory=date.today)
-    high_price_target: Optional[float] = None
-    low_price_target: Optional[float] = None
-    recent_news: Optional[str] = None
-    recommendation: Optional[str] = None
-    explanation: Optional[str] = None
-    moat: Optional[bool] = None
+    high_price_target: float | None = None
+    low_price_target: float | None = None
+    recent_news: str | None = None
+    recommendation: str | None = None
+    explanation: str | None = None
+    moat: bool | None = None
 
     def valid(self) -> bool:
         return bool(
@@ -69,7 +69,7 @@ class OpenAINews(BaseModel):
         print(f"Fetching OpenAI news for {ticker}...")
         client = OpenAI()
         resp = client.responses.create(
-            model="gpt-4o", input=prompt(ticker), tools=[{"type": "web_search"}]  # type: ignore
+            model="gpt-4o", input=prompt(ticker), tools=[{"type": "web_search"}]
         )
         try:
             return cls.model_validate(json.loads(resp.output_text) | {"symbol": ticker})
@@ -78,11 +78,11 @@ class OpenAINews(BaseModel):
             return cls(symbol=ticker)
 
     @classmethod
-    def from_tickers(cls, tickers: List[str]) -> List["OpenAINews"]:
+    def from_tickers(cls, tickers: list[str]) -> list["OpenAINews"]:
         return [cls.from_ticker(t) for t in tickers]
 
 
-def get_open_ai_news(bullish_db: "BullishDb", tickers: List[str]) -> bool:
+def get_open_ai_news(bullish_db: "BullishDb", tickers: list[str]) -> bool:
     news = OpenAINews.from_tickers(tickers)
     valid_news = [n for n in news if n.valid()]
     if valid_news:

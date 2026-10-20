@@ -1,0 +1,1011 @@
+{
+  "extras": {
+    "DAL": {
+      "bbands_columns": [
+        "BBB_5_2.0_2.0",
+        "BBL_5_2.0_2.0",
+        "BBM_5_2.0_2.0",
+        "BBP_5_2.0_2.0",
+        "BBU_5_2.0_2.0"
+      ],
+      "bbands_last": {
+        "BBB_5_2.0_2.0": 7.84379,
+        "BBL_5_2.0_2.0": 46.125177,
+        "BBM_5_2.0_2.0": 48.008,
+        "BBP_5_2.0_2.0": 0.702356,
+        "BBU_5_2.0_2.0": 49.890823
+      },
+      "resistance": 69.45,
+      "resistance_previous": 69.98,
+      "support": 42.84,
+      "support_previous": 64.97
+    },
+    "MSFT": {
+      "bbands_columns": [
+        "BBB_5_2.0_2.0",
+        "BBL_5_2.0_2.0",
+        "BBM_5_2.0_2.0",
+        "BBP_5_2.0_2.0",
+        "BBU_5_2.0_2.0"
+      ],
+      "bbands_last": {
+        "BBB_5_2.0_2.0": 15.065149,
+        "BBL_5_2.0_2.0": 339.820555,
+        "BBM_5_2.0_2.0": 367.502991,
+        "BBP_5_2.0_2.0": 0.945084,
+        "BBU_5_2.0_2.0": 395.185427
+      },
+      "resistance": 396.359985,
+      "resistance_previous": 419.309998,
+      "support": 376.910004,
+      "support_previous": 403.560798
+    },
+    "NVDA": {
+      "bbands_columns": [
+        "BBB_5_2.0_2.0",
+        "BBL_5_2.0_2.0",
+        "BBM_5_2.0_2.0",
+        "BBP_5_2.0_2.0",
+        "BBU_5_2.0_2.0"
+      ],
+      "bbands_last": {
+        "BBB_5_2.0_2.0": 23.594141,
+        "BBL_5_2.0_2.0": 92.62366,
+        "BBM_5_2.0_2.0": 105.012,
+        "BBP_5_2.0_2.0": 0.068061,
+        "BBU_5_2.0_2.0": 117.400339
+      },
+      "resistance": 122.889999,
+      "resistance_previous": 143.426814,
+      "support": 104.760361,
+      "support_previous": 112.999611
+    },
+    "PLTR": {
+      "bbands_columns": [
+        "BBB_5_2.0_2.0",
+        "BBL_5_2.0_2.0",
+        "BBM_5_2.0_2.0",
+        "BBP_5_2.0_2.0",
+        "BBU_5_2.0_2.0"
+      ],
+      "bbands_last": {
+        "BBB_5_2.0_2.0": 32.535935,
+        "BBL_5_2.0_2.0": 67.913376,
+        "BBM_5_2.0_2.0": 81.107999,
+        "BBP_5_2.0_2.0": 0.941922,
+        "BBU_5_2.0_2.0": 94.302622
+      },
+      "resistance": 98.169998,
+      "resistance_previous": 125.410004,
+      "support": 74.57,
+      "support_previous": 78.580002
+    },
+    "TSM": {
+      "bbands_columns": [
+        "BBB_5_2.0_2.0",
+        "BBL_5_2.0_2.0",
+        "BBM_5_2.0_2.0",
+        "BBP_5_2.0_2.0",
+        "BBU_5_2.0_2.0"
+      ],
+      "bbands_last": {
+        "BBB_5_2.0_2.0": 18.089367,
+        "BBL_5_2.0_2.0": 136.518473,
+        "BBM_5_2.0_2.0": 150.094,
+        "BBP_5_2.0_2.0": 0.818809,
+        "BBU_5_2.0_2.0": 163.669527
+      },
+      "resistance": 182.929993,
+      "resistance_previous": 225.521306,
+      "support": 167.25833,
+      "support_previous": 186.941638
+    }
+  },
+  "indicators": {
+    "DAL": {
+      "AD": {
+        "AD": {
+          "count": 1256,
+          "last": 369614519.890154
+        }
+      },
+      "ADOSC": {
+        "ADOSC": {
+          "count": 1247,
+          "last": 9464716.864982
+        },
+        "ADOSC_SIGNAL": {
+          "count": 1256,
+          "last": 0.0
+        }
+      },
+      "ADX": {
+        "ADX_14": {
+          "count": 1229,
+          "last": 49.324117
+        },
+        "MINUS_DI": {
+          "count": 1242,
+          "last": 33.175312
+        },
+        "PLUS_DI": {
+          "count": 1242,
+          "last": 16.553168
+        }
+      },
+      "ATR": {
+        "ATR": {
+          "count": 1242,
+          "last": 2.339126
+        }
+      },
+      "MACD": {
+        "MACD_12_26_9": {
+          "count": 1223,
+          "last": -3.591427
+        },
+        "MACD_12_26_9_HIST": {
+          "count": 1223,
+          "last": 0.487822
+        },
+        "MACD_12_26_9_SIGNAL": {
+          "count": 1223,
+          "last": -4.079249
+        }
+      },
+      "MFI": {
+        "MFI": {
+          "count": 1242,
+          "last": 29.404938
+        }
+      },
+      "NATR": {
+        "NATR": {
+          "count": 1242,
+          "last": 4.79624
+        }
+      },
+      "OBV": {
+        "OBV": {
+          "count": 1256,
+          "last": -304967081.0
+        }
+      },
+      "PRICE": {
+        "200_DAY_HIGH": {
+          "count": 1057,
+          "last": 69.06
+        },
+        "200_DAY_LOW": {
+          "count": 1057,
+          "last": 37.32
+        },
+        "20_DAY_HIGH": {
+          "count": 1237,
+          "last": 60.12
+        },
+        "20_DAY_LOW": {
+          "count": 1237,
+          "last": 43.92
+        },
+        "HIGH": {
+          "count": 1256,
+          "last": 49.275
+        },
+        "LAST_PRICE": {
+          "count": 1256,
+          "last": 48.77
+        },
+        "LOW": {
+          "count": 1256,
+          "last": 48.61
+        },
+        "MONTHLY_GROWTH": {
+          "count": 1235,
+          "last": -0.210714
+        },
+        "WEEKLY_GROWTH": {
+          "count": 1251,
+          "last": 0.021361
+        },
+        "YEARLY_GROWTH": {
+          "count": 1004,
+          "last": 0.069752
+        }
+      },
+      "ROC": {
+        "MOM": {
+          "count": 983,
+          "last": 19.67
+        },
+        "ROC_1": {
+          "count": 1255,
+          "last": 0.205465
+        },
+        "ROC_30": {
+          "count": 1226,
+          "last": -24.679537
+        },
+        "ROC_7": {
+          "count": 1249,
+          "last": 4.009384
+        }
+      },
+      "RSI": {
+        "RSI": {
+          "count": 1242,
+          "last": 38.617611
+        }
+      },
+      "SMA": {
+        "CLOSE": {
+          "count": 1256,
+          "last": 48.77
+        },
+        "SMA_200": {
+          "count": 1057,
+          "last": 53.66065
+        },
+        "SMA_50": {
+          "count": 1207,
+          "last": 59.8264
+        }
+      },
+      "STOCH": {
+        "SLOW_D": {
+          "count": 1248,
+          "last": 75.258553
+        },
+        "SLOW_K": {
+          "count": 1248,
+          "last": 78.02648
+        }
+      },
+      "TRANGE": {
+        "TRANGE": {
+          "count": 1255,
+          "last": 0.665
+        }
+      },
+      "VOLUME": {
+        "AVERAGE_VOLUME_10": {
+          "count": 1247,
+          "last": 11384347.1
+        },
+        "AVERAGE_VOLUME_30": {
+          "count": 1227,
+          "last": 11596882.933333
+        },
+        "VOLUME": {
+          "count": 1256,
+          "last": 1307726.0
+        }
+      }
+    },
+    "MSFT": {
+      "AD": {
+        "AD": {
+          "count": 2047,
+          "last": 3649841097.196623
+        }
+      },
+      "ADOSC": {
+        "ADOSC": {
+          "count": 2038,
+          "last": -7645612.473611
+        },
+        "ADOSC_SIGNAL": {
+          "count": 2047,
+          "last": 0.0
+        }
+      },
+      "ADX": {
+        "ADX_14": {
+          "count": 2020,
+          "last": 29.42315
+        },
+        "MINUS_DI": {
+          "count": 2033,
+          "last": 26.765798
+        },
+        "PLUS_DI": {
+          "count": 2033,
+          "last": 18.876759
+        }
+      },
+      "ATR": {
+        "ATR": {
+          "count": 2033,
+          "last": 13.526197
+        }
+      },
+      "MACD": {
+        "MACD_12_26_9": {
+          "count": 2014,
+          "last": -7.258573
+        },
+        "MACD_12_26_9_HIST": {
+          "count": 2014,
+          "last": -0.283743
+        },
+        "MACD_12_26_9_SIGNAL": {
+          "count": 2014,
+          "last": -6.97483
+        }
+      },
+      "MFI": {
+        "MFI": {
+          "count": 2033,
+          "last": 46.249438
+        }
+      },
+      "NATR": {
+        "NATR": {
+          "count": 2033,
+          "last": 3.449285
+        }
+      },
+      "OBV": {
+        "OBV": {
+          "count": 2047,
+          "last": 3059592049.0
+        }
+      },
+      "PRICE": {
+        "200_DAY_HIGH": {
+          "count": 1848,
+          "last": 464.85434
+        },
+        "200_DAY_LOW": {
+          "count": 1848,
+          "last": 354.559998
+        },
+        "20_DAY_HIGH": {
+          "count": 2028,
+          "last": 395.160004
+        },
+        "20_DAY_LOW": {
+          "count": 2028,
+          "last": 354.559998
+        },
+        "HIGH": {
+          "count": 2047,
+          "last": 392.230011
+        },
+        "LAST_PRICE": {
+          "count": 2047,
+          "last": 392.144989
+        },
+        "LOW": {
+          "count": 2047,
+          "last": 353.309998
+        },
+        "MONTHLY_GROWTH": {
+          "count": 2026,
+          "last": 0.03074
+        },
+        "WEEKLY_GROWTH": {
+          "count": 2042,
+          "last": 0.026181
+        },
+        "YEARLY_GROWTH": {
+          "count": 1795,
+          "last": -0.069364
+        }
+      },
+      "ROC": {
+        "MOM": {
+          "count": 1774,
+          "last": -25.589996
+        },
+        "ROC_1": {
+          "count": 2046,
+          "last": 10.60046
+        },
+        "ROC_30": {
+          "count": 2017,
+          "last": -1.897536
+        },
+        "ROC_7": {
+          "count": 2040,
+          "last": 4.463351
+        }
+      },
+      "RSI": {
+        "RSI": {
+          "count": 2033,
+          "last": 54.47962
+        }
+      },
+      "SMA": {
+        "CLOSE": {
+          "count": 2047,
+          "last": 392.144989
+        },
+        "SMA_200": {
+          "count": 1848,
+          "last": 418.368209
+        },
+        "SMA_50": {
+          "count": 1998,
+          "last": 395.123337
+        }
+      },
+      "STOCH": {
+        "SLOW_D": {
+          "count": 2039,
+          "last": 30.585189
+        },
+        "SLOW_K": {
+          "count": 2039,
+          "last": 52.16991
+        }
+      },
+      "TRANGE": {
+        "TRANGE": {
+          "count": 2046,
+          "last": 38.920013
+        }
+      },
+      "VOLUME": {
+        "AVERAGE_VOLUME_10": {
+          "count": 2038,
+          "last": 30560584.9
+        },
+        "AVERAGE_VOLUME_30": {
+          "count": 2018,
+          "last": 26026068.3
+        },
+        "VOLUME": {
+          "count": 2047,
+          "last": 33538449.0
+        }
+      }
+    },
+    "NVDA": {
+      "AD": {
+        "AD": {
+          "count": 2044,
+          "last": 60418232248.33763
+        }
+      },
+      "ADOSC": {
+        "ADOSC": {
+          "count": 2035,
+          "last": -128112904.525513
+        },
+        "ADOSC_SIGNAL": {
+          "count": 2044,
+          "last": 0.0
+        }
+      },
+      "ADX": {
+        "ADX_14": {
+          "count": 2017,
+          "last": 27.847424
+        },
+        "MINUS_DI": {
+          "count": 2030,
+          "last": 40.916792
+        },
+        "PLUS_DI": {
+          "count": 2030,
+          "last": 12.388352
+        }
+      },
+      "ATR": {
+        "ATR": {
+          "count": 2030,
+          "last": 6.072231
+        }
+      },
+      "MACD": {
+        "MACD_12_26_9": {
+          "count": 2011,
+          "last": -5.3106
+        },
+        "MACD_12_26_9_HIST": {
+          "count": 2011,
+          "last": -1.448038
+        },
+        "MACD_12_26_9_SIGNAL": {
+          "count": 2011,
+          "last": -3.862562
+        }
+      },
+      "MFI": {
+        "MFI": {
+          "count": 2030,
+          "last": 32.235209
+        }
+      },
+      "NATR": {
+        "NATR": {
+          "count": 2030,
+          "last": 6.438587
+        }
+      },
+      "OBV": {
+        "OBV": {
+          "count": 2044,
+          "last": 79156156400.0
+        }
+      },
+      "PRICE": {
+        "200_DAY_HIGH": {
+          "count": 1845,
+          "last": 149.416245
+        },
+        "200_DAY_LOW": {
+          "count": 1845,
+          "last": 94.309998
+        },
+        "20_DAY_HIGH": {
+          "count": 2025,
+          "last": 121.669998
+        },
+        "20_DAY_LOW": {
+          "count": 2025,
+          "last": 94.309998
+        },
+        "HIGH": {
+          "count": 2044,
+          "last": 100.129997
+        },
+        "LAST_PRICE": {
+          "count": 2044,
+          "last": 94.309998
+        },
+        "LOW": {
+          "count": 2044,
+          "last": 92.110001
+        },
+        "MONTHLY_GROWTH": {
+          "count": 2023,
+          "last": -0.146978
+        },
+        "WEEKLY_GROWTH": {
+          "count": 2039,
+          "last": -0.140057
+        },
+        "YEARLY_GROWTH": {
+          "count": 1792,
+          "last": 0.06044
+        }
+      },
+      "ROC": {
+        "MOM": {
+          "count": 1771,
+          "last": 25.354828
+        },
+        "ROC_1": {
+          "count": 2043,
+          "last": -7.357569
+        },
+        "ROC_30": {
+          "count": 2014,
+          "last": -29.838076
+        },
+        "ROC_7": {
+          "count": 2037,
+          "last": -17.097402
+        }
+      },
+      "RSI": {
+        "RSI": {
+          "count": 2030,
+          "last": 28.457036
+        }
+      },
+      "SMA": {
+        "CLOSE": {
+          "count": 2044,
+          "last": 94.309998
+        },
+        "SMA_200": {
+          "count": 1845,
+          "last": 127.048655
+        },
+        "SMA_50": {
+          "count": 1995,
+          "last": 121.297803
+        }
+      },
+      "STOCH": {
+        "SLOW_D": {
+          "count": 2036,
+          "last": 35.008167
+        },
+        "SLOW_K": {
+          "count": 2036,
+          "last": 25.177265
+        }
+      },
+      "TRANGE": {
+        "TRANGE": {
+          "count": 2043,
+          "last": 9.690002
+        }
+      },
+      "VOLUME": {
+        "AVERAGE_VOLUME_10": {
+          "count": 2035,
+          "last": 276704260.0
+        },
+        "AVERAGE_VOLUME_30": {
+          "count": 2015,
+          "last": 305575770.0
+        },
+        "VOLUME": {
+          "count": 2044,
+          "last": 529707700.0
+        }
+      }
+    },
+    "PLTR": {
+      "AD": {
+        "AD": {
+          "count": 1137,
+          "last": 2707209532.507177
+        }
+      },
+      "ADOSC": {
+        "ADOSC": {
+          "count": 1128,
+          "last": 70740678.311826
+        },
+        "ADOSC_SIGNAL": {
+          "count": 1137,
+          "last": 0.0
+        }
+      },
+      "ADX": {
+        "ADX_14": {
+          "count": 1110,
+          "last": 19.480415
+        },
+        "MINUS_DI": {
+          "count": 1123,
+          "last": 26.645749
+        },
+        "PLUS_DI": {
+          "count": 1123,
+          "last": 21.530019
+        }
+      },
+      "ATR": {
+        "ATR": {
+          "count": 1123,
+          "last": 8.091887
+        }
+      },
+      "MACD": {
+        "MACD_12_26_9": {
+          "count": 1104,
+          "last": -1.749219
+        },
+        "MACD_12_26_9_HIST": {
+          "count": 1104,
+          "last": -0.173411
+        },
+        "MACD_12_26_9_SIGNAL": {
+          "count": 1104,
+          "last": -1.575808
+        }
+      },
+      "MFI": {
+        "MFI": {
+          "count": 1123,
+          "last": 52.073428
+        }
+      },
+      "NATR": {
+        "NATR": {
+          "count": 1123,
+          "last": 8.722526
+        }
+      },
+      "OBV": {
+        "OBV": {
+          "count": 1137,
+          "last": 3388382521.0
+        }
+      },
+      "PRICE": {
+        "200_DAY_HIGH": {
+          "count": 938,
+          "last": 124.620003
+        },
+        "200_DAY_LOW": {
+          "count": 938,
+          "last": 24.09
+        },
+        "20_DAY_HIGH": {
+          "count": 1118,
+          "last": 96.75
+        },
+        "20_DAY_LOW": {
+          "count": 1118,
+          "last": 74.010002
+        },
+        "HIGH": {
+          "count": 1137,
+          "last": 93.290001
+        },
+        "LAST_PRICE": {
+          "count": 1137,
+          "last": 92.769997
+        },
+        "LOW": {
+          "count": 1137,
+          "last": 77.269997
+        },
+        "MONTHLY_GROWTH": {
+          "count": 1116,
+          "last": 0.188597
+        },
+        "WEEKLY_GROWTH": {
+          "count": 1132,
+          "last": 0.060835
+        },
+        "YEARLY_GROWTH": {
+          "count": 885,
+          "last": 3.033478
+        }
+      },
+      "ROC": {
+        "MOM": {
+          "count": 864,
+          "last": 51.590004
+        },
+        "ROC_1": {
+          "count": 1136,
+          "last": 19.98189
+        },
+        "ROC_30": {
+          "count": 1107,
+          "last": 3.874145
+        },
+        "ROC_7": {
+          "count": 1130,
+          "last": 9.917056
+        }
+      },
+      "RSI": {
+        "RSI": {
+          "count": 1123,
+          "last": 55.638622
+        }
+      },
+      "SMA": {
+        "CLOSE": {
+          "count": 1137,
+          "last": 92.769997
+        },
+        "SMA_200": {
+          "count": 938,
+          "last": 58.3103
+        },
+        "SMA_50": {
+          "count": 1088,
+          "last": 92.1314
+        }
+      },
+      "STOCH": {
+        "SLOW_D": {
+          "count": 1129,
+          "last": 47.472484
+        },
+        "SLOW_K": {
+          "count": 1129,
+          "last": 66.978512
+        }
+      },
+      "TRANGE": {
+        "TRANGE": {
+          "count": 1136,
+          "last": 16.020004
+        }
+      },
+      "VOLUME": {
+        "AVERAGE_VOLUME_10": {
+          "count": 1128,
+          "last": 117236862.1
+        },
+        "AVERAGE_VOLUME_30": {
+          "count": 1108,
+          "last": 110736384.033333
+        },
+        "VOLUME": {
+          "count": 1137,
+          "last": 169186521.0
+        }
+      }
+    },
+    "TSM": {
+      "AD": {
+        "AD": {
+          "count": 2047,
+          "last": 36936437.178625
+        }
+      },
+      "ADOSC": {
+        "ADOSC": {
+          "count": 2038,
+          "last": -1931107.313767
+        },
+        "ADOSC_SIGNAL": {
+          "count": 2047,
+          "last": 0.0
+        }
+      },
+      "ADX": {
+        "ADX_14": {
+          "count": 2020,
+          "last": 34.489193
+        },
+        "MINUS_DI": {
+          "count": 2033,
+          "last": 35.831009
+        },
+        "PLUS_DI": {
+          "count": 2033,
+          "last": 15.648319
+        }
+      },
+      "ATR": {
+        "ATR": {
+          "count": 2033,
+          "last": 9.216131
+        }
+      },
+      "MACD": {
+        "MACD_12_26_9": {
+          "count": 2014,
+          "last": -8.872415
+        },
+        "MACD_12_26_9_HIST": {
+          "count": 2014,
+          "last": -1.497252
+        },
+        "MACD_12_26_9_SIGNAL": {
+          "count": 2014,
+          "last": -7.375162
+        }
+      },
+      "MFI": {
+        "MFI": {
+          "count": 2033,
+          "last": 25.526724
+        }
+      },
+      "NATR": {
+        "NATR": {
+          "count": 2033,
+          "last": 5.805437
+        }
+      },
+      "OBV": {
+        "OBV": {
+          "count": 2047,
+          "last": 709122743.0
+        }
+      },
+      "PRICE": {
+        "200_DAY_HIGH": {
+          "count": 1848,
+          "last": 223.74823
+        },
+        "200_DAY_LOW": {
+          "count": 1848,
+          "last": 141.369995
+        },
+        "20_DAY_HIGH": {
+          "count": 2028,
+          "last": 181.160004
+        },
+        "20_DAY_LOW": {
+          "count": 2028,
+          "last": 141.369995
+        },
+        "HIGH": {
+          "count": 2047,
+          "last": 160.619995
+        },
+        "LAST_PRICE": {
+          "count": 2047,
+          "last": 158.75
+        },
+        "LOW": {
+          "count": 2047,
+          "last": 137.899994
+        },
+        "MONTHLY_GROWTH": {
+          "count": 2026,
+          "last": -0.067857
+        },
+        "WEEKLY_GROWTH": {
+          "count": 2042,
+          "last": -0.068314
+        },
+        "YEARLY_GROWTH": {
+          "count": 1795,
+          "last": 0.127326
+        }
+      },
+      "ROC": {
+        "MOM": {
+          "count": 1774,
+          "last": 23.760071
+        },
+        "ROC_1": {
+          "count": 2046,
+          "last": 12.293984
+        },
+        "ROC_30": {
+          "count": 2017,
+          "last": -18.112974
+        },
+        "ROC_7": {
+          "count": 2040,
+          "last": -4.36747
+        }
+      },
+      "RSI": {
+        "RSI": {
+          "count": 2033,
+          "last": 42.490518
+        }
+      },
+      "SMA": {
+        "CLOSE": {
+          "count": 2047,
+          "last": 158.75
+        },
+        "SMA_200": {
+          "count": 1848,
+          "last": 183.322781
+        },
+        "SMA_50": {
+          "count": 1998,
+          "last": 182.976869
+        }
+      },
+      "STOCH": {
+        "SLOW_D": {
+          "count": 2039,
+          "last": 26.444311
+        },
+        "SLOW_K": {
+          "count": 2039,
+          "last": 46.567508
+        }
+      },
+      "TRANGE": {
+        "TRANGE": {
+          "count": 2046,
+          "last": 22.720001
+        }
+      },
+      "VOLUME": {
+        "AVERAGE_VOLUME_10": {
+          "count": 2038,
+          "last": 25926084.3
+        },
+        "AVERAGE_VOLUME_30": {
+          "count": 2018,
+          "last": 19904338.1
+        },
+        "VOLUME": {
+          "count": 2047,
+          "last": 45385143.0
+        }
+      }
+    }
+  },
+  "queries": {
+    "income_cashflow_price_order": "positive_net_income=1 AND positive_free_cash_flow=1 AND growing_operating_cash_flow=1 AND last_price BETWEEN 1.0 AND 1000.0 ORDER BY market_capitalization DESC LIMIT 1000",
+    "market_cap_country": "country IN ('Germany', 'France') AND market_capitalization BETWEEN 5000000000.0 AND 1000000000000.0 LIMIT 1000",
+    "price_per_earning_limit": "price_per_earning_ratio BETWEEN 10.0 AND 40.0  ORDER BY last_price ASC LIMIT 50"
+  }
+}
