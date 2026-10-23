@@ -162,13 +162,102 @@ Presets (composites, all explainable):
 * **Turnaround**: F-score ≥ 7 + RRG improving + surprise consistency.
 * **Dividend quality**: yield, payout from FCF, dividend growth, coverage.
 
-### 3.6 Commodities
+### 3.6 Single-stock due diligence: "is it fundamentally good, and is it only temporarily oversold?"
+
+This is the question the scorecard in §3.5 must answer directly, not leave to
+the reader. The engine produces a **verdict object** per symbol with five
+parts, each backed by the KPIs that produced it.
+
+**(1) Fundamental health** (is the business good?). A pass/fail checklist plus
+a 0–100 score, computed from the last 3 fiscal years and the last 8 quarters:
+
+| Check | Rule (defaults, configurable) | Source |
+|---|---|---|
+| Profitable and cash-generative | operating income > 0, FCF > 0 in ≥ 3 of the last 4 years, FCF conversion (FCF / net income) > 0.8 | metrics, cash flow |
+| Returns on capital | ROIC > 10 % and ROE > 12 % (or > sector median) | metrics, balance sheet |
+| Earnings quality | accruals ratio < 10 % of assets, CFO ≥ net income | metrics, cash flow |
+| Growth | revenue 3y CAGR > 5 % and not decelerating two years in a row | metrics |
+| Margins | gross and operating margin flat or rising over 8 quarters | quarterly metrics |
+| Balance sheet | net debt / EBITDA < 3, interest coverage > 4, current ratio > 1, Altman Z > 2.6 | balance sheet, metrics |
+| Capital discipline | share count flat or falling (no dilution), capex ratio stable, dividends covered by FCF | balance sheet, cash flow |
+| Scores | Piotroski F ≥ 6, Mohanram G ≥ 4 | derived |
+| Trusted statements | SEC XBRL source with `filed_date` for US names; Yahoo elsewhere flagged as lower confidence | `filing`, `financialmetrics.source` |
+
+**(2) Oversold state** (is the price depressed?). Short-term reversal has
+academic evidence (Jegadeesh 1990, Lehmann 1990), long-term reversal too
+(De Bondt–Thaler 1985), and Piotroski showed high F-score names among beaten-
+down stocks outperform. KPIs:
+
+* RSI 14 < 30 and RSI turning up, Bollinger %B < 0, stochastic oversold
+  (existing TA-Lib signals, kept);
+* drawdown from 52-week high, distance below 50d / 200d SMA, z-score of price
+  vs 200d SMA, proximity to 52-week low;
+* **excess drawdown** = stock drawdown minus sector-ETF (or industry median)
+  drawdown over the same window: separates a company-specific sell-off from a
+  sector or market one;
+* capitulation volume (volume / 30d average > 3 on down days), ADOSC turning
+  positive after the drop (existing signal), 1-month return in the bottom
+  decile of the universe (the reversal factor).
+
+**(3) Temporary or structural?** The discriminating evidence, scored as
+"temporary" (+), "structural" (−) or neutral:
+
+| Evidence | Reads as temporary when… | Reads as structural when… | Source |
+|---|---|---|---|
+| Nature of the drawdown | sector / market fell with it (excess drawdown ≈ 0) | excess drawdown large and persistent | prices, `etfexposure` |
+| Event type at the drop | drop on an earnings date with an EPS **beat** (overreaction), index exclusion, macro shock | drop on a **miss**, guidance cut, restatement | `earningsdate` (estimate vs reported), filings |
+| Analyst reaction | target mean and recommendation trend flat or falling less than price (upside widening) | targets cut faster than price, buy ratio collapsing | `pricetarget`, `analystrecommendation` |
+| Estimate trend | next-quarter EPS / revenue estimates stable | forward estimates falling | `earningsdate` forward rows |
+| Insiders | officers and directors buy after the drop (cluster buy within 30 days) | insiders sell into the drop | `insidertransaction` |
+| Institutions | 13F new holders > closed holders in the following quarter, 13D activist appears | holders leaving two quarters in a row | `holding13fsummary`, `ownership13dg` |
+| Short interest | falling or flat | rising sharply | equity snapshots (§7) |
+| SEC 8-K items | 2.02 results, 7.01 Reg FD, 1.01 ordinary agreements | 4.02 restatement, 4.01 auditor change, 3.01 delisting notice, 1.03 bankruptcy, 5.02 CEO / CFO departure, 2.04 debt acceleration | `filing` with 8-K items (§7) |
+| Financing | no new issuance | share offering or convertible after the drop (`proceeds_from_issuance_of_common_stock` spike) | cash flow |
+| Fundamentals vs price | **fundamental-price gap**: fundamental percentile minus price-momentum percentile is large and positive | gap small or negative (price was right) | derived |
+| Valuation | P/E, EV/EBITDA, P/FCF at multi-year lows vs own history while margins hold | valuation low because earnings collapsed | derived |
+
+**(4) Recovery evidence.** Signals that the market is turning: RSI bullish
+crossover (existing), MACD zero-line cross, price back above 20d high, volume
+on up days exceeding volume on down days, positive earnings surprise after the
+drop, insider cluster buy, revisions turning up.
+
+**(5) Verdict.** `fundamentally_sound` (bool, score, failed checks),
+`oversold` (score and the signals firing), `drawdown_nature`
+(idiosyncratic / sector / market), `likely_cause` (earnings miss, guidance,
+offering, sector sell-off, event from 8-K, unknown), `structural_red_flags`
+(list), `recovery_evidence` (list), `data_coverage` (§3.7), and a label:
+**quality on sale** (sound + oversold + temporary), **falling knife** (oversold
++ structural), **sound, not cheap**, **avoid**. Each label is a preset in the
+screener so "show me all quality-on-sale names in Europe" is one call.
+
+### 3.7 Data coverage: does Bearish have enough to judge this stock?
+
+Before any verdict the engine grades the inputs, per symbol, and the MCP
+returns the grade with every scorecard:
+
+| Dimension | Measured as | Needed for a grade A |
+|---|---|---|
+| Statements | fiscal years and quarters with non-null revenue, net income, CFO, total assets, equity; source (SEC XBRL vs Yahoo); `filed_date` present | ≥ 4 years and ≥ 8 quarters, SEC source for US names |
+| Prices | first and last price date, gaps > 5 trading days, dividends / splits present | ≥ 3 years, no gaps, last price < 5 days old |
+| Expectations | number of analysts, dated price targets, recommendation periods, earnings rows with both estimate and reported | ≥ 3 analysts, ≥ 4 earnings rows with surprises |
+| Ownership | 13F summary quarters, insider rows, 13D/G rows | ≥ 4 quarters of 13F (US only) |
+| Reference | sector, industry, shares outstanding, float, currency, ISIN / CUSIP mapping | all present |
+| Links | sector mapped to the shared vocabulary, country mapped to ISO-3 | both resolved |
+
+Output: grade A / B / C / insufficient per dimension and overall, the list of
+missing items, and the Bearish command that would fill them (for example
+`bearish financials ... --filters SYM`, `bearish insiders`, `bearish holdings`).
+Grades are stored as KPIs so the screener can require a minimum grade, and the
+universe-level summary ("how much of the Belgian market is grade A?") tells
+you where Bearish needs another run.
+
+### 3.8 Commodities
 
 Price momentum 1 / 3 / 12m, COT positioning percentile (crowding, from
 `COT_NET_SPEC_PCT_OI`), inventories / stocks-to-use trend, and the list of
 sectors and countries each move helps or hurts (from the link tables).
 
-### 3.7 Portfolio and decision support
+### 3.9 Portfolio and decision support
 
 Look-through exposure of a holdings list (sector, country, commodity, factor),
 pairwise correlation and overlap, concentration, and what-if deltas. Keeps the
@@ -234,12 +323,15 @@ Tools:
 | `rank_countries(as_of)` | §3.4 |
 | `screen_equities(preset, filters, universe, limit, as_of)` | §3.5 presets or custom filters |
 | `get_equity_scorecard(symbol, as_of)` | every KPI + composite + peers |
+| `assess_stock(symbol, as_of)` | §3.6 verdict: fundamentally sound, oversold, temporary vs structural, red flags, recovery evidence |
+| `get_data_coverage(symbol \| universe)` | §3.7 grade, missing items, Bearish commands to fill them |
+| `get_filings(symbol, forms, since)` | 10-K / 10-Q / 8-K list with items and dates |
 | `explain_score(entity, score, as_of)` | components, weights, tiers, caveats |
 | `get_kpi_series(entity, kpi, start, end)` | time series for charts and trend questions |
 | `get_macro_snapshot(entity, categories, as_of)` / `get_commodity_snapshot(code)` | macro and commodity context |
 | `get_smart_money(symbol)` | 13F, 13D/G, insider detail |
 | `get_earnings_calendar(window)` | upcoming events on the universe |
-| `analyze_portfolio(holdings)` | §3.7 |
+| `analyze_portfolio(holdings)` | §3.9 |
 | `backtest_preset(preset, start, end, holding_period)` | hit rate and decile spread |
 | `list_kpis()` / `describe_kpi(name)` | self-documenting catalogue |
 | `query(sql)` (optional, off by default) | guarded read-only SQL with row limit |
@@ -260,6 +352,9 @@ database in CI; a golden file pins the ranking output for a frozen date.
   forward return, drawdown).
 * Weights in config are only changed with a backtest result attached.
 * Survivorship: use every symbol ever tracked, not only the current universe.
+* §3.6 specifically: forward 3 / 6 / 12m excess return vs sector for each
+  verdict label (quality on sale vs falling knife); the labels only ship if
+  the spread between them is positive and stable across regions.
 
 ## 7. Bearish prerequisites (small PRs, do first)
 
@@ -273,15 +368,25 @@ database in CI; a golden file pins the ranking output for a frozen date.
 4. Index constituents (`indexmember`) for breadth and tracking, from
    FinanceDatabase / Yahoo where available.
 5. Shared sector vocabulary (GICS-style) and the Yahoo → GICS mapping.
+6. `filing`: keep 8-K rows and their item codes (the EDGAR submissions
+   payload already carries `items`; today only 10-K / 10-Q are kept) so the
+   structural red flags in §3.6 can be read without text parsing.
+7. XBRL tags missing for the quality checks: `InterestExpense`,
+   `ResearchAndDevelopmentExpense`, `SellingGeneralAndAdministrativeExpense`,
+   `ShareBasedCompensation`, `WeightedAverageNumberOfDilutedSharesOutstanding`,
+   `PaymentsOfDividends`, `ProceedsFromIssuanceOfCommonStock`. Without R&D the
+   G-score drops to 6 signals; without interest expense coverage is estimated.
+8. A `coverage` view or table written by Bearish on each run (rows per
+   symbol and table, first / last date, row count) so §3.7 is cheap.
 
 ## 8. Phases and effort (one developer)
 
 | Phase | Scope | Est. |
 |---|---|---|
-| 0 | Bearish prerequisites (§7) | 1 week |
+| 0 | Bearish prerequisites (§7, items 1–8) | 1–2 weeks |
 | 1 | Core skeleton: config, data layer, KPI registry, long `kpi` table, migrations, TA indicators ported, equity KPI blocks | 2–3 weeks |
 | 2 | Group KPIs: sector / industry / country / ETF / market regime / commodity | 2 weeks |
-| 3 | Scoring: percentiles, composites, presets, explanations | 1–2 weeks |
+| 3 | Scoring: percentiles, composites, presets, explanations, the §3.6 verdict engine and §3.7 coverage grades | 2 weeks |
 | 4 | MCP server, tests, Claude Desktop / Code config, docs | 1–2 weeks |
 | 5 | Validation: rank backtests, weight calibration, golden tests | 2 weeks |
 | 6 | Streamlit viewer slimmed to the new tables; scheduled jobs; cleanup of dropped modules | 1 week |
@@ -314,5 +419,7 @@ plausible KPIs into trusted ones.
   AAII glamour stocks — https://www.aaii.com/journal/article/13008-finding-future-winners-among-glamour-stocks
 * Multi-bagger traits (margin expansion): https://stashaway.my/r/weekly-market-update-how-identify-multi-bagger ;
   revisions — https://articles.stockcharts.com/article/beyond-the-ai-hype-where-earnings-revisions-point-ahead-of-q3-reports/
+* Reversal and F-score evidence: Jegadeesh (1990) and Lehmann (1990) one-month reversal;
+  De Bondt & Thaler (1985) long-term reversal; Piotroski (2000) F-score on low P/B stocks.
 * MCP Python SDK structured output and transports: https://pypi.org/project/MCP/ ;
   FastMCP practices — https://www.fast.io/resources/mcp-python-sdk.md ; https://dev.co/ai/mcp/fastmcp
