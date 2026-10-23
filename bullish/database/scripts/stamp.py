@@ -1,28 +1,25 @@
-import os
+"""Helpers for databases that predate bullish's alembic migrations."""
+
+from __future__ import annotations
+
 import sqlite3
 from pathlib import Path
 
-from alembic.config import Config
 from bullish.database.settings import TEST_DATABASE_PATH
+
+LEGACY_TABLES = ("view", "analysis", "filteredresults", "jobtracker")
+
+
+def drop_legacy_tables(conn: sqlite3.Connection) -> None:
+    """Drop the tables an old, pre-alembic bullish created; the first bullish migration recreates them."""
+    for table in LEGACY_TABLES:
+        conn.execute(f"DROP TABLE IF EXISTS {table};")
+    conn.commit()
 
 
 def stamp(database_path: Path) -> None:
-    database_url = f"sqlite:///{database_path}"
-    root_folder = Path(__file__).parents[1]
-    os.environ.update({"DATABASE_URL": database_url})
-
     with sqlite3.connect(database_path) as conn:
-        conn.execute("DROP TABLE IF EXISTS view;")
-        conn.execute("DROP TABLE IF EXISTS analysis;")
-        conn.execute("DROP TABLE IF EXISTS filteredresults;")
-        conn.execute("DROP TABLE IF EXISTS jobtracker;")
-        conn.execute("DELETE FROM alembic_version;")
-        conn.execute(
-            "INSERT INTO alembic_version (version_num) VALUES ('037dbd721319');"
-        )
-        conn.commit()
-    alembic_cfg = Config(root_folder / "alembic" / "alembic.ini")
-    alembic_cfg.set_main_option("script_location", str(root_folder / "alembic"))
+        drop_legacy_tables(conn)
 
 
 if __name__ == "__main__":
