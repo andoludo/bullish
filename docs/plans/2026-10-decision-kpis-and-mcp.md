@@ -388,6 +388,13 @@ Status (2026-10-23): all eight are implemented on the Bearish branch
 
 ## 8. Phases and effort (one developer)
 
+Status (2026-10-23): phases 1-5 are implemented on this branch as an
+additive layer (`bullish/config.py`, `bullish/data`, `bullish/kpi`,
+`bullish/scoring`, `bullish/database/kpi_store.py`, `bullish/mcp`,
+`bullish/backtest`; commands `bullish compute`, `history`, `backtest`,
+`mcp`), tested on a synthetic bearish database (`tests/v2`). Phase 6 (slimming
+the Streamlit app) is not started: the app is untouched and still works.
+
 | Phase | Scope | Est. |
 |---|---|---|
 | 0 | Bearish prerequisites (§7, items 1–8) | 1–2 weeks |
