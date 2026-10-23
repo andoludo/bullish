@@ -34,6 +34,7 @@ from bullish.database.schemas import (
     OpenAINewsORM,
     PortfolioORM,
 )
+from bullish.database.kpi_store import KpiStoreMixin
 from bullish.database.scripts.upgrade import upgrade
 from bullish.exceptions import DatabaseFileNotFoundError
 from bullish.interface.interface import BullishDbBase
@@ -49,7 +50,7 @@ logger = logging.getLogger(__name__)
 BATCH_SIZE = 5000
 
 
-class BullishDb(BearishDb, BullishDbBase):  # type: ignore
+class BullishDb(KpiStoreMixin, BearishDb, BullishDbBase):  # type: ignore
     model_config = ConfigDict(arbitrary_types_allowed=True)
     database_path: Path
 
