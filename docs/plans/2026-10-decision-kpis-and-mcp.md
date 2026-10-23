@@ -358,6 +358,13 @@ database in CI; a golden file pins the ranking output for a frozen date.
 
 ## 7. Bearish prerequisites (small PRs, do first)
 
+Status (2026-10-23): all eight are implemented on the Bearish branch
+`claude/bullish-repo-sector-etf-analysis-90s9nf` (tables `sectoralias` +
+`equitysector` view, `filing.items`, statement detail columns,
+`equitysnapshot`, `etfsnapshot`, `pricecurrency` + `fxrate` view,
+`indexmember`, `coverage`; commands `bearish link`, `fx`, `members`,
+`coverage`).
+
 1. `etfsnapshot` table: `(symbol, as_of, total_net_assets, nav_price,
    expense_ratio, holdings_json)` written on every ETF fetch → flows,
    premium/discount, concentration history.
