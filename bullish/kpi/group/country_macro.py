@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 import numpy as np
 import pandas as pd
 
@@ -201,7 +203,7 @@ def compute(ctx: DataContext, countries: list[str]) -> pd.DataFrame:
     commodity_returns = _commodity_returns(ctx)
     rows = {}
     for country in countries:
-        s = lambda concept, c=country: ctx.macro_series(concept, c)  # noqa: E731
+        s = partial(ctx.macro_series, entity=country)
         curve = s("CURVE_10_2")
         rows[country] = {
             "cli_change_3m": _change(s("CLI"), 3),

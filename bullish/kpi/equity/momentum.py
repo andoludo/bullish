@@ -7,6 +7,7 @@ import pandas as pd
 
 from bullish.data.panels import DataContext, returns_over
 from bullish.kpi.registry import declare_many
+from bullish.utils.typed import as_float
 
 BLOCK = "momentum"
 MONTH, QUARTER, HALF, YEAR = 21, 63, 126, 252
@@ -265,7 +266,7 @@ def compute(ctx: DataContext) -> pd.DataFrame:  # noqa: PLR0915
     if len(close) > HALF:
         out["mom_6_1"] = close.iloc[-1 - MONTH] / close.iloc[-1 - HALF] - 1
     market_3m = (
-        float(market.iloc[-QUARTER:].add(1).prod() - 1)
+        as_float(market.iloc[-QUARTER:].add(1).prod()) - 1
         if len(market) >= QUARTER
         else np.nan
     )

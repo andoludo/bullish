@@ -1,75 +1,30 @@
 # Bullish
 
-**Bullish** is a high-powered stock screener that helps you quickly identify the best stock or trading opportunities in the market.  
-It can scan **thousands of equities** across multiple markets, exchanges, and countries to uncover strong *buy* candidates.  
+**Bullish** turns a [bearish](https://github.com/andoludo/bearish) database
+into decision KPIs and serves them to an LLM client over the
+[Model Context Protocol](https://modelcontextprotocol.io): which sector,
+country or ETF is attractive, which stocks fit a preset such as *quality on
+sale*, whether a stock is fundamentally sound and only temporarily oversold,
+and whether the data is good enough to judge. Technical analysis (TA-Lib
+indicators and signals) is one block of those KPIs.
 
-Bullish uses the well-known **TA-Lib** library to calculate popular technical analysis indicators—such as **RSI**, **MACD**, and moving averages—then lets you filter and select the strongest stocks from your **local database**.
-
----
-
-## Why Bullish?
-The main goals behind Bullish are:
-- **Full control over your data** — no dependency on third-party screeners  
-- **Local analysis** — run any type of screening or backtesting on your own system  
-
-Bullish is built on:
-- **bearish** – a Python library that fetches equity data, statements, analyst and ownership data, macro series and ETF metadata from multiple sources  
-- **tickermood** – retrieves recent, relevant news for screened tickers and uses LLMs to produce an investment recommendation.
-
----
+Nothing here is a forecast: every KPI carries an evidence tier (A academic,
+B practitioner, C heuristic) and every answer the date of the run it is based
+on.
 
 ## Prerequisites
-### Install TA-Lib
-Bullish depends on **TA-Lib** for technical analysis calculations.  
-TA-Lib must be installed separately before using Bullish.  
-See the [TA-Lib installation guide](https://ta-lib.org/) for instructions.
 
----
+- A bearish database: `bearish run ./bear.db Belgium` (prices, statements,
+  analyst and ownership data), then `bearish macro`, `bearish link`,
+  `bearish members`, `bearish fx` for the group-level KPIs.
+- **TA-Lib**: the `ta-lib` wheel bundles the C library on supported
+  platforms; otherwise see the [TA-Lib installation guide](https://ta-lib.org/).
 
-## Installation
 ```bash
 pip install bullishpy
 ```
 
----
-
-## Quick Start
-
-### 1. Create a Bearish Database
-A **bearish database** contains historical prices and fundamental data for all stocks in your chosen market.
-
-Example: Create a database for the Belgian stock market:
-```bash
-bearish run ./bearish.db Belgium
-```
-You can replace `Belgium` with any supported country.  
-**Note:** Building the database can take some time.
-
----
-
-### 2. Run Bullish
-Navigate to the folder containing your **bullish database** and run:
-```bash
-bullish
-```
-This launches a **local Streamlit app** where you can screen, filter, and analyze stocks interactively.
-
-![img1.png](docs/img1.png)
-
-
-![img.png](docs/img.png)
-
----
-
-## Decision KPIs and the MCP server (bullish v2)
-
-On top of the screener, bullish computes a **catalogue of decision KPIs** from
-a bearish database and serves them to an LLM client over the
-[Model Context Protocol](https://modelcontextprotocol.io). Nothing here is a
-forecast: every KPI carries an evidence tier (A academic, B practitioner,
-C heuristic) and every answer the date of the run it is based on.
-
-### What is computed
+## What is computed
 
 | Level | KPIs | Composite |
 |---|---|---|
@@ -77,7 +32,7 @@ C heuristic) and every answer the date of the run it is based on.
 | Sector and industry | cap-weighted relative strength, RRG quadrant, breadth, median growth and acceleration, revision ratio, beat rate, valuation vs history, 13F and insider flows, commodity tailwind | `sector_score`, `industry_score` |
 | Country | the same market block plus CLI, PMI, forecasts, inflation and policy trend, real yields, BIS credit gap, debt, current account, confidence, uncertainty, FX vs base currency, terms of trade | `country_score` |
 | ETF | expense ratio, AUM and flows, dollar volume, tracking difference / error vs the best-correlated index, premium to NAV, holdings concentration, risk-adjusted momentum, age | `etf_vehicle_score`; `etf_score` = 0.5 exposure attractiveness + 0.3 vehicle + 0.2 momentum |
-| Equity (124 KPIs) | momentum and risk, growth and acceleration, quality (ROIC, accruals, Piotroski F, Mohanram G, Altman Z, dilution), valuation vs peers and own history, revisions and surprises, 13F / insider / 13D / short interest / 8-K items, macro exposure | presets `emerging_leader`, `quality_compounder`, `value_with_catalyst`, `turnaround`, `dividend_quality`, `quality_on_sale` |
+| Equity | technical (every TA-Lib indicator and signal of `bullish.analysis.indicators`, dated signals as trading days since they last fired), momentum and risk, growth and acceleration, quality (ROIC, accruals, Piotroski F, Mohanram G, Altman Z, dilution), valuation vs peers and own history, revisions and surprises, 13F / insider / 13D / short interest / 8-K items, macro exposure | presets `emerging_leader`, `quality_compounder`, `value_with_catalyst`, `turnaround`, `dividend_quality`, `quality_on_sale` |
 | Stock verdict | fundamental checklist, oversold signals, drawdown nature (company-specific / sector / market), temporary-vs-structural evidence, recovery evidence | label: quality on sale, falling knife, sound not cheap, oversold unclear, avoid |
 | Data coverage | statements, prices, expectations, ownership and reference per symbol | grade A / B / C / insufficient with the bearish command that fills the gap |
 
@@ -87,7 +42,7 @@ declared in `bullish/scoring/presets.py` and every block carries its rationale.
 Values are stored point-in-time in the long `kpi` table and the `score` table,
 so `as_of` questions are answered with what was known then.
 
-### Running it
+## Running it
 
 ```bash
 # compute every KPI, score and grade for today (or a past date) and store them
@@ -120,12 +75,12 @@ Settings come from the environment or a `.env` file (`BULLISH_DATABASE_PATH`,
 `BULLISH_BASE_CURRENCY`, `BULLISH_PEER_GROUP`, `BULLISH_MIN_DOLLAR_VOLUME`,
 `BULLISH_MIN_MARKET_CAP`, `BULLISH_ALLOW_SQL`, ...), see `bullish/config.py`.
 
-### MCP tools
+## MCP tools
 
 `get_market_regime`, `rank_sectors`, `rank_industries`, `rank_countries`,
 `rank_etfs`, `compare_etfs`, `screen_equities`, `explain_score`,
 `get_equity_scorecard`, `assess_stock`, `get_kpi_series`, `get_smart_money`,
-`get_filings`, `get_earnings_calendar`, `get_macro_snapshot`,
+`get_technical_signals`, `get_filings`, `get_earnings_calendar`, `get_macro_snapshot`,
 `get_commodity_snapshot`, `get_data_coverage`, `analyze_portfolio`,
 `list_kpis`, `describe_kpi`, `list_composites`, `list_runs` and, when
 `BULLISH_ALLOW_SQL=1`, a read-only `query`. Resources expose the KPI
@@ -139,34 +94,27 @@ The plan behind this layer, with the literature it rests on, is in
 
 ## Development
 
-Bullish uses [uv](https://docs.astral.sh/uv/) for dependency management and packaging.
+Bullish uses [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
-# Install uv (https://docs.astral.sh/uv/getting-started/installation/)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Create the virtual environment and install all dependencies (incl. dev tools)
-uv sync --all-groups
-
-# Run the test suite (integration tests excluded)
-uv run pytest -m "not integration"
-
-# Linting & type checking
-uv run nox -s linting
-
-# Run any command inside the project environment
-uv run bullish
+uv sync --all-groups          # environment with the dev tools
+uv run pytest                 # tests (tests/v2 run on a synthetic bearish database)
+uv run nox -s linting         # black, mypy (strict), ruff
 ```
 
-> **Note:** `ta-lib` is installed from a prebuilt wheel, so the TA-Lib C library
-> no longer needs to be built separately for local development on supported
-> platforms.
+The repository layout:
 
----
+| Package | Role |
+|---|---|
+| `bullish.analysis` | TA-Lib indicator functions and the signal definitions |
+| `bullish.data` | point-in-time loaders over the bearish tables |
+| `bullish.kpi` | KPI registry, equity and group blocks, the run engine |
+| `bullish.scoring` | percentile ranking, composites and presets, stock verdict, coverage grades, regime |
+| `bullish.backtest` | rank information coefficient across stored runs |
+| `bullish.database` | bullish's tables (`kpi`, `score`, `kpirun`) and the migration bridge with bearish |
+| `bullish.mcp` | the MCP server and its service layer |
 
-## What Bullish Is Not
-Bullish is **not**:
-- A real-time trading platform  
-- A tool for intraday or high-frequency trading  
+## What Bullish is not
 
-It is designed for **retail traders** and **swing traders** focusing on opportunities over days or weeks.
+Not a trading platform and not real-time: it is a research layer for
+decisions over days to months, on data you own locally.

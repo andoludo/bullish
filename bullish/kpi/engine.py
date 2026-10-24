@@ -16,6 +16,7 @@ from bullish.kpi.group import compute_group_kpis
 from bullish.kpi.registry import declare_many
 from bullish.scoring.composite import ScoreResult, score_composite
 from bullish.scoring.coverage import grade_universe
+from bullish.utils.typed import as_float
 from bullish.scoring.presets import (
     COUNTRY_SCORE,
     EQUITY_PRESETS,
@@ -88,16 +89,19 @@ def lookthrough_scores(
     if ("country", COUNTRY_SCORE.name) in scores:
         lookups["country"] = scores[("country", COUNTRY_SCORE.name)].scores["score"]
     if not commodity.empty and "ret_3m" in commodity:
-        lookups["commodity"] = commodity["ret_3m"].rank(pct=True) * 100
-    values = exposures.apply(
-        lambda r: lookups.get(r["entity_type"], pd.Series(dtype=float)).get(
-            r["entity"]
-        ),
-        axis=1,
-    )
-    frame = exposures.assign(_score=pd.to_numeric(values, errors="coerce")).dropna(
-        subset=["_score"]
-    )
+        lookups["commodity"] = commodity["ret_3m"].rank(pct=True) * 100.0
+
+    def _lookup(entity_type: str, entity: str) -> float:
+        table = lookups.get(entity_type)
+        return as_float(table.get(entity)) if table is not None else float("nan")
+
+    values = [
+        _lookup(entity_type, entity)
+        for entity_type, entity in zip(
+            exposures["entity_type"], exposures["entity"], strict=True
+        )
+    ]
+    frame = exposures.assign(_score=values).dropna(subset=["_score"])
     if frame.empty:
         return pd.Series(dtype=float)
     weighted = (frame["_score"] * frame["weight"]).groupby(frame["symbol"]).sum()

@@ -1002,10 +1002,5 @@
         }
       }
     }
-  },
-  "queries": {
-    "income_cashflow_price_order": "positive_net_income=1 AND positive_free_cash_flow=1 AND growing_operating_cash_flow=1 AND last_price BETWEEN 1.0 AND 1000.0 ORDER BY market_capitalization DESC LIMIT 1000",
-    "market_cap_country": "country IN ('Germany', 'France') AND market_capitalization BETWEEN 5000000000.0 AND 1000000000000.0 LIMIT 1000",
-    "price_per_earning_limit": "price_per_earning_ratio BETWEEN 10.0 AND 40.0  ORDER BY last_price ASC LIMIT 50"
   }
 }

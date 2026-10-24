@@ -62,6 +62,7 @@ async def test_tools_resources_and_prompts_are_listed(client: Client) -> None:
         "get_data_coverage",
         "analyze_portfolio",
         "query",
+        "get_technical_signals",
     }
     assert expected <= tools
     for tool in (await client.list_tools()).tools:
@@ -150,6 +151,18 @@ async def test_screen_scorecard_and_verdict(client: Client) -> None:
         for b in explanation["blocks"]
         for k in b["kpis"]
     )
+
+
+async def test_technical_signals(client: Client) -> None:
+    technical = (
+        await client.call_tool("get_technical_signals", {"symbol": "QSALE"})
+    ).structured_content
+    assert technical["symbol"] == "QSALE"
+    assert "rsi" in technical["values"]
+    assert technical["values"]["rsi"] < 40  # the fixture slides 30 % into the run date
+    assert any(name.endswith("_days_since") for name in technical["days_since"])
+    ages = [s["trading_days_ago"] for s in technical["most_recent_signals"]]
+    assert ages == sorted(ages)
 
 
 async def test_raw_data_tools(client: Client) -> None:
