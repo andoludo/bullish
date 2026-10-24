@@ -7,7 +7,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any
 
-from bearish.database.crud import BearishDb  # type: ignore[import-untyped]
+from bearish.database.crud import BearishDb
 from pydantic import ConfigDict
 from sqlalchemy import Engine, create_engine
 
@@ -18,7 +18,7 @@ from bullish.exceptions import DatabaseFileNotFoundError
 logger = logging.getLogger(__name__)
 
 
-class BullishDb(KpiStoreMixin, BearishDb):  # type: ignore[misc]
+class BullishDb(KpiStoreMixin, BearishDb):
     """Opens an existing bearish file, brings both schemas to head and exposes the KPI store."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

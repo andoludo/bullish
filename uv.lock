@@ -62,8 +62,8 @@ wheels = [
 
 [[package]]
 name = "bearishpy"
-version = "0.54.0"
-source = { git = "https://github.com/andoludo/bearish?rev=0.54.0#e0773e50565629736dacd6811845ebba7409f052" }
+version = "0.55.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "alembic" },
     { name = "html5lib" },
@@ -84,6 +84,10 @@ dependencies = [
     { name = "xlrd" },
     { name = "yahooquery" },
     { name = "yfinance" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/30/c8/c4e8e4972c79d35e5c1fe9f49fee29c349fd01cd8a2609af52f0a6d5a137/bearishpy-0.55.0.tar.gz", hash = "sha256:d99927a0afb9ea71ca7251f40e863195ca0ab84feeb1b26f068b9f2cfc500e82", size = 2225119, upload-time = "2026-10-24T05:10:06.388Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/f1/c7baf11a84dd74d1478f916f4db81cedeb6c43bc8fa308fe77572db233e0/bearishpy-0.55.0-py3-none-any.whl", hash = "sha256:239c2b145d1f9309c9f77daddeabcfaf8cbeafa5780894c98bb812c43b868292", size = 385089, upload-time = "2026-10-24T05:10:04.696Z" },
 ]
 
 [[package]]
@@ -164,7 +168,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bearishpy", git = "https://github.com/andoludo/bearish?rev=0.54.0" },
+    { name = "bearishpy", specifier = ">=0.55.0,<1.0.0" },
     { name = "mcp", specifier = ">=2.3.0,<3" },
     { name = "pandas-ta", specifier = ">=0.4.71b0,<0.5.0" },
     { name = "pydantic-settings", specifier = ">=2.16,<3" },

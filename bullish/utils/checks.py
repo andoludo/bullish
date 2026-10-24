@@ -4,7 +4,7 @@ from pathlib import Path
 from sqlite3 import Connection
 from collections.abc import Generator
 
-from bearish.database.schemas import *  # type: ignore # noqa: F403
+from bearish.database.schemas import *  # noqa: F403
 
 from bullish.database.schemas import *  # noqa: F403
 

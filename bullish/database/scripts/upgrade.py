@@ -20,7 +20,7 @@ from typing import Literal
 from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
-from bearish.database.scripts.upgrade import upgrade as bearish_upgrade  # type: ignore
+from bearish.database.scripts.upgrade import upgrade as bearish_upgrade
 
 from bullish.database.scripts.stamp import drop_legacy_tables
 
