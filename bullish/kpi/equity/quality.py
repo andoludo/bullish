@@ -245,7 +245,8 @@ def _piotroski(frame: pd.DataFrame) -> pd.Series:
 
     if frame.empty:
         return pd.Series(dtype=float)
-    return frame.groupby("symbol").apply(_score, include_groups=False)
+    scores = {symbol: _score(rows) for symbol, rows in frame.groupby("symbol")}
+    return pd.Series(scores, dtype=float).rename_axis("symbol")
 
 
 def _ratio(row: pd.Series, numerator: str, denominator: str) -> float:
@@ -410,9 +411,13 @@ def compute(ctx: DataContext) -> pd.DataFrame:  # noqa: PLR0915
         index
     )
     if not annual_frame.empty and "operating_cash_flow" in annual_frame:
+        annual_capex: pd.Series | float = (
+            annual_frame["capital_expenditure"].abs()
+            if "capital_expenditure" in annual_frame
+            else 0.0
+        )
         annual_fcf = annual_frame.assign(
-            _fcf=annual_frame["operating_cash_flow"]
-            - annual_frame.get("capital_expenditure", 0.0).abs()
+            _fcf=annual_frame["operating_cash_flow"] - annual_capex
         )
         out["fcf_positive_years_4"] = _count_positive(annual_fcf, "_fcf").reindex(index)
     dividends = ttm(ctx, "cash_dividends_paid").abs()

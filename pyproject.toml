@@ -1,27 +1,18 @@
 [project]
 name = "bullishpy"
 version = "0.91.0"
-description = ""
+description = "Decision KPIs, technical analysis and an MCP server on top of a bearish database."
 authors = [{ name = "aan", email = "andoludovic.andriamamonjy@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "bearishpy>=0.49.0,<1.0.0",
-    "tickermood>=0.29.0,<0.30.0",
-    "streamlit>=1.45.1,<2.0.0",
-    "streamlit-pydantic>=0.6.1rc3,<0.7.0",
-    "streamlit-file-browser>=3.2.22,<4.0.0",
-    "huey>=2.5.3,<3.0.0",
+    "bearishpy>=0.54.0,<1.0.0",
     "pandas-ta>=0.4.71b0,<0.5.0",
-    "plotly>=4.12.0,<6.0.0",
     "ta-lib>=0.6.5,<0.7.0",
-    "click>=7.0,<=8.1",
-    "joblib>=1.5.1,<2.0.0",
-    "vectorbt>=0.28.0,<0.29.0",
-    "mysec>=0.8.0,<1.0.0",
-    "myportfolio>=0.6.0,<1.0.0",
     "mcp>=2.3.0,<3",
     "pydantic-settings>=2.16,<3",
+    "typer>=0.13.1,<1",
+    "python-dotenv>=1.0.1,<2",
 ]
 
 [project.scripts]
@@ -73,39 +64,6 @@ strict = true
 exclude = [
     "test_*",
     "conftest.py",
-]
-
-[[tool.mypy.overrides]]
-module = [
-    "plotly.*",
-]
-ignore_missing_imports = true
-
-# The KPI / scoring / MCP layers are pandas-heavy; pandas-stubs reports many
-# false positives on Series arithmetic, .loc and groupby.apply. Signatures stay
-# fully typed (disallow_untyped_defs); only those value-level codes are muted.
-[[tool.mypy.overrides]]
-module = [
-    "bullish.data.*",
-    "bullish.kpi.*",
-    "bullish.scoring.*",
-    "bullish.mcp.*",
-    "bullish.backtest.*",
-    "bullish.database.kpi_store",
-]
-disable_error_code = [
-    "no-any-return",
-    "operator",
-    "arg-type",
-    "call-overload",
-    "no-untyped-call",
-    "union-attr",
-    "attr-defined",
-    "dict-item",
-    "assignment",
-    "return-value",
-    "index",
-    "unused-ignore",
 ]
 
 [tool.ruff]

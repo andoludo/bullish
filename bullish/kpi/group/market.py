@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 import numpy as np
 import pandas as pd
 
@@ -181,8 +183,8 @@ def _sum_last(series: pd.Series, months: int) -> float:
 
 
 def _macro(ctx: DataContext, entity: str) -> dict[str, float]:
-    s = lambda concept: ctx.macro_series(concept, entity)  # noqa: E731
-    us = lambda concept: ctx.macro_series(concept, "USA")  # noqa: E731
+    s = partial(ctx.macro_series, entity=entity)
+    us = partial(ctx.macro_series, entity="USA")
     vix = us("VIX")
     cli, cpi = s("CLI"), s("CPI_YOY")
     growth_up = _change(cli, 3) > 0 if len(cli) > 3 else None

@@ -49,12 +49,9 @@ def nth_last(frame: pd.DataFrame, column: str, n: int = 0) -> pd.Series:
     """Value ``n`` rows before the last row of each symbol (``n=0`` is the latest)."""
     if frame.empty or column not in frame:
         return pd.Series(dtype=float)
-    series = frame.groupby("symbol")[column].nth(-1 - n)
-    return (
-        series.set_axis(frame.loc[series.index, "symbol"])
-        if "symbol" in frame
-        else series
-    )
+    values = frame.groupby("symbol")[column].nth(-1 - n)
+    symbols = frame.loc[values.index, "symbol"].to_numpy()
+    return pd.Series(values.to_numpy(), index=pd.Index(symbols), name=column)
 
 
 def last_valid(frame: pd.DataFrame, column: str) -> pd.Series:

@@ -92,7 +92,8 @@ class DataContext:
         return self.as_of_ts - pd.DateOffset(years=self.settings.lookback_years)
 
     def query(self, sql: str) -> pd.DataFrame:
-        return self.db.read_query(sql)
+        frame: pd.DataFrame = self.db.read_query(sql)
+        return frame
 
     def _symbol_filter(self, column: str = "symbol") -> str:
         return (
@@ -136,7 +137,7 @@ class DataContext:
         frames = []
         for chunk in _chunks(list(symbols)):
             sql = (
-                f'SELECT symbol, source, date, close, volume, dividends, stock_splits FROM "{table}" '  # noqa: S608
+                f'SELECT symbol, source, date, open, high, low, close, volume, dividends, stock_splits FROM "{table}" '  # noqa: S608
                 f"WHERE symbol IN ({_quote(chunk)}) AND date >= '{self.start_ts.date()}' "
                 f"AND date <= '{self.as_of} 23:59:59'"
             )
@@ -148,6 +149,9 @@ class DataContext:
                     "symbol",
                     "source",
                     "date",
+                    "open",
+                    "high",
+                    "low",
                     "close",
                     "volume",
                     "dividends",
@@ -175,6 +179,24 @@ class DataContext:
     def close(self) -> pd.DataFrame:
         return self.price_panel(
             self.settings.price_table, list(self.universe.index), "close"
+        )
+
+    @cached_property
+    def open(self) -> pd.DataFrame:
+        return self.price_panel(
+            self.settings.price_table, list(self.universe.index), "open"
+        )
+
+    @cached_property
+    def high(self) -> pd.DataFrame:
+        return self.price_panel(
+            self.settings.price_table, list(self.universe.index), "high"
+        )
+
+    @cached_property
+    def low(self) -> pd.DataFrame:
+        return self.price_panel(
+            self.settings.price_table, list(self.universe.index), "low"
         )
 
     @cached_property

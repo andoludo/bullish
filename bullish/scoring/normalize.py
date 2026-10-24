@@ -38,7 +38,9 @@ def _rank(values: pd.Series) -> pd.Series:
         return pd.Series(np.nan, index=values.index)
     if n == 1:
         return pd.Series(np.where(values.notna(), 50.0, np.nan), index=values.index)
-    return (values.rank(method="average", pct=True) - 1 / n) / (1 - 1 / n) * 100
+    ranked: pd.Series = values.rank(method="average", pct=True)
+    scaled: pd.Series = (ranked - 1 / n) / (1 - 1 / n) * 100.0
+    return scaled
 
 
 def directed_percentile(  # noqa: PLR0913

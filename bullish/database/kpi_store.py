@@ -5,14 +5,18 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, insert
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from bullish.database.schemas import KpiORM, KpiRunORM, ScoreORM
+from bullish.utils.typed import as_float, row_of
+
+if TYPE_CHECKING:
+    from sqlalchemy import Engine
 
 logger = logging.getLogger(__name__)
 BATCH = 5000
@@ -37,6 +41,11 @@ class KpiRun(BaseModel):
 class KpiStoreMixin:
     """Mixed into ``BullishDb``; expects ``self._engine``."""
 
+    if TYPE_CHECKING:
+
+        @property
+        def _engine(self) -> Engine: ...
+
     # --- write -----------------------------------------------------------
 
     def write_kpi_frame(
@@ -45,19 +54,18 @@ class KpiStoreMixin:
         """Store a wide ``entity x kpi`` frame as long rows for ``as_of``; returns rows written."""
         if frame.empty:
             return 0
+        index_name = str(frame.index.name or "index")
         long = frame.reset_index().melt(
-            id_vars=frame.index.name or "index", var_name="name", value_name="value"
+            id_vars=[index_name], var_name="name", value_name="value"
         )
-        long = long.rename(columns={frame.index.name or "index": "entity"}).dropna(
-            subset=["value"]
-        )
+        long = long.rename(columns={index_name: "entity"}).dropna(subset=["value"])
         rows = [
             {
                 "entity_type": entity_type,
                 "entity": str(r.entity),
                 "name": r.name,
                 "date": as_of,
-                "value": float(r.value),
+                "value": as_float(r.value),
             }
             for r in long.itertuples(index=False)
         ]
@@ -83,7 +91,7 @@ class KpiStoreMixin:
                     if c.startswith("block_")
                 },
                 "kpis": (
-                    {k: _f(v) for k, v in components.loc[entity].items()}
+                    {k: _f(v) for k, v in row_of(components, str(entity)).items()}
                     if entity in components.index
                     else {}
                 ),
@@ -104,9 +112,9 @@ class KpiStoreMixin:
         with Session(self._engine) as session:
             session.exec(  # type: ignore[call-overload]
                 delete(ScoreORM).where(
-                    ScoreORM.entity_type == entity_type,
-                    ScoreORM.score == score_name,
-                    ScoreORM.date == as_of,
+                    col(ScoreORM.entity_type) == entity_type,
+                    col(ScoreORM.score) == score_name,
+                    col(ScoreORM.date) == as_of,
                 )
             )
             for i in range(0, len(rows), BATCH):
@@ -127,7 +135,11 @@ class KpiStoreMixin:
         as_of: datetime.date,
     ) -> None:
         with Session(self._engine) as session:
-            session.exec(delete(orm).where(orm.entity_type == entity_type, orm.date == as_of))  # type: ignore[call-overload]
+            session.exec(  # type: ignore[call-overload]
+                delete(orm).where(
+                    col(orm.entity_type) == entity_type, col(orm.date) == as_of
+                )
+            )
             for i in range(0, len(rows), BATCH):
                 session.exec(insert(orm), params=rows[i : i + BATCH])  # type: ignore[call-overload]
             session.commit()
@@ -138,9 +150,11 @@ class KpiStoreMixin:
         self, entity_type: str, as_of: datetime.date | None = None
     ) -> datetime.date | None:
         with Session(self._engine) as session:
-            stmt = select(KpiORM.date).where(KpiORM.entity_type == entity_type)
+            stmt = select(col(KpiORM.date)).where(
+                col(KpiORM.entity_type) == entity_type
+            )
             if as_of is not None:
-                stmt = stmt.where(KpiORM.date <= as_of)
+                stmt = stmt.where(col(KpiORM.date) <= as_of)
             dates = session.exec(stmt.distinct()).all()
         return max(dates) if dates else None
 
@@ -148,8 +162,8 @@ class KpiStoreMixin:
         with Session(self._engine) as session:
             return sorted(
                 session.exec(
-                    select(KpiORM.date)
-                    .where(KpiORM.entity_type == entity_type)
+                    select(col(KpiORM.date))
+                    .where(col(KpiORM.entity_type) == entity_type)
                     .distinct()
                 ).all()
             )
@@ -165,11 +179,11 @@ class KpiStoreMixin:
         if date is None:
             return pd.DataFrame()
         with Session(self._engine) as session:
-            stmt = select(KpiORM.entity, KpiORM.name, KpiORM.value).where(
-                KpiORM.entity_type == entity_type, KpiORM.date == date
-            )
+            stmt = select(
+                col(KpiORM.entity), col(KpiORM.name), col(KpiORM.value)
+            ).where(col(KpiORM.entity_type) == entity_type, col(KpiORM.date) == date)
             if entities:
-                stmt = stmt.where(KpiORM.entity.in_(entities))  # type: ignore[attr-defined]
+                stmt = stmt.where(col(KpiORM.entity).in_(entities))
             rows = session.exec(stmt).all()
         if not rows:
             return pd.DataFrame()
@@ -189,16 +203,16 @@ class KpiStoreMixin:
         end: datetime.date | None = None,
     ) -> pd.Series:
         with Session(self._engine) as session:
-            stmt = select(KpiORM.date, KpiORM.value).where(
-                KpiORM.entity_type == entity_type,
-                KpiORM.entity == entity,
-                KpiORM.name == name,
+            stmt = select(col(KpiORM.date), col(KpiORM.value)).where(
+                col(KpiORM.entity_type) == entity_type,
+                col(KpiORM.entity) == entity,
+                col(KpiORM.name) == name,
             )
             if start is not None:
-                stmt = stmt.where(KpiORM.date >= start)
+                stmt = stmt.where(col(KpiORM.date) >= start)
             if end is not None:
-                stmt = stmt.where(KpiORM.date <= end)
-            rows = session.exec(stmt.order_by(KpiORM.date)).all()  # type: ignore[arg-type]
+                stmt = stmt.where(col(KpiORM.date) <= end)
+            rows = session.exec(stmt.order_by(col(KpiORM.date))).all()
         return pd.Series(dict(rows), dtype=float, name=name)
 
     def read_scores(
@@ -206,9 +220,10 @@ class KpiStoreMixin:
     ) -> pd.DataFrame:
         with Session(self._engine) as session:
             dates = session.exec(
-                select(ScoreORM.date)
+                select(col(ScoreORM.date))
                 .where(
-                    ScoreORM.entity_type == entity_type, ScoreORM.score == score_name
+                    col(ScoreORM.entity_type) == entity_type,
+                    col(ScoreORM.score) == score_name,
                 )
                 .distinct()
             ).all()
@@ -218,9 +233,9 @@ class KpiStoreMixin:
             date = max(valid)
             rows = session.exec(
                 select(ScoreORM).where(
-                    ScoreORM.entity_type == entity_type,
-                    ScoreORM.score == score_name,
-                    ScoreORM.date == date,
+                    col(ScoreORM.entity_type) == entity_type,
+                    col(ScoreORM.score) == score_name,
+                    col(ScoreORM.date) == date,
                 )
             ).all()
         frame = pd.DataFrame([r.model_dump() for r in rows])
@@ -230,13 +245,10 @@ class KpiStoreMixin:
 
     def read_kpi_runs(self) -> list[KpiRun]:
         with Session(self._engine) as session:
-            rows = session.exec(select(KpiRunORM).order_by(KpiRunORM.as_of)).all()  # type: ignore[arg-type]
+            rows = session.exec(select(KpiRunORM).order_by(col(KpiRunORM.as_of))).all()
         return [KpiRun.model_validate(r.model_dump()) for r in rows]
 
 
 def _f(value: object) -> float | None:
-    try:
-        number = float(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        return None
+    number = as_float(value)
     return None if pd.isna(number) else round(number, 4)

@@ -25,6 +25,7 @@ from bullish.scoring.coverage import CoverageReport, grade_symbol
 from bullish.scoring.presets import ALL_COMPOSITES, EQUITY_PRESETS
 from bullish.scoring.regime import MarketRegime, classify
 from bullish.scoring.verdict import StockVerdict, assess
+from bullish.utils.typed import as_float, iso_date, row_of
 
 logger = logging.getLogger(__name__)
 
@@ -276,7 +277,7 @@ class BullishService:
         for entity, row in scores.head(limit or self.settings.max_rows).iterrows():
             context = {
                 k: (
-                    _clean(kpis.loc[entity, k])
+                    _clean(row_of(kpis, str(entity))[k])
                     if entity in kpis.index and k in kpis
                     else None
                 )
@@ -316,7 +317,7 @@ class BullishService:
             raise KeyError(
                 f"{entity} has no stored {composite} score; run `bullish compute`"
             )
-        row = scores.loc[entity]
+        row = row_of(scores, entity)
         kpis = self.frame(entity_type, scores.attrs["as_of"])
         blocks = []
         for block in spec.blocks:
@@ -352,10 +353,10 @@ class BullishService:
             "entity": entity,
             "entity_type": entity_type,
             "composite": composite,
-            "as_of": scores.attrs["as_of"].isoformat(),
-            "score": round(float(row["value"]), 1),
+            "as_of": iso_date(scores.attrs["as_of"]),
+            "score": round(as_float(row["value"]), 1),
             "rank": None if pd.isna(row["rank"]) else int(row["rank"]),
-            "coverage": round(float(row["coverage"]), 2),
+            "coverage": round(as_float(row["coverage"]), 2),
             "eligible": bool(row["eligible"]),
             "evidence": spec.evidence,
             "blocks": blocks,
@@ -383,12 +384,12 @@ class BullishService:
         for name in EQUITY_PRESETS:
             scores = self.db.read_scores("equity", name, run_date)
             if not scores.empty and symbol in scores.index:
-                s = scores.loc[symbol]
+                s = row_of(scores, symbol)
                 presets[name] = {
-                    "score": round(float(s["value"]), 1),
+                    "score": round(as_float(s["value"]), 1),
                     "rank": None if pd.isna(s["rank"]) else int(s["rank"]),
                     "eligible": bool(s["eligible"]),
-                    "coverage": round(float(s["coverage"]), 2),
+                    "coverage": round(as_float(s["coverage"]), 2),
                 }
         ctx = self.context(run_date)
         reference = (
@@ -407,7 +408,7 @@ class BullishService:
             grade_symbol(
                 symbol,
                 ctx.coverage,
-                ctx.universe.loc[symbol] if symbol in ctx.universe.index else None,
+                row_of(ctx.universe, symbol) if symbol in ctx.universe.index else None,
                 ctx.as_of_ts,
             )
             if not ctx.coverage.empty
@@ -432,7 +433,7 @@ class BullishService:
                 f"{symbol} is not in the stored equity KPIs (unknown symbol, or run `bullish compute`)"
             )
         run_date = kpis.attrs["as_of"]
-        row = kpis.loc[symbol].copy()
+        row = row_of(kpis, symbol).copy()
         for name in ("roic", "fcf_conversion", "piotroski_f", "mom_12_1"):
             scores = self.db.read_scores("equity", "quality_on_sale", run_date)
             pct = (
@@ -443,18 +444,59 @@ class BullishService:
             row[f"pct_{name}"] = np.nan if pct is None else pct
         ctx = self.context(run_date)
         sector_name = (
-            ctx.universe.loc[symbol, "sector"] if symbol in ctx.universe.index else None
+            str(ctx.universe.loc[symbol, "sector"])
+            if symbol in ctx.universe.index
+            else None
         )
         sectors = self.frame("sector", run_date)
-        sector_row = sectors.loc[sector_name] if sector_name in sectors.index else None
+        sector_row = (
+            row_of(sectors, sector_name)
+            if sector_name is not None and sector_name in sectors.index
+            else None
+        )
         grade = (
-            GRADE_BY_CODE.get(float(row.get("coverage_grade", np.nan)))
+            GRADE_BY_CODE.get(as_float(row.get("coverage_grade", np.nan)))
             if not pd.isna(row.get("coverage_grade", np.nan))
             else None
         )
         return assess(
             symbol, row, run_date.isoformat(), sector_row, coverage_grade=grade
         )
+
+    def technical_signals(
+        self, symbol: str, as_of: datetime.date | None = None
+    ) -> dict[str, Any]:
+        """TA-Lib signals of one stock: current indicator values and the age of the last dated signals."""
+        kpis = self.frame("equity", as_of)
+        if kpis.empty or symbol not in kpis.index:
+            raise KeyError(
+                f"{symbol} is not in the stored equity KPIs (unknown symbol, or run `bullish compute`)"
+            )
+        row = kpis.loc[symbol]
+        values: dict[str, float | None] = {}
+        days_since: dict[str, float | None] = {}
+        for definition in REGISTRY.all("equity", "technical"):
+            if definition.name not in row.index:
+                continue
+            target = days_since if definition.name.endswith("_days_since") else values
+            target[definition.name] = _clean(row[definition.name])
+        recent = sorted(
+            (
+                (name.removesuffix("_days_since"), age)
+                for name, age in days_since.items()
+                if age is not None
+            ),
+            key=lambda item: item[1],
+        )
+        return {
+            "symbol": symbol,
+            "as_of": kpis.attrs["as_of"].isoformat(),
+            "values": values,
+            "days_since": days_since,
+            "most_recent_signals": [
+                {"signal": name, "trading_days_ago": age} for name, age in recent[:10]
+            ],
+        }
 
     def market_regime(
         self, region: str = "ALL", as_of: datetime.date | None = None
@@ -466,7 +508,7 @@ class BullishService:
             raise KeyError(
                 f"No market row for {region}; available: {list(market.index)}"
             )
-        regime: MarketRegime = classify(region, market.loc[region])
+        regime: MarketRegime = classify(region, row_of(market, region))
         return regime.model_dump() | {
             "as_of": market.attrs["as_of"].isoformat(),
             "kpis": {k: _clean(v) for k, v in market.loc[region].items()},
@@ -488,7 +530,7 @@ class BullishService:
             "entity": entity,
             "kpi": name,
             "points": [
-                {"date": d.isoformat(), "value": _clean(v)} for d, v in series.items()
+                {"date": iso_date(d), "value": _clean(v)} for d, v in series.items()
             ],
         }
 
@@ -503,7 +545,7 @@ class BullishService:
         rows = []
         holdings: dict[str, pd.Series] = {}
         for symbol in symbols:
-            row = {"symbol": symbol}
+            row: dict[str, Any] = {"symbol": symbol}
             if not etf.empty and symbol in etf.index:
                 row |= {k: _clean(v) for k, v in etf.loc[symbol].items()}
             if symbol in ctx.etfs.index:
@@ -702,7 +744,7 @@ class BullishService:
     ) -> dict[str, Any]:
         ctx = self.context(as_of)
         if symbol:
-            row = ctx.universe.loc[symbol] if symbol in ctx.universe.index else None
+            row = row_of(ctx.universe, symbol) if symbol in ctx.universe.index else None
             return grade_symbol(symbol, ctx.coverage, row, ctx.as_of_ts).model_dump()
         kpis = self.frame("equity", as_of)
         if kpis.empty or "coverage_grade" not in kpis:
@@ -779,7 +821,7 @@ class BullishService:
             upper = corr.where(  # noqa: PD013
                 np.triu(np.ones(corr.shape), k=1).astype(bool)
             ).stack()
-            avg = round(float(upper.mean()), 3) if len(upper) else None
+            avg = round(as_float(upper.mean()), 3) if len(upper) else None
         return PortfolioAnalysis(
             as_of=run_date,
             weights={k: round(v, 4) for k, v in weights.items()},

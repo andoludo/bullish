@@ -9,6 +9,7 @@ import pandas as pd
 
 from bullish.data.panels import DataContext
 from bullish.kpi.equity import (
+    technical,
     growth,
     macro_exposure,
     momentum,
@@ -22,6 +23,7 @@ from bullish.kpi.registry import REGISTRY
 logger = logging.getLogger(__name__)
 
 BLOCKS: tuple[ModuleType, ...] = (
+    technical,
     momentum,
     growth,
     quality,

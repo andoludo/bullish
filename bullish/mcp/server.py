@@ -12,7 +12,8 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-from typing import Any
+from collections.abc import Callable
+from typing import Any, ParamSpec, TypeVar
 
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
@@ -31,6 +32,8 @@ from bullish.scoring.presets import EQUITY_PRESETS
 from bullish.scoring.verdict import StockVerdict
 
 logger = logging.getLogger(__name__)
+P = ParamSpec("P")
+R = TypeVar("R")
 
 READ_ONLY = ToolAnnotations(
     read_only_hint=True, open_world_hint=False, idempotent_hint=True
@@ -53,7 +56,8 @@ def _as_of(value: str | None) -> datetime.date | None:
         raise ToolError(f"as_of must be an ISO date (YYYY-MM-DD), got {value!r}") from e
 
 
-def _guard(fn: Any, *args: Any, **kwargs: Any) -> Any:
+def _guard(fn: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R:
+    """Call a service method and turn its domain errors into ``ToolError`` for the client."""
     try:
         return fn(*args, **kwargs)
     except (KeyError, PermissionError, ValueError, FileNotFoundError) as e:
@@ -257,6 +261,13 @@ def build_server(  # noqa: C901, PLR0915
         sound_not_cheap, oversold_unclear, avoid.
         """
         return _guard(svc.assess, symbol, _as_of(as_of))
+
+    @mcp.tool(title="Technical signals", annotations=READ_ONLY)
+    def get_technical_signals(symbol: str, as_of: str | None = None) -> dict[str, Any]:
+        """TA-Lib indicators of one stock (RSI, MACD, ADX, stochastic, MFI, moving averages, candlestick
+        patterns): current values and the trading-day age of the last crossover or pattern, most recent first.
+        """
+        return _guard(svc.technical_signals, symbol, _as_of(as_of))
 
     @mcp.tool(title="KPI time series", annotations=READ_ONLY)
     def get_kpi_series(

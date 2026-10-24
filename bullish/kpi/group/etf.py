@@ -10,6 +10,7 @@ import pandas as pd
 
 from bullish.data.panels import DataContext, returns_over
 from bullish.kpi.registry import declare_many
+from bullish.utils.typed import as_float
 
 BLOCK = "vehicle"
 MONTH, QUARTER, YEAR = 21, 63, 252
@@ -137,14 +138,13 @@ def _benchmark_stats(
     aligned = pd.concat([fund_returns, benchmark], axis=1).dropna()
     if len(aligned) < QUARTER:
         return np.nan, np.nan, float(correlations[best]), np.nan
-    diff = aligned.iloc[:, 0] - aligned.iloc[:, 1]
-    fund_total = float((1 + aligned.iloc[:, 0]).prod() - 1)
-    index_total = float((1 + aligned.iloc[:, 1]).prod() - 1)
-    beta = (
-        float(aligned.cov().iloc[0, 1] / aligned.iloc[:, 1].var())
-        if aligned.iloc[:, 1].var()
-        else np.nan
-    )
+    fund_col = aligned.iloc[:, 0].astype(float)
+    index_col = aligned.iloc[:, 1].astype(float)
+    diff = fund_col - index_col
+    fund_total = as_float((1 + fund_col).prod()) - 1
+    index_total = as_float((1 + index_col).prod()) - 1
+    index_var = as_float(index_col.var())
+    beta = as_float(aligned.cov().iloc[0, 1]) / index_var if index_var else np.nan
     return (
         fund_total - index_total,
         float(diff.std() * np.sqrt(YEAR)),

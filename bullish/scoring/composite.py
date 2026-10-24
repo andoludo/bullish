@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from bullish.config import BullishSettings
 from bullish.kpi.registry import REGISTRY, EntityType
 from bullish.scoring.normalize import directed_percentile
+from bullish.utils.typed import as_float, row_of
 
 Operator = Literal[">=", "<=", ">", "<"]
 
@@ -153,18 +154,18 @@ def explain(result: ScoreResult, entity: str) -> dict[str, object]:
     """Blocks, their weights and the percentile of every KPI behind ``entity``'s score."""
     if entity not in result.scores.index:
         raise KeyError(f"{entity} is not scored by {result.spec.name}")
-    row = result.scores.loc[entity]
+    row = row_of(result.scores, entity)
     blocks = []
     for block in result.spec.blocks:
         kpis = []
         for item in block.kpis:
             definition = REGISTRY.get(result.spec.entity_type, item.kpi)
-            pct = result.components.loc[entity, item.kpi]
+            pct = as_float(row_of(result.components, entity)[item.kpi])
             kpis.append(
                 {
                     "kpi": item.kpi,
                     "weight": item.weight,
-                    "percentile": None if pd.isna(pct) else round(float(pct), 1),
+                    "percentile": None if pd.isna(pct) else round(pct, 1),
                     "tier": definition.tier,
                     "inverted": item.invert,
                     "description": definition.description,
@@ -184,7 +185,7 @@ def explain(result: ScoreResult, entity: str) -> dict[str, object]:
         "entity": entity,
         "composite": result.spec.name,
         "score": None if pd.isna(row["score"]) else round(float(row["score"]), 1),
-        "coverage": round(float(row["coverage"]), 2),
+        "coverage": round(as_float(row["coverage"]), 2),
         "eligible": bool(row["eligible"]),
         "rank": None if pd.isna(row["rank"]) else int(row["rank"]),
         "evidence": result.spec.evidence,
