@@ -151,7 +151,24 @@ class BullishService:
     def frame(
         self, entity_type: str, as_of: datetime.date | None = None
     ) -> pd.DataFrame:
-        return self.db.read_kpi_frame(entity_type, as_of)
+        """The stored KPI frame of the latest run at or before ``as_of``, cached per run.
+
+        The cache key carries the run's ``created_at``, so a recompute of the
+        same date is picked up without restarting the server.
+        """
+        run = self.db.latest_run(entity_type, as_of)
+        if run is None:
+            return pd.DataFrame()
+        return self._cached_frame(entity_type, run[0], run[1])
+
+    @lru_cache(maxsize=32)  # noqa: B019
+    def _cached_frame(
+        self,
+        entity_type: str,
+        run_date: datetime.date,
+        created_at: datetime.datetime | None,
+    ) -> pd.DataFrame:
+        return self.db.read_kpi_frame(entity_type, run_date)
 
     def freshness(self, as_of: datetime.date | None = None) -> Freshness:
         run_date = self.db.latest_kpi_date("equity", as_of)
@@ -393,8 +410,8 @@ class BullishService:
                 }
         ctx = self.context(run_date)
         reference = (
-            {k: _clean(v) for k, v in ctx.universe.loc[symbol].items()}
-            if symbol in ctx.universe.index
+            {k: _clean(v) for k, v in ctx.reference.loc[symbol].items()}
+            if symbol in ctx.reference.index
             else {}
         )
         sector_name = reference.get("sector")
@@ -407,8 +424,12 @@ class BullishService:
         coverage = (
             grade_symbol(
                 symbol,
-                ctx.coverage,
-                row_of(ctx.universe, symbol) if symbol in ctx.universe.index else None,
+                ctx.coverage_index,
+                (
+                    row_of(ctx.reference, symbol)
+                    if symbol in ctx.reference.index
+                    else None
+                ),
                 ctx.as_of_ts,
             )
             if not ctx.coverage.empty
@@ -444,8 +465,8 @@ class BullishService:
             row[f"pct_{name}"] = np.nan if pct is None else pct
         ctx = self.context(run_date)
         sector_name = (
-            str(ctx.universe.loc[symbol, "sector"])
-            if symbol in ctx.universe.index
+            str(ctx.reference.loc[symbol, "sector"])
+            if symbol in ctx.reference.index
             else None
         )
         sectors = self.frame("sector", run_date)
@@ -744,8 +765,12 @@ class BullishService:
     ) -> dict[str, Any]:
         ctx = self.context(as_of)
         if symbol:
-            row = row_of(ctx.universe, symbol) if symbol in ctx.universe.index else None
-            return grade_symbol(symbol, ctx.coverage, row, ctx.as_of_ts).model_dump()
+            row = (
+                row_of(ctx.reference, symbol) if symbol in ctx.reference.index else None
+            )
+            return grade_symbol(
+                symbol, ctx.coverage_index, row, ctx.as_of_ts
+            ).model_dump()
         kpis = self.frame("equity", as_of)
         if kpis.empty or "coverage_grade" not in kpis:
             return {"note": "No stored run with coverage grades; run `bullish compute`"}
@@ -781,8 +806,8 @@ class BullishService:
         unknown = []
         exposures = ctx.etf_exposures
         for symbol, weight in weights.items():
-            if symbol in ctx.universe.index:
-                row = ctx.universe.loc[symbol]
+            if symbol in ctx.reference.index:
+                row = ctx.reference.loc[symbol]
                 sector[row["sector"] or "unknown"] = (
                     sector.get(row["sector"] or "unknown", 0.0) + weight
                 )

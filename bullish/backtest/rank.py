@@ -184,12 +184,27 @@ def build_history(  # noqa: PLR0913
     step_months: int = 1,
     countries: list[str] | None = None,
 ) -> list[datetime.date]:
-    """Run the KPI engine on a grid of past dates so that series and backtests have history."""
+    """Run the KPI engine on a grid of past dates so that series and backtests have history.
+
+    Prices, statements and the other tables are loaded once for the whole
+    span (``end`` with a lookback reaching ``start - lookback_years``) and
+    every run date derives its point-in-time context from that span.
+    """
+    span_years = settings.lookback_years + max(
+        1, -(-(pd.Timestamp(end) - pd.Timestamp(start)).days // 365)
+    )
+    span = DataContext(
+        db=db,
+        settings=settings.model_copy(update={"lookback_years": span_years}),
+        as_of=end,
+        countries=countries,
+    )
+    span.close  # noqa: B018  # load the span's prices once so each date slices them
     dates = []
     current = pd.Timestamp(start)
     while current <= pd.Timestamp(end):
         as_of = current.date()
-        engine.run(db, settings, as_of=as_of, countries=countries)
+        engine.run_context(span.derive(as_of, settings))
         dates.append(as_of)
         current = current + pd.DateOffset(months=step_months)
     return dates

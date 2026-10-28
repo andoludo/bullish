@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 from bullish.config import BullishSettings
+from bullish.scoring.coverage import CoverageIndex
 
 if TYPE_CHECKING:
     from bullish.database.crud import BullishDb
@@ -79,7 +80,46 @@ class DataContext:
     as_of: datetime.date
     countries: list[str] | None = None
     symbols: list[str] | None = None
+    parent: DataContext | None = field(default=None, repr=False)
     _price_cache: dict[str, pd.DataFrame] = field(default_factory=dict)
+    _table_cache: dict[str, pd.DataFrame] = field(default_factory=dict)
+
+    def derive(
+        self, as_of: datetime.date, settings: BullishSettings | None = None
+    ) -> DataContext:
+        """A point-in-time context for an earlier ``as_of`` that slices this one's frames instead
+        of querying again.
+
+        ``settings`` are the run's own (notably its ``lookback_years``); this
+        span context must have been loaded at or after ``as_of`` with a lookback
+        reaching ``as_of - settings.lookback_years``.
+        :func:`bullish.backtest.rank.build_history` builds one span per history.
+        """
+        if as_of > self.as_of:
+            raise ValueError(f"{as_of} is after the span context's {self.as_of}")
+        settings = settings or self.settings
+        if (
+            pd.Timestamp(as_of) - pd.DateOffset(years=settings.lookback_years)
+            < self.start_ts
+        ):
+            raise ValueError(
+                f"the span's lookback starts at {self.start_ts.date()}, after the "
+                f"{settings.lookback_years}-year window of {as_of}"
+            )
+        return DataContext(
+            db=self.db,
+            settings=settings,
+            as_of=as_of,
+            countries=self.countries,
+            symbols=self.symbols,
+            parent=self,
+        )
+
+    def _up_to(self, frame: pd.DataFrame, column: str) -> pd.DataFrame:
+        """Rows of a parent frame dated at or before ``as_of`` (``column`` already normalised)."""
+        if frame.empty or column not in frame:
+            return frame
+        return frame[frame[column] <= self.as_of_ts]
 
     # --- helpers ---------------------------------------------------------
 
@@ -95,19 +135,22 @@ class DataContext:
         frame: pd.DataFrame = self.db.read_query(sql)
         return frame
 
-    def _symbol_filter(self, column: str = "symbol") -> str:
-        return (
-            f" AND {column} IN ({_quote(self.universe.index)})"
-            if len(self.universe)
-            else " AND 1 = 0"
-        )
-
     # --- universe --------------------------------------------------------
 
     @cached_property
-    def universe(self) -> pd.DataFrame:
-        """One row per symbol: reference data with canonical sector / industry / country."""
-        sql = """
+    def reference(self) -> pd.DataFrame:
+        """One row per symbol of the equity table: reference data with canonical sector / industry / country.
+
+        This is every equity bearish knows, whether or not it has data; the KPI
+        run works on :attr:`universe`, the subset that has prices.
+        """
+        if self.parent is not None:
+            return self.parent.reference
+        return self._reference_rows(None)
+
+    def _reference_rows(self, symbols: Sequence[str] | None) -> pd.DataFrame:
+        """Deduped equity rows joined to the canonical sector / country, for ``symbols`` or all."""
+        base = """
             SELECT e.symbol, e.source, e.name, e.currency, e.exchange, e.market_capitalization,
                    e.shares_outstanding, e.float_shares, e.short_shares, e.short_ratio,
                    e.trailing_price_to_earnings, e.forward_price_to_earnings, e.trailing_peg_ratio,
@@ -117,15 +160,66 @@ class DataContext:
             LEFT JOIN equitysector AS s ON s.symbol = e.symbol AND s.source = e.source
             LEFT JOIN equitycountry AS c ON c.symbol = e.symbol AND c.source = e.source
         """
-        frame = self.query(sql)
+        if symbols is None:
+            frame = self.query(base)
+        else:
+            frames = [
+                self.query(f"{base} WHERE e.symbol IN ({_quote(chunk)})")
+                for chunk in _chunks(list(symbols))
+            ]
+            frame = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
         if frame.empty:
-            return frame.set_index("symbol") if "symbol" in frame else frame
+            return pd.DataFrame(columns=["symbol"]).set_index("symbol")
         frame = dedupe_by_source(frame, ["symbol"])
+        return frame.set_index("symbol").sort_index()
+
+    def _priced_symbols(self, table: str) -> pd.Index:
+        """Symbols with at least ``min_price_rows`` rows of ``table`` inside the lookback."""
+        floor = self.settings.min_price_rows
+        if self.parent is not None and table in self.parent._price_cache:
+            long = self.parent._price_cache[table]
+            window = long[
+                (long["date"] >= self.start_ts) & (long["date"] <= self.as_of_ts)
+            ]
+            counts = window.groupby("symbol").size()
+            return pd.Index(counts[counts >= floor].index.to_numpy().astype(str))
+        sql = (
+            f'SELECT symbol FROM "{table}" '  # noqa: S608
+            f"WHERE date >= '{self.start_ts.date()}' AND date <= '{self.as_of} 23:59:59' "
+            f"GROUP BY symbol HAVING COUNT(*) >= {int(floor)}"
+        )
+        return pd.Index(self.query(sql)["symbol"].astype(str))
+
+    @cached_property
+    def universe(self) -> pd.DataFrame:
+        """The equities the KPI run covers: equity rows that have prices, filtered by
+        ``countries`` / ``symbols`` when given.
+
+        Only the priced symbols' rows are read (the full table is :attr:`reference`).
+        """
+        priced: pd.Index | None = None
+        if self.settings.min_price_rows > 0:
+            priced = self._priced_symbols(self.settings.price_table)
+            if self.symbols:
+                priced = priced[priced.isin(self.symbols)]
+            if priced.empty:
+                logger.info(
+                    f"No equity has {self.settings.min_price_rows} price rows in the lookback"
+                )
+                return pd.DataFrame(columns=["symbol"]).set_index("symbol")
+        wanted = priced if priced is not None else self.symbols
+        frame = (
+            self.parent.universe
+            if self.parent is not None
+            else self._reference_rows(None if wanted is None else list(wanted))
+        )
+        if frame.empty:
+            return frame
+        if wanted is not None:
+            frame = frame[frame.index.isin(wanted)]
         if self.countries:
             frame = frame[frame["country"].isin(self.countries)]
-        if self.symbols:
-            frame = frame[frame["symbol"].isin(self.symbols)]
-        return frame.set_index("symbol").sort_index()
+        return frame
 
     def peer_group(self, name: str | None = None) -> pd.Series:
         column = name or self.settings.peer_group
@@ -160,20 +254,47 @@ class DataContext:
             )
         return dedupe_by_source(_dates(frame), ["symbol", "date"])
 
+    def _long_prices(self, table: str, symbols: Sequence[str]) -> pd.DataFrame:
+        """Long price rows of ``table`` for ``symbols`` inside the lookback, loaded once per table.
+
+        A derived context slices its parent's rows (``symbol``, date window)
+        instead of querying.
+        """
+        if self.parent is not None:
+            long = self.parent._long_prices(table, symbols)
+            if long.empty:
+                return long
+            return long[
+                long["symbol"].isin(symbols)
+                & (long["date"] >= self.start_ts)
+                & (long["date"] <= self.as_of_ts)
+            ]
+        if table not in self._price_cache:
+            self._price_cache[table] = self._load_prices(table, symbols)
+        long = self._price_cache[table]
+        if long.empty or set(symbols) <= set(long["symbol"].unique()):
+            return long
+        missing = sorted(set(symbols) - set(long["symbol"].unique()))
+        extra = self._load_prices(table, missing)
+        long = pd.concat([long, extra], ignore_index=True) if not extra.empty else long
+        self._price_cache[table] = long
+        return long
+
     def price_panel(
         self, table: str, symbols: Sequence[str], column: str = "close"
     ) -> pd.DataFrame:
-        """Wide ``date x symbol`` frame of ``column`` from ``table`` (cached per table)."""
-        key = f"{table}:{','.join(sorted(symbols))}"
-        if key not in self._price_cache:
-            self._price_cache[key] = self._load_prices(table, symbols)
-        long = self._price_cache[key]
+        """Wide ``date x symbol`` frame of ``column`` from ``table`` for ``symbols``."""
+        long = self._long_prices(table, symbols)
         if long.empty:
-            return pd.DataFrame(columns=list(symbols))
+            return pd.DataFrame()
+        long = long[long["symbol"].isin(symbols)]
+        if long.empty:
+            return pd.DataFrame()
         panel = long.pivot(  # noqa: PD010
             index="date", columns="symbol", values=column
         ).sort_index()
-        return panel.reindex(columns=list(symbols))
+        panel.columns = panel.columns.astype(str)
+        return panel
 
     @cached_property
     def close(self) -> pd.DataFrame:
@@ -227,16 +348,16 @@ class DataContext:
     @cached_property
     def etf_close(self) -> pd.DataFrame:
         return (
-            self.price_panel("priceetf", list(self.etfs.index), "close")
-            if len(self.etfs)
+            self.price_panel("priceetf", list(self.etf_universe.index), "close")
+            if len(self.etf_universe)
             else pd.DataFrame()
         )
 
     @cached_property
     def etf_volume(self) -> pd.DataFrame:
         return (
-            self.price_panel("priceetf", list(self.etfs.index), "volume")
-            if len(self.etfs)
+            self.price_panel("priceetf", list(self.etf_universe.index), "volume")
+            if len(self.etf_universe)
             else pd.DataFrame()
         )
 
@@ -254,6 +375,9 @@ class DataContext:
     @cached_property
     def fx(self) -> pd.DataFrame:
         """``date x quote`` units of ``quote`` per one USD."""
+        if self.parent is not None:
+            fx = self.parent.fx
+            return fx[fx.index <= self.as_of_ts] if not fx.empty else fx
         frame = self.query(
             f"SELECT date, quote, rate FROM fxrate WHERE date <= '{self.as_of} 23:59:59'"  # noqa: S608
         )
@@ -288,16 +412,29 @@ class DataContext:
 
     # --- statements ------------------------------------------------------
 
-    def _statements(self, table: str) -> pd.DataFrame:
+    def _raw_statements(self, table: str) -> pd.DataFrame:
+        """Every row of ``table`` for the universe, dates normalised, no visibility filter."""
+        if self.parent is not None:
+            return self.parent._raw_statements(table)
+        if table in self._table_cache:
+            return self._table_cache[table]
         frames = []
         for chunk in _chunks(list(self.universe.index)):
             sql = f'SELECT * FROM "{table}" WHERE symbol IN ({_quote(chunk)})'  # noqa: S608
             frames.append(self.query(sql))
         frame = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+        if not frame.empty:
+            frame = _dates(frame)
+            frame = _dates(frame, "filed_date") if "filed_date" in frame else frame
+        self._table_cache[table] = frame
+        return frame
+
+    def _statements(self, table: str) -> pd.DataFrame:
+        frame = self._raw_statements(table)
         if frame.empty:
             return frame
-        frame = _dates(frame)
-        frame = _dates(frame, "filed_date") if "filed_date" in frame else frame
+        if self.parent is not None:
+            frame = frame[frame["symbol"].isin(self.universe.index)]
         lag = pd.Timedelta(days=self.settings.statement_lag_days)
         visible = (
             frame["filed_date"].fillna(frame["date"] + lag)
@@ -337,6 +474,16 @@ class DataContext:
     # --- expectations ----------------------------------------------------
 
     def _symbol_table(self, table: str, date_column: str = "date") -> pd.DataFrame:
+        if self.parent is not None:
+            frame = self.parent._symbol_table(table, date_column)
+            if frame.empty:
+                return frame
+            return self._up_to(
+                frame[frame["symbol"].isin(self.universe.index)], date_column
+            )
+        key = f"{table}:{date_column}"
+        if key in self._table_cache:
+            return self._table_cache[key]
         frames = []
         for chunk in _chunks(list(self.universe.index)):
             sql = (
@@ -345,11 +492,16 @@ class DataContext:
             )
             frames.append(self.query(sql))
         frame = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-        return _dates(frame, date_column) if not frame.empty else frame
+        frame = _dates(frame, date_column) if not frame.empty else frame
+        self._table_cache[key] = frame
+        return frame
 
     @cached_property
     def earnings(self) -> pd.DataFrame:
         """Earnings dates up to ``as_of`` plus the next scheduled one per symbol."""
+        if self.parent is not None:
+            frame = self.parent.earnings
+            return frame[frame["symbol"].isin(self.universe.index)]
         past = self._symbol_table("earningsdate")
         frames = []
         for chunk in _chunks(list(self.universe.index)):
@@ -403,6 +555,8 @@ class DataContext:
 
     @cached_property
     def etfs(self) -> pd.DataFrame:
+        if self.parent is not None:
+            return self.parent.etfs
         frame = self.query("SELECT * FROM etf")
         if frame.empty:
             return frame
@@ -410,7 +564,32 @@ class DataContext:
         return frame.set_index("symbol").sort_index()
 
     @cached_property
+    def etf_universe(self) -> pd.DataFrame:
+        """The funds the KPI run covers: :attr:`etfs` rows with enough ``priceetf`` history."""
+        if self.settings.min_price_rows <= 0:
+            return self.etfs
+        if self.parent is not None:
+            priced = self._priced_symbols("priceetf")
+            return self.parent.etf_universe.loc[
+                self.parent.etf_universe.index.isin(priced)
+            ]
+        priced = self._priced_symbols("priceetf")
+        if priced.empty:
+            return pd.DataFrame(columns=[]).rename_axis("symbol")
+        frames = []
+        for chunk in _chunks(list(priced)):
+            sql = f"SELECT * FROM etf WHERE symbol IN ({_quote(chunk)})"  # noqa: S608
+            frames.append(self.query(sql))
+        frame = pd.concat(frames, ignore_index=True)
+        if frame.empty:
+            return frame.rename_axis("symbol")
+        frame = dedupe_by_source(frame, ["symbol"])
+        return frame.set_index("symbol").sort_index()
+
+    @cached_property
     def etf_snapshots(self) -> pd.DataFrame:
+        if self.parent is not None:
+            return self._up_to(self.parent.etf_snapshots, "as_of")
         frame = self.query(
             f"SELECT * FROM etfsnapshot WHERE as_of <= '{self.as_of}'"  # noqa: S608
         )
@@ -422,6 +601,8 @@ class DataContext:
 
     @cached_property
     def etf_exposures(self) -> pd.DataFrame:
+        if self.parent is not None:
+            return self.parent.etf_exposures
         return self.query(
             "SELECT symbol, entity_type, entity, weight, method FROM etfexposure"
         )
@@ -430,38 +611,65 @@ class DataContext:
 
     @cached_property
     def sector_sensitivities(self) -> pd.DataFrame:
+        if self.parent is not None:
+            return self.parent.sector_sensitivities
         return self.query(
             "SELECT sector, commodity, direction, strength FROM sectorcommoditysensitivity"
         )
 
     @cached_property
     def commodities(self) -> pd.DataFrame:
+        if self.parent is not None:
+            return self.parent.commodities
         return self.query('SELECT code, name, "group", yfinance_symbol FROM commodity')
 
     @cached_property
     def country_exposures(self) -> pd.DataFrame:
+        if self.parent is not None:
+            return self.parent.country_exposures
         return self.query(
             "SELECT country, commodity, direction, share FROM countrycommodityexposure"
         )
 
     @cached_property
     def index_members(self) -> pd.DataFrame:
-        frame = self.query(
-            f"SELECT index_symbol, symbol, as_of FROM indexmember WHERE as_of <= '{self.as_of}'"  # noqa: S608
-        )
+        if self.parent is not None:
+            frame = self.parent._index_members_raw
+            frame = (
+                frame[frame["as_of"] <= str(self.as_of)] if not frame.empty else frame
+            )
+        else:
+            frame = self._index_members_raw
         if frame.empty:
             return frame
         latest = frame.groupby("index_symbol")["as_of"].transform("max")
         return frame[frame["as_of"] == latest]
 
     @cached_property
-    def macro(self) -> pd.DataFrame:
-        """Latest vintage known at ``as_of`` of every macro series: long ``series_id, date, value``."""
-        sql = (
+    def _index_members_raw(self) -> pd.DataFrame:
+        return self.query(
+            f"SELECT index_symbol, symbol, as_of FROM indexmember WHERE as_of <= '{self.as_of}'"  # noqa: S608
+        )
+
+    @cached_property
+    def _macro_raw(self) -> pd.DataFrame:
+        """Every macro vintage known at ``as_of``: ``series_id, date, value, as_of``."""
+        if self.parent is not None:
+            frame = self.parent._macro_raw
+            if frame.empty:
+                return frame
+            return frame[
+                (frame["as_of"] <= str(self.as_of)) & (frame["date"] <= str(self.as_of))
+            ]
+        return self.query(
             "SELECT series_id, date, value, as_of FROM macroobservation "  # noqa: S608
             f"WHERE as_of <= '{self.as_of}' AND date <= '{self.as_of}'"
         )
-        frame = self.query(sql)
+
+    @cached_property
+    def macro(self) -> pd.DataFrame:
+        """Latest vintage known at ``as_of`` of every macro series: long ``series_id, date, value``."""
+        frame = self._macro_raw
         if frame.empty:
             return pd.DataFrame(columns=["series_id", "date", "value"])
         frame = frame.sort_values(["series_id", "date", "as_of"]).drop_duplicates(
@@ -478,7 +686,16 @@ class DataContext:
         )
 
     @cached_property
+    def coverage_index(self) -> CoverageIndex:
+        """Per-symbol census aggregate, built once per context."""
+        if self.parent is not None:
+            return self.parent.coverage_index
+        return CoverageIndex(self.coverage)
+
+    @cached_property
     def coverage(self) -> pd.DataFrame:
+        if self.parent is not None:
+            return self.parent.coverage
         return self.query(
             "SELECT symbol, table_name, source, first_date, last_date, rows, as_of FROM coverage"
         )

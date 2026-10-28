@@ -92,13 +92,13 @@ def test_legacy_stamped_database_upgrades_to_both_heads(tmp_path: Path) -> None:
             "name"
         ].tolist()
     )
-    assert _version(path, BULLISH_VERSION_TABLE) == "b2c3d4e5f6a7"
+    assert _version(path, BULLISH_VERSION_TABLE) == "c3d4e5f6a7b8"
     assert _version(path, BEARISH_VERSION_TABLE) == "a9d3e5f7c164"
     assert compatible_bearish_database(path)
     assert compatible_bullish_database(path)
     # idempotent
     BullishDb(database_path=path)
-    assert _version(path, BULLISH_VERSION_TABLE) == "b2c3d4e5f6a7"
+    assert _version(path, BULLISH_VERSION_TABLE) == "c3d4e5f6a7b8"
 
 
 def test_fresh_bearish_database_gets_bullish_tables(tmp_path: Path) -> None:
@@ -107,5 +107,5 @@ def test_fresh_bearish_database_gets_bullish_tables(tmp_path: Path) -> None:
     assert _version(path, BEARISH_VERSION_TABLE) == "a9d3e5f7c164"
     BullishDb(database_path=path)
     assert _version(path, BEARISH_VERSION_TABLE) == "a9d3e5f7c164"
-    assert _version(path, BULLISH_VERSION_TABLE) == "b2c3d4e5f6a7"
+    assert _version(path, BULLISH_VERSION_TABLE) == "c3d4e5f6a7b8"
     assert compatible_bullish_database(path)
