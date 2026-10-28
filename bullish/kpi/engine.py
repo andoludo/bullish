@@ -135,7 +135,7 @@ def run_context(ctx: DataContext, persist: bool = True) -> RunResult:
     logger.info(f"KPI run as of {as_of}: {len(ctx.universe)} equities")
     equity = compute_equity_kpis(ctx)
     coverage = (
-        grade_universe(ctx.coverage, ctx.universe, ctx.as_of_ts)
+        grade_universe(ctx.coverage_index, ctx.universe, ctx.as_of_ts)
         if not ctx.coverage.empty
         else pd.DataFrame()
     )

@@ -424,7 +424,7 @@ class BullishService:
         coverage = (
             grade_symbol(
                 symbol,
-                ctx.coverage,
+                ctx.coverage_index,
                 (
                     row_of(ctx.reference, symbol)
                     if symbol in ctx.reference.index
@@ -768,7 +768,9 @@ class BullishService:
             row = (
                 row_of(ctx.reference, symbol) if symbol in ctx.reference.index else None
             )
-            return grade_symbol(symbol, ctx.coverage, row, ctx.as_of_ts).model_dump()
+            return grade_symbol(
+                symbol, ctx.coverage_index, row, ctx.as_of_ts
+            ).model_dump()
         kpis = self.frame("equity", as_of)
         if kpis.empty or "coverage_grade" not in kpis:
             return {"note": "No stored run with coverage grades; run `bullish compute`"}

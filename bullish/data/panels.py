@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 from bullish.config import BullishSettings
+from bullish.scoring.coverage import CoverageIndex
 
 if TYPE_CHECKING:
     from bullish.database.crud import BullishDb
@@ -683,6 +684,13 @@ class DataContext:
             if len(rows)
             else pd.Series(dtype=float)
         )
+
+    @cached_property
+    def coverage_index(self) -> CoverageIndex:
+        """Per-symbol census aggregate, built once per context."""
+        if self.parent is not None:
+            return self.parent.coverage_index
+        return CoverageIndex(self.coverage)
 
     @cached_property
     def coverage(self) -> pd.DataFrame:
