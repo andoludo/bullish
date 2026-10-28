@@ -53,6 +53,14 @@ class BullishSettings(BaseSettings):
         description="Peers needed to rank inside a group; else the universe",
     )
     price_table: str = Field(default="price")
+    workers: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Processes for the per-symbol technical signals; 0 = all CPUs but one, "
+            "1 = in-process"
+        ),
+    )
     min_price_rows: int = Field(
         default=60,
         ge=0,

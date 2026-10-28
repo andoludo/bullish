@@ -35,18 +35,20 @@ _OptionalDate = date | None
 
 
 def _last_date(d: pd.Series) -> date | None:
-    d_valid = d[d == 1]
-    if d_valid.empty:
+    """Date of the last row whose value is 1 (or True); None when the signal never fired."""
+    hits = np.flatnonzero(d.to_numpy() == 1)
+    if len(hits) == 0:
         return None
-    last_index = d_valid.last_valid_index()
-    return last_index.date() if last_index is not None else None  # type: ignore
+    return d.index[hits[-1]].date()  # type: ignore[no-any-return]
+
+
+def _last_value(d: pd.Series) -> float | None:
+    return d.iloc[-1] if d.notna().any() else None
 
 
 class ProcessingFunction(BaseModel):
     date: Callable[[pd.Series], _OptionalDate] = Field(default=_last_date)
-    number: Callable[[pd.Series], float | None] = Field(
-        default=lambda d: d.iloc[-1] if not d.dropna().empty else None
-    )
+    number: Callable[[pd.Series], float | None] = Field(default=_last_value)
 
 
 class SignalSeries(BaseModel):
@@ -732,8 +734,8 @@ class Indicators(BaseModel):
             except Exception as e:
                 logger.error(f"Failed to compute indicator {indicator.name}: {e}")
                 continue
-            logger.info(
-                f"Computed {indicator.name} with {len(indicator.signals)} signals"
+            logger.debug(
+                "Computed %s with %d signals", indicator.name, len(indicator.signals)
             )
 
     def compute_series(self, data: pd.DataFrame, symbol: str) -> list[SignalSeries]:

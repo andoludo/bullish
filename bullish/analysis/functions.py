@@ -17,10 +17,26 @@ except Exception:
 
 
 def cross_simple(
-    series_a: pd.Series, series_b: pd.Series, above: bool = True
+    series_a: pd.Series, series_b: pd.Series | float, above: bool = True
 ) -> pd.Series:
-    crossing = ta.cross(x=series_a, y=series_b, above=above)  # type: ignore
-    return crossing  # type: ignore
+    """1 where ``series_a`` crosses ``series_b`` (above: ``>=`` now and ``<`` before), else 0.
+
+    Same contract as ``pandas_ta.cross(above=above, equal=True)`` on numpy
+    arrays: NaN never crosses and the first row is never a cross.
+    """
+    a = series_a.to_numpy(dtype=float)
+    b = (
+        series_b.to_numpy(dtype=float)
+        if isinstance(series_b, pd.Series)
+        else np.full(a.shape, float(series_b))
+    )
+    crossed = np.zeros(a.shape, dtype=bool)
+    if len(a) > 1:
+        if above:
+            crossed[1:] = (a[1:] >= b[1:]) & (a[:-1] < b[:-1])
+        else:
+            crossed[1:] = (a[1:] <= b[1:]) & (a[:-1] > b[:-1])
+    return pd.Series(crossed.astype(int), index=series_a.index)
 
 
 def consecutive_highs(low: pd.Series, high: pd.Series) -> pd.Series:
@@ -38,24 +54,24 @@ def consecutive_highs(low: pd.Series, high: pd.Series) -> pd.Series:
     return mask_high[common_indexes]
 
 
-def cross(series_a: pd.Series, series_b: pd.Series, above: bool = True) -> date | None:
+def cross(
+    series_a: pd.Series, series_b: pd.Series | float, above: bool = True
+) -> date | None:
     crossing = cross_simple(series_a=series_a, series_b=series_b, above=above)
-    if not crossing[crossing == 1].index.empty:
-        return crossing[crossing == 1].last_valid_index().date()  # type: ignore
-    return None
+    hits = np.flatnonzero(crossing.to_numpy() == 1)
+    if len(hits) == 0:
+        return None
+    return cast(date, crossing.index[hits[-1]].date())
 
 
 def cross_value(series: pd.Series, number: int, above: bool = True) -> date | None:
-    return cross(series, pd.Series(number, index=series.index), above=above)
+    return cross(series, number, above=above)
 
 
 def cross_value_series(
     series_a: pd.Series, number: int, above: bool = True
 ) -> pd.Series:
-    crossing = cross_simple(
-        series_a, pd.Series(number, index=series_a.index), above=above
-    )
-    return crossing
+    return cross_simple(series_a, number, above=above)
 
 
 def compute_adx(data: pd.DataFrame) -> pd.DataFrame:
