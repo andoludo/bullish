@@ -5,7 +5,7 @@ Everything else bullish needs lives in the bearish schema of the same file.
 
 import datetime as dt
 
-from sqlalchemy import Index
+from sqlalchemy import Column, Index, LargeBinary
 from sqlmodel import Field, SQLModel
 
 
@@ -14,8 +14,8 @@ class KpiORM(SQLModel, table=True):
 
     __tablename__ = "kpi"
     __table_args__ = (
+        # (entity_type, entity, name) lookups are served by the primary key.
         Index("ix_kpi_lookup", "entity_type", "date", "name"),
-        Index("ix_kpi_entity", "entity_type", "entity", "name"),
         {"extend_existing": True},
     )
     entity_type: str = Field(primary_key=True)
@@ -23,6 +23,25 @@ class KpiORM(SQLModel, table=True):
     name: str = Field(primary_key=True)
     date: dt.date = Field(primary_key=True)
     value: float
+
+
+class KpiWideORM(SQLModel, table=True):
+    """One run's wide ``entity x kpi`` frame, zlib-compressed float64, for sub-second reads.
+
+    The long :class:`KpiORM` rows stay the source of truth for series and
+    backtests; this is the read cache the MCP server answers from.
+    """
+
+    __tablename__ = "kpiwide"
+    __table_args__ = {"extend_existing": True}  # noqa: RUF012
+    entity_type: str = Field(primary_key=True)
+    date: dt.date = Field(primary_key=True)
+    created_at: dt.datetime
+    rows: int
+    cols: int
+    index_json: str
+    columns_json: str
+    payload: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
 
 
 class ScoreORM(SQLModel, table=True):

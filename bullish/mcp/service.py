@@ -151,7 +151,24 @@ class BullishService:
     def frame(
         self, entity_type: str, as_of: datetime.date | None = None
     ) -> pd.DataFrame:
-        return self.db.read_kpi_frame(entity_type, as_of)
+        """The stored KPI frame of the latest run at or before ``as_of``, cached per run.
+
+        The cache key carries the run's ``created_at``, so a recompute of the
+        same date is picked up without restarting the server.
+        """
+        run = self.db.latest_run(entity_type, as_of)
+        if run is None:
+            return pd.DataFrame()
+        return self._cached_frame(entity_type, run[0], run[1])
+
+    @lru_cache(maxsize=32)  # noqa: B019
+    def _cached_frame(
+        self,
+        entity_type: str,
+        run_date: datetime.date,
+        created_at: datetime.datetime | None,
+    ) -> pd.DataFrame:
+        return self.db.read_kpi_frame(entity_type, run_date)
 
     def freshness(self, as_of: datetime.date | None = None) -> Freshness:
         run_date = self.db.latest_kpi_date("equity", as_of)

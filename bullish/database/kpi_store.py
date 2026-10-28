@@ -5,14 +5,19 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+import sqlite3
+import zlib
+from contextlib import contextmanager
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, insert
 from sqlmodel import Session, col, select
 
-from bullish.database.schemas import KpiORM, KpiRunORM, ScoreORM
+from bullish.database.schemas import KpiORM, KpiRunORM, KpiWideORM, ScoreORM
 from bullish.utils.typed import as_float, row_of
 
 if TYPE_CHECKING:
@@ -51,26 +56,79 @@ class KpiStoreMixin:
     def write_kpi_frame(
         self, entity_type: str, frame: pd.DataFrame, as_of: datetime.date
     ) -> int:
-        """Store a wide ``entity x kpi`` frame as long rows for ``as_of``; returns rows written."""
+        """Store a wide ``entity x kpi`` frame for ``as_of``: long rows plus the wide read cache.
+
+        Returns the number of long rows written (one per non-null cell).
+        """
         if frame.empty:
             return 0
-        index_name = str(frame.index.name or "index")
-        long = frame.reset_index().melt(
-            id_vars=[index_name], var_name="name", value_name="value"
-        )
-        long = long.rename(columns={index_name: "entity"}).dropna(subset=["value"])
+        values = frame.to_numpy(dtype=float)
+        mask = ~np.isnan(values)
+        row_pos, col_pos = np.nonzero(mask)
+        entities = frame.index.astype(str).to_numpy()[row_pos].tolist()
+        names = frame.columns.astype(str).to_numpy()[col_pos].tolist()
+        date = as_of.isoformat()
         rows = [
-            {
-                "entity_type": entity_type,
-                "entity": str(r.entity),
-                "name": r.name,
-                "date": as_of,
-                "value": as_float(r.value),
-            }
-            for r in long.itertuples(index=False)
+            (entity_type, entity, name, date, value)
+            for entity, name, value in zip(
+                entities, names, values[mask].tolist(), strict=True
+            )
         ]
-        self._replace_rows(KpiORM, rows, entity_type=entity_type, as_of=as_of)
+        with self._bulk_connection() as conn:
+            conn.execute(
+                "DELETE FROM kpi WHERE entity_type = ? AND date = ?",
+                (entity_type, date),
+            )
+            conn.executemany(
+                "INSERT INTO kpi (entity_type, entity, name, date, value) "
+                "VALUES (?, ?, ?, ?, ?)",
+                rows,
+            )
+            self._write_wide(conn, entity_type, frame, as_of)
         return len(rows)
+
+    @contextmanager
+    def _bulk_connection(self) -> Iterator[sqlite3.Connection]:
+        """A raw sqlite connection in one transaction with fsync off for the duration of a bulk load."""
+        raw = self._engine.raw_connection()
+        try:
+            conn: sqlite3.Connection = raw.driver_connection  # type: ignore[assignment]
+            previous = conn.execute("PRAGMA synchronous").fetchone()[0]
+            conn.execute("PRAGMA synchronous = OFF")
+            try:
+                yield conn
+                conn.commit()
+            except BaseException:
+                conn.rollback()
+                raise
+            finally:
+                conn.execute(f"PRAGMA synchronous = {int(previous)}")
+        finally:
+            raw.close()
+
+    @staticmethod
+    def _write_wide(
+        conn: sqlite3.Connection,
+        entity_type: str,
+        frame: pd.DataFrame,
+        as_of: datetime.date,
+    ) -> None:
+        values = np.ascontiguousarray(frame.to_numpy(dtype=np.float64))
+        conn.execute(
+            "INSERT OR REPLACE INTO kpiwide "
+            "(entity_type, date, created_at, rows, cols, index_json, columns_json, payload) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                entity_type,
+                as_of.isoformat(),
+                datetime.datetime.now().isoformat(sep=" "),
+                int(values.shape[0]),
+                int(values.shape[1]),
+                json.dumps(frame.index.astype(str).tolist()),
+                json.dumps(frame.columns.astype(str).tolist()),
+                zlib.compress(values.tobytes(), level=1),
+            ),
+        )
 
     def write_scores(  # noqa: PLR0913
         self,
@@ -127,46 +185,59 @@ class KpiStoreMixin:
             session.exec(insert(KpiRunORM).prefix_with("OR REPLACE").values(run.model_dump()))  # type: ignore[call-overload]
             session.commit()
 
-    def _replace_rows(
-        self,
-        orm: type[KpiORM],
-        rows: list[dict[str, Any]],
-        entity_type: str,
-        as_of: datetime.date,
-    ) -> None:
-        with Session(self._engine) as session:
-            session.exec(  # type: ignore[call-overload]
-                delete(orm).where(
-                    col(orm.entity_type) == entity_type, col(orm.date) == as_of
-                )
-            )
-            for i in range(0, len(rows), BATCH):
-                session.exec(insert(orm), params=rows[i : i + BATCH])  # type: ignore[call-overload]
-            session.commit()
-
     # --- read ------------------------------------------------------------
+
+    def latest_run(
+        self, entity_type: str, as_of: datetime.date | None = None
+    ) -> tuple[datetime.date, datetime.datetime | None] | None:
+        """``(date, created_at)`` of the latest stored run at or before ``as_of``.
+
+        Answered from the wide cache when it has any run at or before ``as_of``,
+        else from the long table (runs written before the cache existed).
+        """
+        with Session(self._engine) as session:
+            stmt = select(col(KpiWideORM.date), col(KpiWideORM.created_at)).where(
+                col(KpiWideORM.entity_type) == entity_type
+            )
+            if as_of is not None:
+                stmt = stmt.where(col(KpiWideORM.date) <= as_of)
+            wide = session.exec(
+                stmt.order_by(col(KpiWideORM.date).desc()).limit(1)
+            ).first()
+            if wide is not None:
+                return wide[0], wide[1]
+            # Runs written before the wide cache existed: scan the long table.
+            legacy = select(col(KpiORM.date)).where(
+                col(KpiORM.entity_type) == entity_type
+            )
+            if as_of is not None:
+                legacy = legacy.where(col(KpiORM.date) <= as_of)
+            dates = session.exec(legacy.distinct()).all()
+        return (max(dates), None) if dates else None
 
     def latest_kpi_date(
         self, entity_type: str, as_of: datetime.date | None = None
     ) -> datetime.date | None:
-        with Session(self._engine) as session:
-            stmt = select(col(KpiORM.date)).where(
-                col(KpiORM.entity_type) == entity_type
-            )
-            if as_of is not None:
-                stmt = stmt.where(col(KpiORM.date) <= as_of)
-            dates = session.exec(stmt.distinct()).all()
-        return max(dates) if dates else None
+        run = self.latest_run(entity_type, as_of)
+        return run[0] if run else None
 
     def kpi_dates(self, entity_type: str = "equity") -> list[datetime.date]:
         with Session(self._engine) as session:
-            return sorted(
+            dates = set(
                 session.exec(
                     select(col(KpiORM.date))
                     .where(col(KpiORM.entity_type) == entity_type)
                     .distinct()
                 ).all()
             )
+            dates |= set(
+                session.exec(
+                    select(col(KpiWideORM.date)).where(
+                        col(KpiWideORM.entity_type) == entity_type
+                    )
+                ).all()
+            )
+        return sorted(dates)
 
     def read_kpi_frame(
         self,
@@ -178,21 +249,45 @@ class KpiStoreMixin:
         date = self.latest_kpi_date(entity_type, as_of)
         if date is None:
             return pd.DataFrame()
+        frame = self._read_wide(entity_type, date)
+        if frame is None:
+            frame = self._read_long(entity_type, date)
+        if frame.empty:
+            return frame
+        if entities:
+            frame = frame[frame.index.isin(entities)]
+        frame.index.name = entity_type
+        frame.attrs["as_of"] = date
+        return frame
+
+    def _read_wide(self, entity_type: str, date: datetime.date) -> pd.DataFrame | None:
+        with Session(self._engine) as session:
+            row = session.exec(
+                select(KpiWideORM).where(
+                    col(KpiWideORM.entity_type) == entity_type,
+                    col(KpiWideORM.date) == date,
+                )
+            ).first()
+        if row is None:
+            return None
+        values = np.frombuffer(zlib.decompress(row.payload), dtype=np.float64)
+        return pd.DataFrame(
+            values.reshape(row.rows, row.cols).copy(),
+            index=pd.Index(json.loads(row.index_json)),
+            columns=pd.Index(json.loads(row.columns_json), name="name"),
+        )
+
+    def _read_long(self, entity_type: str, date: datetime.date) -> pd.DataFrame:
         with Session(self._engine) as session:
             stmt = select(
                 col(KpiORM.entity), col(KpiORM.name), col(KpiORM.value)
             ).where(col(KpiORM.entity_type) == entity_type, col(KpiORM.date) == date)
-            if entities:
-                stmt = stmt.where(col(KpiORM.entity).in_(entities))
             rows = session.exec(stmt).all()
         if not rows:
             return pd.DataFrame()
-        frame = pd.DataFrame(  # noqa: PD010
+        return pd.DataFrame(  # noqa: PD010
             rows, columns=["entity", "name", "value"]
         ).pivot(index="entity", columns="name", values="value")
-        frame.index.name = entity_type
-        frame.attrs["as_of"] = date
-        return frame
 
     def read_kpi_series(  # noqa: PLR0913
         self,
