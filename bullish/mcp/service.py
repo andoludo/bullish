@@ -393,8 +393,8 @@ class BullishService:
                 }
         ctx = self.context(run_date)
         reference = (
-            {k: _clean(v) for k, v in ctx.universe.loc[symbol].items()}
-            if symbol in ctx.universe.index
+            {k: _clean(v) for k, v in ctx.reference.loc[symbol].items()}
+            if symbol in ctx.reference.index
             else {}
         )
         sector_name = reference.get("sector")
@@ -408,7 +408,11 @@ class BullishService:
             grade_symbol(
                 symbol,
                 ctx.coverage,
-                row_of(ctx.universe, symbol) if symbol in ctx.universe.index else None,
+                (
+                    row_of(ctx.reference, symbol)
+                    if symbol in ctx.reference.index
+                    else None
+                ),
                 ctx.as_of_ts,
             )
             if not ctx.coverage.empty
@@ -444,8 +448,8 @@ class BullishService:
             row[f"pct_{name}"] = np.nan if pct is None else pct
         ctx = self.context(run_date)
         sector_name = (
-            str(ctx.universe.loc[symbol, "sector"])
-            if symbol in ctx.universe.index
+            str(ctx.reference.loc[symbol, "sector"])
+            if symbol in ctx.reference.index
             else None
         )
         sectors = self.frame("sector", run_date)
@@ -744,7 +748,9 @@ class BullishService:
     ) -> dict[str, Any]:
         ctx = self.context(as_of)
         if symbol:
-            row = row_of(ctx.universe, symbol) if symbol in ctx.universe.index else None
+            row = (
+                row_of(ctx.reference, symbol) if symbol in ctx.reference.index else None
+            )
             return grade_symbol(symbol, ctx.coverage, row, ctx.as_of_ts).model_dump()
         kpis = self.frame("equity", as_of)
         if kpis.empty or "coverage_grade" not in kpis:
@@ -781,8 +787,8 @@ class BullishService:
         unknown = []
         exposures = ctx.etf_exposures
         for symbol, weight in weights.items():
-            if symbol in ctx.universe.index:
-                row = ctx.universe.loc[symbol]
+            if symbol in ctx.reference.index:
+                row = ctx.reference.loc[symbol]
                 sector[row["sector"] or "unknown"] = (
                     sector.get(row["sector"] or "unknown", 0.0) + weight
                 )

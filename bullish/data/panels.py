@@ -105,8 +105,12 @@ class DataContext:
     # --- universe --------------------------------------------------------
 
     @cached_property
-    def universe(self) -> pd.DataFrame:
-        """One row per symbol: reference data with canonical sector / industry / country."""
+    def reference(self) -> pd.DataFrame:
+        """One row per symbol of the equity table: reference data with canonical sector / industry / country.
+
+        This is every equity bearish knows, whether or not it has data; the KPI
+        run works on :attr:`universe`, the subset that has prices.
+        """
         sql = """
             SELECT e.symbol, e.source, e.name, e.currency, e.exchange, e.market_capitalization,
                    e.shares_outstanding, e.float_shares, e.short_shares, e.short_ratio,
@@ -121,11 +125,39 @@ class DataContext:
         if frame.empty:
             return frame.set_index("symbol") if "symbol" in frame else frame
         frame = dedupe_by_source(frame, ["symbol"])
+        return frame.set_index("symbol").sort_index()
+
+    def _priced_symbols(self, table: str) -> pd.Index:
+        """Symbols with at least ``min_price_rows`` rows of ``table`` inside the lookback."""
+        floor = self.settings.min_price_rows
+        sql = (
+            f'SELECT symbol FROM "{table}" '  # noqa: S608
+            f"WHERE date >= '{self.start_ts.date()}' AND date <= '{self.as_of} 23:59:59' "
+            f"GROUP BY symbol HAVING COUNT(*) >= {int(floor)}"
+        )
+        return pd.Index(self.query(sql)["symbol"].astype(str))
+
+    @cached_property
+    def universe(self) -> pd.DataFrame:
+        """The equities the KPI run covers: :attr:`reference` rows that have prices, filtered by
+        ``countries`` / ``symbols`` when given."""
+        frame = self.reference
+        if frame.empty:
+            return frame
         if self.countries:
             frame = frame[frame["country"].isin(self.countries)]
         if self.symbols:
-            frame = frame[frame["symbol"].isin(self.symbols)]
-        return frame.set_index("symbol").sort_index()
+            frame = frame[frame.index.isin(self.symbols)]
+        if self.settings.min_price_rows > 0:
+            priced = self._priced_symbols(self.settings.price_table)
+            dropped = len(frame) - int(frame.index.isin(priced).sum())
+            if dropped:
+                logger.info(
+                    f"{dropped} equities skipped: fewer than "
+                    f"{self.settings.min_price_rows} price rows in the lookback"
+                )
+            frame = frame[frame.index.isin(priced)]
+        return frame
 
     def peer_group(self, name: str | None = None) -> pd.Series:
         column = name or self.settings.peer_group
@@ -169,11 +201,12 @@ class DataContext:
             self._price_cache[key] = self._load_prices(table, symbols)
         long = self._price_cache[key]
         if long.empty:
-            return pd.DataFrame(columns=list(symbols))
+            return pd.DataFrame()
         panel = long.pivot(  # noqa: PD010
             index="date", columns="symbol", values=column
         ).sort_index()
-        return panel.reindex(columns=list(symbols))
+        panel.columns = panel.columns.astype(str)
+        return panel
 
     @cached_property
     def close(self) -> pd.DataFrame:
@@ -227,16 +260,16 @@ class DataContext:
     @cached_property
     def etf_close(self) -> pd.DataFrame:
         return (
-            self.price_panel("priceetf", list(self.etfs.index), "close")
-            if len(self.etfs)
+            self.price_panel("priceetf", list(self.etf_universe.index), "close")
+            if len(self.etf_universe)
             else pd.DataFrame()
         )
 
     @cached_property
     def etf_volume(self) -> pd.DataFrame:
         return (
-            self.price_panel("priceetf", list(self.etfs.index), "volume")
-            if len(self.etfs)
+            self.price_panel("priceetf", list(self.etf_universe.index), "volume")
+            if len(self.etf_universe)
             else pd.DataFrame()
         )
 
@@ -406,6 +439,24 @@ class DataContext:
         frame = self.query("SELECT * FROM etf")
         if frame.empty:
             return frame
+        frame = dedupe_by_source(frame, ["symbol"])
+        return frame.set_index("symbol").sort_index()
+
+    @cached_property
+    def etf_universe(self) -> pd.DataFrame:
+        """The funds the KPI run covers: :attr:`etfs` rows with enough ``priceetf`` history."""
+        if self.settings.min_price_rows <= 0:
+            return self.etfs
+        priced = self._priced_symbols("priceetf")
+        if priced.empty:
+            return pd.DataFrame(columns=[]).rename_axis("symbol")
+        frames = []
+        for chunk in _chunks(list(priced)):
+            sql = f"SELECT * FROM etf WHERE symbol IN ({_quote(chunk)})"  # noqa: S608
+            frames.append(self.query(sql))
+        frame = pd.concat(frames, ignore_index=True)
+        if frame.empty:
+            return frame.rename_axis("symbol")
         frame = dedupe_by_source(frame, ["symbol"])
         return frame.set_index("symbol").sort_index()
 

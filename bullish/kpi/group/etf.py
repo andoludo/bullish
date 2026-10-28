@@ -184,7 +184,7 @@ def _holdings_concentration(holdings: object) -> tuple[float, float]:
 
 
 def compute(ctx: DataContext) -> pd.DataFrame:
-    etfs = ctx.etfs
+    etfs = ctx.etf_universe
     out = pd.DataFrame(index=etfs.index, columns=NAMES, dtype=float)
     if etfs.empty:
         out.index.name = "etf"

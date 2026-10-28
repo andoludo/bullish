@@ -109,15 +109,18 @@ def lookthrough_scores(
     return weighted / weights.replace(0.0, pd.NA)
 
 
-def run(
+def run(  # noqa: PLR0913
     db: BullishDb,
     settings: BullishSettings,
     as_of: datetime.date | None = None,
     countries: list[str] | None = None,
     persist: bool = True,
+    symbols: list[str] | None = None,
 ) -> RunResult:
     as_of = as_of or datetime.date.today()
-    ctx = DataContext(db=db, settings=settings, as_of=as_of, countries=countries)
+    ctx = DataContext(
+        db=db, settings=settings, as_of=as_of, countries=countries, symbols=symbols
+    )
     result = RunResult(as_of)
     if ctx.universe.empty:
         logger.warning("Empty universe: nothing to compute")

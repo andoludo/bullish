@@ -40,6 +40,9 @@ def compute(
     base_currency: str = typer.Option(
         None, help="Currency of every cross-country comparison (default: EUR)"
     ),
+    symbol: list[str] = typer.Option(  # noqa: B008
+        None, help="Restrict the run to these symbols (default: every priced equity)"
+    ),
 ) -> None:
     """Compute every KPI, composite score and coverage grade for one date and store them."""
     import datetime
@@ -50,7 +53,13 @@ def compute(
     settings = _settings(db, base_currency)
     database = BullishDb(database_path=settings.require_database())
     date = datetime.date.fromisoformat(as_of) if as_of else None
-    result = engine.run(database, settings, as_of=date, countries=country or None)
+    result = engine.run(
+        database,
+        settings,
+        as_of=date,
+        countries=country or None,
+        symbols=symbol or None,
+    )
     if result.run is None:
         typer.secho("Nothing computed (empty universe).", fg=typer.colors.YELLOW)
         raise typer.Exit(code=1)
