@@ -117,10 +117,17 @@ def run(  # noqa: PLR0913
     persist: bool = True,
     symbols: list[str] | None = None,
 ) -> RunResult:
+    """Build the point-in-time context for ``as_of`` and run every KPI, score and grade on it."""
     as_of = as_of or datetime.date.today()
     ctx = DataContext(
         db=db, settings=settings, as_of=as_of, countries=countries, symbols=symbols
     )
+    return run_context(ctx, persist=persist)
+
+
+def run_context(ctx: DataContext, persist: bool = True) -> RunResult:
+    """One KPI run on an existing context (``bullish history`` derives one per date from a span)."""
+    db, settings, as_of, countries = ctx.db, ctx.settings, ctx.as_of, ctx.countries
     result = RunResult(as_of)
     if ctx.universe.empty:
         logger.warning("Empty universe: nothing to compute")
