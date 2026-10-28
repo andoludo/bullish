@@ -1,6 +1,7 @@
 # Plan: making `bullish compute` fast
 
-Status: proposal, 2026-10-24. Measured on the LFS test database
+Status: implemented, 2026-10-28 (sections 6 and 7 record what shipped and what
+was measured afterwards). Originally proposed 2026-10-24. Measured on the LFS test database
 (`tests/data/bear.db`: 107,366 equity symbols, prices for 6 of them,
 1,256 trading days of history) in a 4-core, 16 GB container, and on
 `tests/data/prices_msft.csv` for the per-symbol indicator cost.
@@ -204,3 +205,27 @@ For a realistic database of ~20k priced symbols with five years of history:
 3. Symbols without prices: excluded from the KPI run entirely (recommended;
    the coverage tool still reports them from the `coverage` table) versus
    kept as all-NaN rows in the KPI frame.
+
+## 6. What shipped (2026-10-28)
+
+| phase | change | measured |
+|---|---|---|
+| 1 | universe = equities with `min_price_rows` price rows in the lookback (one `GROUP BY`); panels as wide as the data; ETF block on funds with `priceetf` history; `--symbol` | unrestricted test DB: killed at 16 GB → 10 s, 390 MB |
+| 2 | numpy `cross` and last-date helpers; one `Indicators` per worker; arrays per chunk; `ProcessPoolExecutor` (`BULLISH_WORKERS`) | 50 → 25 ms per symbol in-process; 9 ms per symbol with 3 workers (2,000 symbols: 18 s); output identical |
+| 3 | `kpiwide` table (compressed wide frame per run); raw sqlite bulk insert with fsync off; redundant `ix_kpi_entity` dropped; `BullishService.frame()` cached per run | 20k x 150: write 66 → 14 s; read 17 → 0.2 s; warm MCP call 0.9 ms; DB 20 % smaller |
+| 4 | universe query restricted to the priced symbols; `DataContext.derive()` slices a span context for every history date | 12-month history on the test DB: 46 → 20 s; frames identical |
+| 5 | `CoverageIndex`: census aggregated once per symbol | 20k symbols x 200k rows: ~2 h (extrapolated) → 1.4 s; reports identical |
+| 6 | `bullish compute --profile`; `tests/v2/test_benchmark.py` bounds a 500-symbol run (time, peak RSS, technical ms per symbol) | runs in CI on every push |
+
+Decisions taken as recommended: payoff-first order, wide cache inside the
+SQLite file, symbols without prices excluded from the run.
+
+## 7. Left for later
+
+- bearish downloads two NASDAQ symbol files at import time
+  (`bearish.models.sec.sec.TICKER_MAPPING`): one to two seconds on every
+  process start and a network dependency that failed once during this work.
+  A lazy, cached mapping in bearish removes both.
+- The column-wise half of the technical signals could run on the whole panel
+  at once (SMA, ROC, RSI, MACD); not needed once the pool brought the block
+  under 10 ms per symbol.

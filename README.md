@@ -47,6 +47,8 @@ so `as_of` questions are answered with what was known then.
 ```bash
 # compute every KPI, score and grade for today (or a past date) and store them
 bullish compute --db /path/to/bear.db [--as-of 2026-06-30] [--country USA --country DEU]
+bullish compute --db /path/to/bear.db --symbol AAPL --symbol NVDA   # a few names only
+bullish compute --db /path/to/bear.db --profile                     # per-phase time and memory
 
 # a monthly grid of past runs, then a rank backtest of a KPI or a preset
 bullish history 2024-01-31 2026-09-30 --db /path/to/bear.db --step-months 1
@@ -75,6 +77,16 @@ Settings come from the environment or a `.env` file (`BULLISH_DATABASE_PATH`,
 `BULLISH_BASE_CURRENCY`, `BULLISH_PEER_GROUP`, `BULLISH_MIN_DOLLAR_VOLUME`,
 `BULLISH_MIN_MARKET_CAP`, `BULLISH_ALLOW_SQL`, ...), see `bullish/config.py`.
 
+A run covers the equities that have at least `BULLISH_MIN_PRICE_ROWS` (default
+60) price rows inside the lookback; everything else bearish knows is still
+reachable through the coverage and scorecard tools. The per-symbol technical
+signals run in `BULLISH_WORKERS` processes (default: all CPUs but one). Each
+run stores its long `kpi` rows and one compressed wide frame (`kpiwide`), which
+is what the MCP server reads, so a tool call costs milliseconds once warm.
+`bullish history` loads the data once for the whole span and derives every
+monthly run from it. `docs/plans/2026-10-compute-performance.md` has the
+measurements behind these choices.
+
 ## MCP tools
 
 `get_market_regime`, `rank_sectors`, `rank_industries`, `rank_countries`,
@@ -98,7 +110,7 @@ Bullish uses [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
 uv sync --all-groups          # environment with the dev tools
-uv run pytest                 # tests (tests/v2 run on a synthetic bearish database)
+uv run pytest                 # tests (tests/v2 run on a synthetic bearish database; test_benchmark bounds a 500-symbol run)
 uv run nox -s linting         # black, mypy (strict), ruff
 ```
 
@@ -111,7 +123,7 @@ The repository layout:
 | `bullish.kpi` | KPI registry, equity and group blocks, the run engine |
 | `bullish.scoring` | percentile ranking, composites and presets, stock verdict, coverage grades, regime |
 | `bullish.backtest` | rank information coefficient across stored runs |
-| `bullish.database` | bullish's tables (`kpi`, `score`, `kpirun`) and the migration bridge with bearish |
+| `bullish.database` | bullish's tables (`kpi`, `kpiwide`, `score`, `kpirun`) and the migration bridge with bearish |
 | `bullish.mcp` | the MCP server and its service layer |
 
 ## What Bullish is not

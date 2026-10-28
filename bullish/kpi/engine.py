@@ -13,6 +13,7 @@ from bullish.database.crud import BullishDb
 from bullish.database.kpi_store import KpiRun
 from bullish.kpi.equity import compute_equity_kpis
 from bullish.kpi.group import compute_group_kpis
+from bullish.kpi.profile import PhaseTimer
 from bullish.kpi.registry import declare_many
 from bullish.scoring.composite import ScoreResult, score_composite
 from bullish.scoring.coverage import grade_universe
@@ -72,6 +73,7 @@ class RunResult:
         self.scores: dict[tuple[str, str], ScoreResult] = {}
         self.coverage = pd.DataFrame()
         self.run: KpiRun | None = None
+        self.timer = PhaseTimer()
 
 
 def lookthrough_scores(
@@ -126,37 +128,49 @@ def run(  # noqa: PLR0913
 
 
 def run_context(ctx: DataContext, persist: bool = True) -> RunResult:
-    """One KPI run on an existing context (``bullish history`` derives one per date from a span)."""
+    """One KPI run on an existing context (``bullish history`` derives one per date from a span).
+
+    ``result.timer`` holds the wall time and peak memory of every phase.
+    """
     db, settings, as_of, countries = ctx.db, ctx.settings, ctx.as_of, ctx.countries
     result = RunResult(as_of)
-    if ctx.universe.empty:
+    timer = result.timer
+    with timer.phase("universe"):
+        empty = ctx.universe.empty
+    if empty:
         logger.warning("Empty universe: nothing to compute")
         return result
     logger.info(f"KPI run as of {as_of}: {len(ctx.universe)} equities")
-    equity = compute_equity_kpis(ctx)
-    coverage = (
-        grade_universe(ctx.coverage_index, ctx.universe, ctx.as_of_ts)
-        if not ctx.coverage.empty
-        else pd.DataFrame()
-    )
-    if not coverage.empty:
-        equity["coverage_grade"] = (
-            coverage["overall"].map(COVERAGE_GRADE).reindex(equity.index)
+    with timer.phase("prices"):
+        ctx.close  # noqa: B018
+    equity = compute_equity_kpis(ctx, timer)
+    with timer.phase("coverage grades"):
+        coverage = (
+            grade_universe(ctx.coverage_index, ctx.universe, ctx.as_of_ts)
+            if not ctx.coverage.empty
+            else pd.DataFrame()
         )
-    groups = compute_group_kpis(ctx, equity)
+        if not coverage.empty:
+            equity["coverage_grade"] = (
+                coverage["overall"].map(COVERAGE_GRADE).reindex(equity.index)
+            )
+    groups = compute_group_kpis(ctx, equity, timer)
     peers = ctx.peer_group()
     scores: dict[tuple[str, str], ScoreResult] = {}
-    for spec in EQUITY_PRESETS.values():
-        scores[("equity", spec.name)] = score_composite(spec, equity, settings, peers)
-    for spec, frame in (
-        (SECTOR_SCORE, groups["sector"]),
-        (INDUSTRY_SCORE, groups["industry"]),
-        (COUNTRY_SCORE, groups["country"]),
-    ):
-        if not frame.empty:
-            scores[(spec.entity_type, spec.name)] = score_composite(
-                spec, frame, settings
+    with timer.phase("composites"):
+        for spec in EQUITY_PRESETS.values():
+            scores[("equity", spec.name)] = score_composite(
+                spec, equity, settings, peers
             )
+        for spec, frame in (
+            (SECTOR_SCORE, groups["sector"]),
+            (INDUSTRY_SCORE, groups["industry"]),
+            (COUNTRY_SCORE, groups["country"]),
+        ):
+            if not frame.empty:
+                scores[(spec.entity_type, spec.name)] = score_composite(
+                    spec, frame, settings
+                )
     etf = groups["etf"]
     if not etf.empty:
         vehicle = score_composite(ETF_VEHICLE_SCORE, etf, settings)
@@ -184,7 +198,9 @@ def run_context(ctx: DataContext, persist: bool = True) -> RunResult:
         coverage,
     )
     if persist:
-        _persist(db, settings, result, countries)
+        with timer.phase("persist"):
+            _persist(db, settings, result, countries)
+    logger.info("run %s: %.1fs total", as_of, timer.total_seconds)
     return result
 
 

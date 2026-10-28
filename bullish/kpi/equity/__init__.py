@@ -18,6 +18,7 @@ from bullish.kpi.equity import (
     revisions,
     valuation,
 )
+from bullish.kpi.profile import PhaseTimer
 from bullish.kpi.registry import REGISTRY
 
 logger = logging.getLogger(__name__)
@@ -34,11 +35,15 @@ BLOCKS: tuple[ModuleType, ...] = (
 )
 
 
-def compute_equity_kpis(ctx: DataContext) -> pd.DataFrame:
+def compute_equity_kpis(
+    ctx: DataContext, timer: PhaseTimer | None = None
+) -> pd.DataFrame:
     """One row per symbol, one column per declared equity KPI."""
+    timer = timer or PhaseTimer()
     frames = []
     for block in BLOCKS:
-        frame = block.compute(ctx)
+        with timer.phase(f"equity.{block.BLOCK}"):
+            frame = block.compute(ctx)
         frames.append(REGISTRY.validate_frame("equity", block.BLOCK, frame))
         logger.info(
             f"equity.{block.BLOCK}: {frame.shape[1]} KPIs for {len(frame)} symbols"
