@@ -677,13 +677,19 @@ class DataContext:
         )
         return _dates(frame)[["series_id", "date", "value"]]
 
+    @cached_property
+    def _macro_by_series(self) -> dict[str, pd.Series]:
+        """``series_id -> date-indexed values``, split once; every KPI block looks series up here."""
+        frame = self.macro
+        if frame.empty:
+            return {}
+        return {
+            str(series_id): group.set_index("date")["value"].sort_index()
+            for series_id, group in frame.groupby("series_id", sort=False)
+        }
+
     def macro_series(self, concept: str, entity: str) -> pd.Series:
-        rows = self.macro[self.macro["series_id"] == f"{concept}.{entity}"]
-        return (
-            rows.set_index("date")["value"].sort_index()
-            if len(rows)
-            else pd.Series(dtype=float)
-        )
+        return self._macro_by_series.get(f"{concept}.{entity}", pd.Series(dtype=float))
 
     @cached_property
     def coverage_index(self) -> CoverageIndex:
