@@ -6,7 +6,7 @@ authors = [{ name = "aan", email = "andoludovic.andriamamonjy@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "bearishpy>=0.55.0,<1.0.0",
+    "bearishpy>=0.56.0,<1.0.0",
     "pandas-ta>=0.4.71b0,<0.5.0",
     "ta-lib>=0.6.5,<0.7.0",
     "mcp>=2.3.0,<3",
