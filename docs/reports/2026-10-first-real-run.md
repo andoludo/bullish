@@ -149,6 +149,49 @@ weights of `quality_on_sale` and `value_with_catalyst` should not be
 trusted as they stand. A longer history (5 years, 60 monthly runs, with a
 point-in-time constituent list) is the prerequisite for recalibrating.
 
-## 5. Analyst expectations fill (section updated after the second fetch)
+## 5. Analyst expectations, second fetch
 
-See the end of this file.
+`write_many_financials` with the Yahoo source forced still wrote nothing:
+`AbstractSource.read_financials` drops every ticker whose exchange is not
+known to belong to the requested countries, and plain `Ticker(symbol=...)`
+objects have no exchange. Calling `yFinanceSource()._read_financials(symbols)`
+directly, in chunks of 25 written as they complete, filled the three
+expectation tables for 502 symbols in 65 minutes (about 12 s per symbol, two
+rate-limit errors in total):
+
+| table | rows | symbols |
+|---|---:|---:|
+| earningsdate | 12,279 | 502 |
+| pricetarget | 503 | 502 |
+| analystrecommendation | 1,992 | 501 |
+
+After that run `bullish compute` stores 79.3k KPI values in 29 s: **144 of
+182 KPIs are more than 80 % filled** (108 before), the expectations block is
+complete (EPS beat rate, surprises, target upside, recommendation mean, days
+to the next earnings all above 98 %), NVDA's coverage reads A on every
+dimension except ownership, and the 22 KPIs still empty all belong to the
+SEC ownership and filings tables, the short-interest change (needs a second
+snapshot), commodity links and the target-change series (need a second
+run). Preset top lists moved with the new inputs (quality_on_sale: DASH,
+DECK, ALB, BE, RDDT, EXPE; emerging_leader: SNDK, PLTR, AES, MU, PWR, TGT).
+
+## 6. What this run changed in the code
+
+- PR #7: macro series split once per context (46.6 s → 27.7 s per run).
+
+## 7. Follow-ups this run points at
+
+1. Load SEC insiders, filings and 13F from the bulk data sets instead of
+   per-filing requests; at five requests per second the per-filing path does
+   not finish for a large-cap universe.
+2. Let `bearish financials` ask the Yahoo source for the expectation tables
+   even when SEC XBRL answered the statements, and let `read_financials`
+   accept tickers without an exchange when the caller already scoped them.
+3. Keep `bearish members` and `bearish shorts` on a schedule so the index
+   membership and short-interest snapshots accumulate history; the
+   survivorship caveat in section 4 and the empty short-interest change KPI
+   both come from having one snapshot.
+4. A warm-up of the data context when the MCP server starts, so the first
+   scorecard does not pay 4 s.
+5. Recalibrate preset weights only on a 5-year, point-in-time-constituent
+   history; the 24-month result above is a direction, not a weight.
